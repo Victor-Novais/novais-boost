@@ -1,0 +1,15 @@
+{
+  "id": "mouse-acceleration",
+  "name": "Desligar a aceleração do mouse",
+  "description": "Desativa Aprimorar precisão do ponteiro para a conta atual. Encerre e reabra a sessão do Windows para atualizar o ponteiro.",
+  "category": "Entrada",
+  "level": "safe",
+  "risk": "Baixo. Altera a sensação do ponteiro no Windows.",
+  "requiresReboot": false,
+  "compat": { "hardware": [], "antiCheat": [] },
+  "actions": [
+    { "type": "registry", "hive": "currentUser", "path": "Control Panel\\Mouse", "valueName": "MouseSpeed", "operation": "set", "expected": { "kind": "string", "value": "0" } },
+    { "type": "registry", "hive": "currentUser", "path": "Control Panel\\Mouse", "valueName": "MouseThreshold1", "operation": "set", "expected": { "kind": "string", "value": "0" } },
+    { "type": "registry", "hive": "currentUser", "path": "Control Panel\\Mouse", "valueName": "MouseThreshold2", "operation": "set", "expected": { "kind": "string", "value": "0" } }
+  ]
+}

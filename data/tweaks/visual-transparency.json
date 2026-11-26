@@ -1,0 +1,13 @@
+{
+  "id": "visual-transparency",
+  "name": "Desligar a transparência",
+  "description": "Desativa os efeitos de transparência para a conta atual. A sessão pode precisar ser reaberta.",
+  "category": "Visual",
+  "level": "safe",
+  "risk": "Baixo. Muda a aparência do Windows.",
+  "requiresReboot": false,
+  "compat": { "hardware": [], "antiCheat": [] },
+  "actions": [
+    { "type": "registry", "hive": "currentUser", "path": "Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize", "valueName": "EnableTransparency", "operation": "set", "expected": { "kind": "dword", "value": 0 } }
+  ]
+}

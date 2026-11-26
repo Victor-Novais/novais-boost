@@ -1,0 +1,14 @@
+{
+  "id": "game-dvr-background",
+  "name": "Desligar a captura em segundo plano",
+  "description": "Desativa a gravação retroativa do Game DVR para a conta atual. A Xbox Game Bar continua instalada. A sessão pode precisar ser reaberta.",
+  "category": "Captura",
+  "level": "safe",
+  "risk": "Baixo. A captura retroativa deixa de estar disponível enquanto o ajuste estiver ativo.",
+  "requiresReboot": false,
+  "compat": { "hardware": [], "antiCheat": [] },
+  "actions": [
+    { "type": "registry", "hive": "currentUser", "path": "Software\\Microsoft\\Windows\\CurrentVersion\\GameDVR", "valueName": "HistoricalCaptureEnabled", "operation": "set", "expected": { "kind": "dword", "value": 0 } },
+    { "type": "registry", "hive": "currentUser", "path": "System\\GameConfigStore", "valueName": "HistoricalCaptureEnabled", "operation": "set", "expected": { "kind": "dword", "value": 0 } }
+  ]
+}
