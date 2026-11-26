@@ -3,7 +3,11 @@ using System.Text.Json;
 
 namespace NovaisBoost.Core;
 
-public sealed record SnapshotInfo(string Path, int TweakCount, long RestorePointNumber, bool Pending);
+public sealed record SnapshotInfo(string Path, int TweakCount, long RestorePointNumber, bool Pending)
+{
+    /// <summary>Applied tweak ids, oldest first, without repetition.</summary>
+    public IReadOnlyList<string> TweakIds { get; init; } = [];
+}
 
 internal sealed record SettingBackup(TweakAction Action, SettingState Before);
 internal sealed record TweakBackup(string Id, SettingBackup[] Settings);
@@ -21,7 +25,10 @@ public sealed class SnapshotManager(
     {
         var file = ReadActive();
         return file is null ? null : new SnapshotInfo(
-            file.Path, file.State.Tweaks.Length, file.State.RestorePointNumber, file.State.Pending);
+            file.Path, file.State.Tweaks.Length, file.State.RestorePointNumber, file.State.Pending)
+        {
+            TweakIds = file.State.Tweaks.Select(tweak => tweak.Id).Distinct(StringComparer.Ordinal).ToArray()
+        };
     }
 
     internal IDisposable Acquire()

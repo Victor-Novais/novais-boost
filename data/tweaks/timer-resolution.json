@@ -1,0 +1,26 @@
+{
+  "id": "timer-resolution",
+  "name": "Resolução de timer global",
+  "description": "Permite que o jogo mantenha a resolução de timer alta mesmo quando outro programa está em foco (GlobalTimerResolutionRequests). Frametime mais estável.",
+  "category": "Latência",
+  "level": "competitive",
+  "risk": "Baixo. Consumo um pouco maior em notebooks.",
+  "requiresReboot": true,
+  "compat": {
+    "hardware": [],
+    "antiCheat": []
+  },
+  "actions": [
+    {
+      "type": "registry",
+      "hive": "localMachine",
+      "path": "SYSTEM\\CurrentControlSet\\Control\\Session Manager\\kernel",
+      "valueName": "GlobalTimerResolutionRequests",
+      "operation": "set",
+      "expected": {
+        "kind": "dword",
+        "value": 1
+      }
+    }
+  ]
+}

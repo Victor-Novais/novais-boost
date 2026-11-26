@@ -1,0 +1,23 @@
+{
+  "id": "nvidia-texture-performance",
+  "name": "NVIDIA: filtragem de textura em alto desempenho",
+  "description": "Usa a filtragem de textura mais leve do driver (perfil global). Ganho pequeno de FPS com perda visual mínima.",
+  "category": "GPU",
+  "level": "competitive",
+  "risk": "Baixo. Texturas um pouco menos nítidas em ângulos oblíquos.",
+  "requiresReboot": false,
+  "compat": {
+    "hardware": [
+      "gpu-nvidia"
+    ],
+    "antiCheat": []
+  },
+  "actions": [
+    {
+      "type": "nvidiaSetting",
+      "settingId": 13510289,
+      "name": "Texture filtering - Quality",
+      "expected": 20
+    }
+  ]
+}

@@ -21,6 +21,18 @@ public interface IScheduledTasks
     void SetEnabled(string path, bool enabled);
 }
 
+public interface INvidiaSettings
+{
+    NvidiaSettingState Read(uint settingId);
+    void Write(uint settingId, NvidiaSettingState state);
+}
+
+public interface IDnsSettings
+{
+    DnsState Read(DnsAction action);
+    void Write(DnsAction action, DnsState state);
+}
+
 public interface IPowerPlans
 {
     PowerPlanState Read(PowerPlanAction plan);
@@ -56,6 +68,8 @@ public interface IActionLog
 [JsonDerivedType(typeof(PowerState), "powercfg")]
 [JsonDerivedType(typeof(TaskState), "scheduledTask")]
 [JsonDerivedType(typeof(PowerPlanState), "powerPlan")]
+[JsonDerivedType(typeof(NvidiaSettingState), "nvidiaSetting")]
+[JsonDerivedType(typeof(DnsState), "dns")]
 public abstract record SettingState
 {
     internal virtual bool Matches(SettingState other) => Equals(other);
@@ -100,6 +114,21 @@ public sealed record PowerState(Guid Scheme) : SettingState
 public sealed record TaskState(bool Exists, bool Enabled) : SettingState
 {
     internal override string Display => !Exists ? "não existe" : Enabled ? "ativada" : "desativada";
+}
+
+/// <param name="Defined">False when the global profile uses the driver default (no explicit value).</param>
+public sealed record NvidiaSettingState(bool Defined, uint Value) : SettingState
+{
+    internal override bool Matches(SettingState other) =>
+        other is NvidiaSettingState nvidia && Defined == nvidia.Defined && (!Defined || Value == nvidia.Value);
+
+    internal override string Display => Defined ? $"0x{Value:X}" : "padrão do driver";
+}
+
+public sealed record DnsState(string[] Servers) : SettingState
+{
+    internal override bool Matches(SettingState other) => other is DnsState dns && Servers.SequenceEqual(dns.Servers);
+    internal override string Display => Servers.Length == 0 ? "automático (DHCP)" : string.Join(", ", Servers);
 }
 
 public sealed record PowerPlanState(bool Exists, PowerSettingValue[]? Settings) : SettingState

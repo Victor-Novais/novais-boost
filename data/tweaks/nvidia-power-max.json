@@ -1,0 +1,23 @@
+{
+  "id": "nvidia-power-max",
+  "name": "NVIDIA: modo de energia em desempenho máximo",
+  "description": "Impede a GPU de baixar o clock entre quadros (perfil global do driver). Evita quedas de FPS em cenas leves que viram picos de frametime.",
+  "category": "GPU",
+  "level": "competitive",
+  "risk": "Baixo. A GPU consome mais energia parada.",
+  "requiresReboot": false,
+  "compat": {
+    "hardware": [
+      "gpu-nvidia"
+    ],
+    "antiCheat": []
+  },
+  "actions": [
+    {
+      "type": "nvidiaSetting",
+      "settingId": 274197361,
+      "name": "Power management mode",
+      "expected": 1
+    }
+  ]
+}

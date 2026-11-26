@@ -57,6 +57,7 @@
               "desktop",
               "gpu-discrete",
               "gpu-hags",
+              "gpu-nvidia",
               "not-dual-ccd-x3d"
             ]
           }
@@ -89,6 +90,12 @@
           },
           {
             "$ref": "#/$defs/powerPlan"
+          },
+          {
+            "$ref": "#/$defs/nvidiaSetting"
+          },
+          {
+            "$ref": "#/$defs/dns"
           }
         ]
       }
@@ -370,6 +377,62 @@
                 "maximum": 4294967295
               }
             }
+          }
+        }
+      }
+    },
+    "nvidiaSetting": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "settingId",
+        "name",
+        "expected"
+      ],
+      "properties": {
+        "type": {
+          "const": "nvidiaSetting"
+        },
+        "settingId": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4294967295
+        },
+        "name": {
+          "$ref": "#/$defs/nonblank"
+        },
+        "expected": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4294967295
+        }
+      }
+    },
+    "dns": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "interfaceId",
+        "alias",
+        "servers"
+      ],
+      "properties": {
+        "type": {
+          "const": "dns"
+        },
+        "interfaceId": {
+          "$ref": "#/$defs/guid"
+        },
+        "alias": {
+          "$ref": "#/$defs/nonblank"
+        },
+        "servers": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^\\d{1,3}(\\.\\d{1,3}){3}$"
           }
         }
       }

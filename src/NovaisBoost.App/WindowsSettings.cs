@@ -214,9 +214,11 @@ internal sealed class WindowsPowerConfig : IPowerConfig
 
 internal static class WindowsCommand
 {
-    public static string Run(string executable, params string[] arguments)
+    public static string Run(string executable, params string[] arguments) => Run(TimeSpan.FromSeconds(15), executable, arguments);
+
+    public static string Run(TimeSpan timeout, string executable, params string[] arguments)
     {
-        var info = new ProcessStartInfo(Path.Combine(Environment.SystemDirectory, executable))
+        var info = new ProcessStartInfo(Path.IsPathRooted(executable) ? executable : Path.Combine(Environment.SystemDirectory, executable))
         {
             UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true, CreateNoWindow = true
         };
@@ -226,7 +228,7 @@ internal static class WindowsCommand
         using var process = Process.Start(info) ?? throw new InvalidOperationException($"Falha ao iniciar {executable}.");
         var output = process.StandardOutput.ReadToEndAsync();
         var error = process.StandardError.ReadToEndAsync();
-        if (!process.WaitForExit(15_000))
+        if (!process.WaitForExit(timeout))
         {
             if (!process.HasExited)
                 process.Kill();

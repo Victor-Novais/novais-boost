@@ -9,7 +9,8 @@ public sealed class TweakEngine(
     IRegistry registry, IServiceController services, IPowerConfig power,
     SnapshotManager snapshots, IActionLog log,
     IScheduledTasks? tasks = null, IPowerPlans? plans = null,
-    Func<TweakCompatibility, string?>? compatibility = null)
+    Func<TweakCompatibility, string?>? compatibility = null,
+    INvidiaSettings? nvidia = null, IDnsSettings? dns = null)
 {
     private RestorePoint? _batchPoint;
     private bool _inBatch;
@@ -221,6 +222,8 @@ public sealed class TweakEngine(
             ScheduledTaskAction when before is TaskState { Exists: false } => before,
             ScheduledTaskAction task => new TaskState(true, task.Expected == TaskSetting.Enabled),
             PowerPlanAction powerPlan => new PowerPlanState(true, powerPlan.Settings),
+            NvidiaSettingAction setting => new NvidiaSettingState(true, setting.Expected),
+            DnsAction servers => new DnsState(servers.Servers),
             _ => throw new InvalidDataException("Operação de ajuste inválida.")
         };
         return new PlannedChange(action, before, expected);
@@ -233,6 +236,8 @@ public sealed class TweakEngine(
         PowerAction => new PowerState(power.GetActiveScheme()),
         ScheduledTaskAction task => Require(tasks).Get(task.Path),
         PowerPlanAction powerPlan => Require(plans).Read(powerPlan),
+        NvidiaSettingAction setting => Require(nvidia).Read(setting.SettingId),
+        DnsAction servers => Require(dns).Read(servers),
         _ => throw new InvalidDataException("Tipo de ajuste desconhecido.")
     };
 
@@ -258,6 +263,12 @@ public sealed class TweakEngine(
                 break;
             case (PowerPlanAction powerPlan, PowerPlanState planState):
                 Require(plans).Write(powerPlan, planState);
+                break;
+            case (NvidiaSettingAction setting, NvidiaSettingState settingState):
+                Require(nvidia).Write(setting.SettingId, settingState);
+                break;
+            case (DnsAction servers, DnsState dnsState):
+                Require(dns).Write(servers, dnsState);
                 break;
             default:
                 throw new InvalidDataException("O estado do backup não corresponde à operação.");

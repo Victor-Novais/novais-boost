@@ -371,3 +371,24 @@ Ryzen 5 7600X · RTX 4070 · 32 GB · Windows 11 25H2
 ## Próximo passo
 
 Começar a **F0**: criar o projeto .NET 10 com o banner, a verificação de admin, o sistema de backup/restore e o formato de tweak em JSON — a base de onde todo o resto cresce.
+
+---
+
+## Status da implementação (26/11/2026)
+
+| Fase | Status | Observações |
+|---|---|---|
+| F0 Fundação | ✅ | Motor de ajustes com simulação, backup, ponto de restauração e reversão |
+| F1 Diagnóstico | ✅ | 24 regras, nota de saúde, relatório JSON |
+| F2 Universal (níveis 1 e 2) | ✅ | Registro, serviços, tarefas, plano de energia próprio |
+| F3 Latência & GPU | ✅ | MSI mode, timer, NVIDIA via NVAPI (modo de energia, filtragem), medição de DPC/ISR |
+| F4 Perfis de hardware | ✅ | 20 perfis (X3D 1/2 CCDs, Zen 3/4/5, Intel 12-14 e Ultra, RTX/GTX, Radeon, Arc, RAM, notebook, placas) + checklist de BIOS |
+| F5 Process Guardian | ✅ | Prioridades automáticas durante o jogo, ProBalance, processos inúteis, inicialização |
+| F6 Cronogramas | ✅ | 5 tarefas no Agendador do Windows, limpeza segura, reaplicação após updates |
+| F7 Benchmark | ✅ | PresentMon (FPS, 1%/0,1% low, p99, travadas) + latência, comparação antes × depois |
+| F8 Jogos & Streaming | ✅ | 12 jogos + OBS, GPU dedicada e QoS por jogo, codificador por GPU |
+| F9 Rede avançada | ✅ | Ping/jitter/perda, bufferbloat, DNS mais rápido (aplicável e reversível), placa de rede |
+| F10 Lançamento | ✅ parcial | Build/assinatura/hash prontos; falta o certificado e a hospedagem para auto-update |
+
+Fora do escopo por segurança: overclock, BIOS, mitigações de CPU, Low Latency Mode/cache de shader NVIDIA,
+instalação limpa automática de driver. Detalhes em `docs/LANCAMENTO.md`.

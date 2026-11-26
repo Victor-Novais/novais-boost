@@ -1,0 +1,20 @@
+{
+  "id": "sysmain-off",
+  "name": "Desligar o SysMain (Superfetch)",
+  "description": "Desativa o pré-carregamento de apps na RAM. Em SSD rápido o ganho do SysMain é pequeno e ele gera atividade de disco.",
+  "category": "Serviços",
+  "level": "extreme",
+  "risk": "Baixo. Apps podem abrir um pouco mais devagar na primeira vez.",
+  "requiresReboot": true,
+  "compat": {
+    "hardware": [],
+    "antiCheat": []
+  },
+  "actions": [
+    {
+      "type": "service",
+      "name": "SysMain",
+      "expected": "disabled"
+    }
+  ]
+}

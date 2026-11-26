@@ -13,6 +13,7 @@ public static partial class Compatibility
             {
                 "desktop" => pc.Os.IsLaptop ? "requer um desktop (em notebook afeta bateria e temperatura)" : null,
                 "gpu-discrete" => pc.Gpus.Any(gpu => !gpu.IsIntegrated) ? null : "requer uma GPU dedicada",
+                "gpu-nvidia" => pc.Gpus.Any(gpu => !gpu.IsIntegrated && gpu.Vendor == GpuVendor.Nvidia) ? null : "requer uma GPU NVIDIA",
                 "gpu-hags" => pc.Gpus.Any(SupportsHags) ? null : "requer GPU com suporte a HAGS (NVIDIA GTX 10/RTX, Radeon RX 5000+ ou Intel Arc)",
                 "not-dual-ccd-x3d" => pc.Cpu is { } cpu && IsDualCcdX3d(cpu.Name)
                     ? "Ryzen X3D com 2 CCDs depende do plano Equilibrado e da Game Bar para colocar o jogo nos núcleos com 3D V-Cache"

@@ -4,7 +4,9 @@
   <trustInfo xmlns="urn:schemas-microsoft-com:asm.v3">
     <security>
       <requestedPrivileges>
-        <requestedExecutionLevel level="requireAdministrator" uiAccess="false" />
+        <!-- asInvoker: the read-only modes (diagnostico, simular, versao) run without UAC;
+             the menu and the scheduled tasks request elevation themselves. -->
+        <requestedExecutionLevel level="asInvoker" uiAccess="false" />
       </requestedPrivileges>
     </security>
   </trustInfo>

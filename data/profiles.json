@@ -1,0 +1,478 @@
+[
+  {
+    "id": "cpu-x3d-single",
+    "name": "AMD Ryzen X3D (1 CCD)",
+    "component": "CPU",
+    "match": {
+      "cpu": "\\b(5700X3D|5800X3D|7600X3D|7800X3D|9800X3D)\\b"
+    },
+    "recommendations": [
+      {
+        "title": "Todos os núcleos têm 3D V-Cache",
+        "detail": "Não force afinidade nem desligue núcleos: o jogo já roda nos núcleos com cache."
+      },
+      {
+        "title": "Temperatura importa",
+        "detail": "O X3D reduz o clock acima de ~89 °C. Um bom cooler mantém o boost estável."
+      },
+      {
+        "title": "Driver de chipset AMD",
+        "detail": "Mantenha o driver de chipset AMD atualizado (site da AMD)."
+      }
+    ],
+    "bios": [
+      "EXPO ligado (6000 MT/s CL30 é o ponto ideal no AM5)",
+      "PBO + Curve Optimizer negativo (-10 a -25, teste estabilidade)",
+      "Resizable BAR e Above 4G ligados",
+      "BIOS com AGESA recente"
+    ],
+    "tweaks": [
+      "power-plan"
+    ],
+    "avoid": []
+  },
+  {
+    "id": "cpu-x3d-dual",
+    "name": "AMD Ryzen X3D (2 CCDs)",
+    "component": "CPU",
+    "match": {
+      "cpu": "\\b(7900X3D|7950X3D|9900X3D|9950X3D)\\b"
+    },
+    "recommendations": [
+      {
+        "title": "NÃO remova a Xbox Game Bar",
+        "detail": "O driver AMD 3D V-Cache Performance Optimizer usa a Game Bar para mandar o jogo ao CCD com cache."
+      },
+      {
+        "title": "Use o plano Equilibrado",
+        "detail": "O estacionamento de núcleos do plano Equilibrado é o que isola o CCD com cache. Planos de 'máximo desempenho' atrapalham."
+      },
+      {
+        "title": "Driver de chipset AMD",
+        "detail": "Instale o driver de chipset AMD completo (inclui o 3D V-Cache Optimizer)."
+      }
+    ],
+    "bios": [
+      "EXPO ligado",
+      "BIOS com AGESA recente",
+      "CPPC e CPPC Preferred Cores em Auto/Enabled",
+      "Resizable BAR ligado"
+    ],
+    "tweaks": [],
+    "avoid": [
+      "power-plan"
+    ]
+  },
+  {
+    "id": "cpu-zen4-zen5",
+    "name": "AMD Ryzen 7000/9000",
+    "component": "CPU",
+    "match": {
+      "cpu": "Ryzen \\d+ (7|9)\\d{3}(?!X3D)"
+    },
+    "recommendations": [
+      {
+        "title": "95 °C é normal",
+        "detail": "O Zen 4/5 sobe até 95 °C de propósito para manter o boost. Não é defeito."
+      },
+      {
+        "title": "Curve Optimizer",
+        "detail": "Um undervolt por Curve Optimizer dá mais clock com menos calor que overclock manual."
+      }
+    ],
+    "bios": [
+      "EXPO ligado (6000 MT/s é o ponto ideal no AM5)",
+      "PBO ligado + Curve Optimizer negativo (testar estabilidade)",
+      "Resizable BAR ligado",
+      "iGPU desligada na BIOS se não for usada"
+    ],
+    "tweaks": [
+      "power-plan",
+      "power-throttling-off"
+    ],
+    "avoid": []
+  },
+  {
+    "id": "cpu-zen3",
+    "name": "AMD Ryzen 5000",
+    "component": "CPU",
+    "match": {
+      "cpu": "Ryzen \\d+ 5\\d{3}(?!X3D)"
+    },
+    "recommendations": [
+      {
+        "title": "Infinity Fabric 1:1",
+        "detail": "Memória a 3600 MT/s com FCLK 1800 é o ponto ideal do Zen 3."
+      }
+    ],
+    "bios": [
+      "XMP/DOCP ligado (3600 MT/s ideal)",
+      "PBO ligado",
+      "Resizable BAR ligado"
+    ],
+    "tweaks": [
+      "power-plan"
+    ],
+    "avoid": []
+  },
+  {
+    "id": "cpu-intel-raptor",
+    "name": "Intel Core 13ª/14ª geração",
+    "component": "CPU",
+    "match": {
+      "cpu": "i[3579]-1[34]\\d{3}"
+    },
+    "recommendations": [
+      {
+        "title": "Atualize a BIOS AGORA",
+        "detail": "Processadores 13ª/14ª geração precisam do microcode 0x12B ou mais novo para evitar degradação e instabilidade."
+      },
+      {
+        "title": "Núcleos P e E",
+        "detail": "O Windows 11 já coloca o jogo nos núcleos P. Não desligue núcleos E sem testar."
+      }
+    ],
+    "bios": [
+      "BIOS com microcode 0x12B ou mais novo",
+      "Perfil 'Intel Default Settings' (limites de energia oficiais)",
+      "XMP ligado",
+      "Resizable BAR ligado"
+    ],
+    "tweaks": [
+      "power-plan"
+    ],
+    "avoid": []
+  },
+  {
+    "id": "cpu-intel-alder",
+    "name": "Intel Core 12ª geração",
+    "component": "CPU",
+    "match": {
+      "cpu": "i[3579]-12\\d{3}"
+    },
+    "recommendations": [
+      {
+        "title": "Núcleos P e E",
+        "detail": "Mantenha o Windows 11 atualizado: o Thread Director coloca o jogo nos núcleos P."
+      }
+    ],
+    "bios": [
+      "XMP ligado",
+      "Resizable BAR ligado"
+    ],
+    "tweaks": [
+      "power-plan"
+    ],
+    "avoid": []
+  },
+  {
+    "id": "cpu-intel-ultra",
+    "name": "Intel Core Ultra 200S",
+    "component": "CPU",
+    "match": {
+      "cpu": "Core\\(TM\\) Ultra [579] 2\\d{2}"
+    },
+    "recommendations": [
+      {
+        "title": "Intel APO",
+        "detail": "Instale o Intel Application Optimization (APO) pelo driver do chipset para jogos suportados."
+      },
+      {
+        "title": "BIOS e ME atualizados",
+        "detail": "Atualizações de BIOS de 2025 melhoraram bastante o desempenho em jogos desta linha."
+      }
+    ],
+    "bios": [
+      "BIOS e firmware ME atualizados",
+      "Perfil 'Intel Default Settings'",
+      "XMP ligado"
+    ],
+    "tweaks": [
+      "power-plan"
+    ],
+    "avoid": []
+  },
+  {
+    "id": "gpu-rtx40-50",
+    "name": "NVIDIA RTX 40/50",
+    "component": "GPU",
+    "match": {
+      "gpu": "RTX\\s?(40|50)\\d{2}"
+    },
+    "recommendations": [
+      {
+        "title": "Reflex sempre ligado",
+        "detail": "Em jogos competitivos use NVIDIA Reflex 'Ligado + Boost'. Reduz mais latência que qualquer ajuste do Windows."
+      },
+      {
+        "title": "Frame Generation não é para competitivo",
+        "detail": "DLSS Frame Generation aumenta o FPS mas também a latência. Use só em jogos single-player."
+      },
+      {
+        "title": "Streaming: NVENC AV1",
+        "detail": "Para gravar/transmitir use NVENC AV1 (ou H.264 na Twitch) com preset P5/P6."
+      }
+    ],
+    "bios": [
+      "Resizable BAR ligado",
+      "Cabo de força 12VHPWR/12V-2x6 bem encaixado"
+    ],
+    "tweaks": [
+      "hags-on",
+      "nvidia-power-max",
+      "nvidia-texture-performance"
+    ],
+    "avoid": []
+  },
+  {
+    "id": "gpu-rtx20-30",
+    "name": "NVIDIA RTX 20/30",
+    "component": "GPU",
+    "match": {
+      "gpu": "RTX\\s?(20|30)\\d{2}"
+    },
+    "recommendations": [
+      {
+        "title": "Reflex sempre ligado",
+        "detail": "Use NVIDIA Reflex nos jogos que suportam."
+      },
+      {
+        "title": "DLSS Super Resolution",
+        "detail": "DLSS em Qualidade/Equilibrado dá FPS com pouca perda visual."
+      }
+    ],
+    "bios": [
+      "Resizable BAR ligado (RTX 30)"
+    ],
+    "tweaks": [
+      "hags-on",
+      "nvidia-power-max",
+      "nvidia-texture-performance"
+    ],
+    "avoid": []
+  },
+  {
+    "id": "gpu-gtx",
+    "name": "NVIDIA GTX",
+    "component": "GPU",
+    "match": {
+      "gpu": "GTX\\s?\\d{3,4}"
+    },
+    "recommendations": [
+      {
+        "title": "VRAM limitada",
+        "detail": "Abaixe texturas antes de resolução; estourar a VRAM causa travadas."
+      }
+    ],
+    "bios": [],
+    "tweaks": [
+      "nvidia-power-max",
+      "nvidia-texture-performance"
+    ],
+    "avoid": []
+  },
+  {
+    "id": "gpu-radeon",
+    "name": "AMD Radeon RX 5000–9000",
+    "component": "GPU",
+    "match": {
+      "gpu": "RX\\s?[5-9]\\d{3}"
+    },
+    "recommendations": [
+      {
+        "title": "Anti-Lag 2",
+        "detail": "Use AMD Anti-Lag 2 nos jogos suportados (CS2, Ghost of Tsushima, etc.)."
+      },
+      {
+        "title": "HYPR-RX desligado no competitivo",
+        "detail": "HYPR-RX liga recursos que podem adicionar latência; prefira configurar manualmente."
+      },
+      {
+        "title": "Streaming: AMF AV1/HEVC",
+        "detail": "Nas RX 7000/9000 use o codificador AMF AV1 no OBS."
+      }
+    ],
+    "bios": [
+      "Smart Access Memory (Resizable BAR) ligado"
+    ],
+    "tweaks": [
+      "hags-on"
+    ],
+    "avoid": []
+  },
+  {
+    "id": "gpu-intel-arc",
+    "name": "Intel Arc",
+    "component": "GPU",
+    "match": {
+      "gpu": "Arc\\(TM\\)\\s?[AB]\\d{3}|Arc\\s[AB]\\d{3}"
+    },
+    "recommendations": [
+      {
+        "title": "Resizable BAR é obrigatório",
+        "detail": "Sem ReBAR as placas Arc perdem até 40% de desempenho."
+      }
+    ],
+    "bios": [
+      "Resizable BAR e Above 4G ligados",
+      "CSM desligado"
+    ],
+    "tweaks": [
+      "hags-on"
+    ],
+    "avoid": []
+  },
+  {
+    "id": "ram-ddr5",
+    "name": "Memória DDR5",
+    "component": "RAM",
+    "match": {
+      "memory": "ddr5"
+    },
+    "recommendations": [
+      {
+        "title": "Dois pentes",
+        "detail": "Use 2 pentes (2x16 GB ou 2x32 GB). Quatro pentes DDR5 costumam forçar velocidades menores."
+      }
+    ],
+    "bios": [
+      "EXPO/XMP ligado",
+      "Memory Context Restore ligado (boot mais rápido no AM5)"
+    ],
+    "tweaks": [],
+    "avoid": []
+  },
+  {
+    "id": "ram-ddr4",
+    "name": "Memória DDR4",
+    "component": "RAM",
+    "match": {
+      "memory": "ddr4"
+    },
+    "recommendations": [
+      {
+        "title": "Dual channel",
+        "detail": "Use 2 ou 4 pentes iguais para dual channel."
+      }
+    ],
+    "bios": [
+      "XMP/DOCP ligado"
+    ],
+    "tweaks": [],
+    "avoid": []
+  },
+  {
+    "id": "ram-16gb",
+    "name": "16 GB de RAM ou menos",
+    "component": "RAM",
+    "match": {
+      "maxRamGb": 16
+    },
+    "recommendations": [
+      {
+        "title": "Feche o navegador antes de jogar",
+        "detail": "Com 16 GB, navegador + Discord + jogo moderno chegam perto do limite."
+      },
+      {
+        "title": "Arquivo de paginação no SSD",
+        "detail": "Mantenha o arquivo de paginação gerenciado pelo sistema no SSD mais rápido."
+      }
+    ],
+    "bios": [],
+    "tweaks": [],
+    "avoid": []
+  },
+  {
+    "id": "ram-32gb",
+    "name": "32 GB de RAM ou mais",
+    "component": "RAM",
+    "match": {
+      "minRamGb": 31
+    },
+    "recommendations": [
+      {
+        "title": "Memória de sobra",
+        "detail": "Com 32 GB você pode manter Discord e navegador abertos sem impacto no jogo."
+      }
+    ],
+    "bios": [],
+    "tweaks": [],
+    "avoid": []
+  },
+  {
+    "id": "laptop",
+    "name": "Notebook",
+    "component": "Sistema",
+    "match": {
+      "laptop": true
+    },
+    "recommendations": [
+      {
+        "title": "Jogue na tomada",
+        "detail": "Na bateria a CPU e a GPU ficam limitadas."
+      },
+      {
+        "title": "MUX switch / Modo dGPU",
+        "detail": "Se o notebook tiver MUX switch, ative o modo 'somente GPU dedicada' para jogar."
+      },
+      {
+        "title": "Modo do fabricante",
+        "detail": "Use o modo Turbo/Desempenho do app do fabricante e uma base com ventilação."
+      }
+    ],
+    "bios": [],
+    "tweaks": [],
+    "avoid": []
+  },
+  {
+    "id": "board-asus",
+    "name": "Placa-mãe ASUS",
+    "component": "Placa-mãe",
+    "match": {
+      "board": "ASUS"
+    },
+    "recommendations": [
+      {
+        "title": "Armoury Crate",
+        "detail": "O Armoury Crate instala vários serviços. Se só usa para RGB, prefira configurar na BIOS ou usar alternativas leves."
+      }
+    ],
+    "bios": [],
+    "tweaks": [],
+    "avoid": []
+  },
+  {
+    "id": "board-msi",
+    "name": "Placa-mãe MSI",
+    "component": "Placa-mãe",
+    "match": {
+      "board": "Micro-Star|MSI"
+    },
+    "recommendations": [
+      {
+        "title": "MSI Center",
+        "detail": "O MSI Center roda serviços em segundo plano. Instale só os módulos que usa."
+      }
+    ],
+    "bios": [],
+    "tweaks": [],
+    "avoid": []
+  },
+  {
+    "id": "board-gigabyte",
+    "name": "Placa-mãe Gigabyte",
+    "component": "Placa-mãe",
+    "match": {
+      "board": "Gigabyte"
+    },
+    "recommendations": [
+      {
+        "title": "Gigabyte Control Center",
+        "detail": "O GCC é pesado; desinstale se não precisar de RGB/ventoinhas por software."
+      }
+    ],
+    "bios": [],
+    "tweaks": [],
+    "avoid": []
+  }
+]

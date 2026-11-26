@@ -14,11 +14,24 @@ internal static class DiagnosticView
         Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) }
     };
 
-    public static DiagnosticReport Run(IHardwareProbe probe, IActionLog log, string? reportDirectory)
+    public static DiagnosticReport Run(AppServices app)
+    {
+        var report = Run(() =>
+        {
+            app.Refresh();
+            return app.Pc;
+        }, app.Log, Path.Combine(app.DataDirectory, "reports"));
+        if (app.Profiles.Count > 0)
+            AnsiConsole.MarkupLine($"[#C084FC]Perfis de hardware detectados:[/] {Markup.Escape(string.Join(", ", app.Profiles.Select(profile => profile.Name)))} " +
+                "[grey](veja o menu [[3]])[/]");
+        return report;
+    }
+
+    public static DiagnosticReport Run(Func<HardwareSnapshot> capture, IActionLog log, string? reportDirectory)
     {
         HardwareSnapshot pc = null!;
         AnsiConsole.Status().Spinner(Spinner.Known.Dots).SpinnerStyle(new Style(new Color(168, 85, 247)))
-            .Start("Analisando o PC...", _ => pc = probe.Capture());
+            .Start("Analisando o PC...", _ => pc = capture());
         var report = Diagnostics.Evaluate(pc, DateOnly.FromDateTime(DateTime.Now));
         log.Info($"Diagnóstico concluído: nota {report.Score}, {report.Findings.Count} ponto(s) de atenção.");
 

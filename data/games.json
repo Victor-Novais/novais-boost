@@ -1,0 +1,225 @@
+[
+  {
+    "id": "cs2",
+    "name": "Counter-Strike 2",
+    "executables": [
+      "cs2.exe"
+    ],
+    "antiCheat": "VAC",
+    "launchOptions": "-novid -fullscreen +fps_max 0",
+    "tips": [
+      "NVIDIA Reflex: Ligado + Boost",
+      "Modo de tela: Tela cheia",
+      "Multisampling: desligado ou 2x (MSAA alto pesa no 1% low)",
+      "Shader detail e partículas: baixo"
+    ],
+    "folders": [
+      "Counter-Strike Global Offensive"
+    ]
+  },
+  {
+    "id": "valorant",
+    "name": "VALORANT",
+    "executables": [
+      "VALORANT-Win64-Shipping.exe"
+    ],
+    "antiCheat": "Vanguard",
+    "launchOptions": null,
+    "tips": [
+      "NVIDIA Reflex: Ligado + Boost",
+      "Limite de FPS: desligado ou bem acima do Hz do monitor",
+      "Multithreaded rendering: ligado",
+      "Vanguard exige TPM 2.0 e Secure Boot: nunca desligue"
+    ],
+    "folders": [
+      "VALORANT",
+      "Riot Games"
+    ]
+  },
+  {
+    "id": "fortnite",
+    "name": "Fortnite",
+    "executables": [
+      "FortniteClient-Win64-Shipping.exe"
+    ],
+    "antiCheat": "Easy Anti-Cheat / BattlEye",
+    "launchOptions": null,
+    "tips": [
+      "Modo de renderização: Performance (mais FPS e menos input lag em competitivo)",
+      "NVIDIA Reflex: Ligado + Boost",
+      "Visualização 3D: 100% (ou Performance com resolução nativa)"
+    ],
+    "folders": [
+      "Fortnite"
+    ]
+  },
+  {
+    "id": "cod",
+    "name": "Call of Duty (BO6 / Warzone / MW3)",
+    "executables": [
+      "cod.exe",
+      "cod24-cod.exe",
+      "cod23-cod.exe",
+      "BlackOps6.exe"
+    ],
+    "antiCheat": "Ricochet",
+    "launchOptions": null,
+    "tips": [
+      "Pré-carregue os shaders antes de jogar (menu Gráficos)",
+      "NVIDIA Reflex: Ligado + Boost",
+      "Streaming de texturas sob demanda: desligado",
+      "Ricochet exige TPM 2.0 e Secure Boot"
+    ],
+    "folders": [
+      "Call of Duty"
+    ]
+  },
+  {
+    "id": "apex",
+    "name": "Apex Legends",
+    "executables": [
+      "r5apex.exe",
+      "r5apex_dx12.exe"
+    ],
+    "antiCheat": "Easy Anti-Cheat",
+    "launchOptions": "+fps_max 0 -dev",
+    "tips": [
+      "NVIDIA Reflex: Ligado + Boost",
+      "Use DX12 (r5apex_dx12) em GPUs modernas"
+    ],
+    "folders": [
+      "Apex Legends"
+    ]
+  },
+  {
+    "id": "r6",
+    "name": "Rainbow Six Siege",
+    "executables": [
+      "RainbowSix.exe",
+      "RainbowSix_BE.exe",
+      "RainbowSix_Vulkan.exe"
+    ],
+    "antiCheat": "BattlEye",
+    "launchOptions": null,
+    "tips": [
+      "Vulkan costuma ter 1% low melhor",
+      "NVIDIA Reflex: Ligado + Boost"
+    ],
+    "folders": [
+      "Tom Clancy's Rainbow Six Siege",
+      "Rainbow Six Siege"
+    ]
+  },
+  {
+    "id": "lol",
+    "name": "League of Legends",
+    "executables": [
+      "League of Legends.exe"
+    ],
+    "antiCheat": "Vanguard",
+    "launchOptions": null,
+    "tips": [
+      "Limite de FPS: sem limite",
+      "Vanguard exige TPM 2.0 e Secure Boot"
+    ],
+    "folders": [
+      "League of Legends"
+    ]
+  },
+  {
+    "id": "overwatch",
+    "name": "Overwatch 2",
+    "executables": [
+      "Overwatch.exe"
+    ],
+    "antiCheat": "Defense Matrix",
+    "launchOptions": null,
+    "tips": [
+      "NVIDIA Reflex: Ligado + Boost",
+      "Escala de renderização: 100%"
+    ],
+    "folders": [
+      "Overwatch"
+    ]
+  },
+  {
+    "id": "pubg",
+    "name": "PUBG: Battlegrounds",
+    "executables": [
+      "TslGame.exe"
+    ],
+    "antiCheat": "BattlEye",
+    "launchOptions": null,
+    "tips": [
+      "Anti-aliasing: muito baixo",
+      "Visibilidade de vegetação baixa"
+    ],
+    "folders": [
+      "PUBG"
+    ]
+  },
+  {
+    "id": "rocket-league",
+    "name": "Rocket League",
+    "executables": [
+      "RocketLeague.exe"
+    ],
+    "antiCheat": "Easy Anti-Cheat",
+    "launchOptions": null,
+    "tips": [
+      "Limite de FPS: sem limite (ou 2x o Hz)"
+    ],
+    "folders": [
+      "rocketleague",
+      "Rocket League"
+    ]
+  },
+  {
+    "id": "dota2",
+    "name": "Dota 2",
+    "executables": [
+      "dota2.exe"
+    ],
+    "antiCheat": "VAC",
+    "launchOptions": "-novid",
+    "tips": [
+      "Use Vulkan se tiver travadas no DX11"
+    ],
+    "folders": [
+      "dota 2 beta"
+    ]
+  },
+  {
+    "id": "marvel-rivals",
+    "name": "Marvel Rivals",
+    "executables": [
+      "Marvel-Win64-Shipping.exe"
+    ],
+    "antiCheat": "NetEase",
+    "launchOptions": null,
+    "tips": [
+      "NVIDIA Reflex: Ligado + Boost"
+    ],
+    "folders": [
+      "Marvel Rivals",
+      "MarvelRivals"
+    ]
+  },
+  {
+    "id": "obs",
+    "name": "OBS Studio",
+    "executables": [
+      "obs64.exe"
+    ],
+    "antiCheat": "nenhum",
+    "launchOptions": null,
+    "tips": [
+      "Codificador: NVENC AV1 (RTX 40/50), NVENC H.264 (RTX 20/30/GTX 16), AMF (Radeon) ou QuickSync (Intel Arc)",
+      "Preset P5/P6, Tuning: Alta qualidade, Multipass: um quarto da resolução",
+      "Twitch: até 6000-8000 kbps H.264; YouTube: AV1/HEVC aceita bitrate maior"
+    ],
+    "folders": [
+      "obs-studio"
+    ]
+  }
+]

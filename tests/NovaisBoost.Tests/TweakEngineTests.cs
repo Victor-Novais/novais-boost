@@ -289,6 +289,42 @@ public sealed class TweakEngineTests : IDisposable
     }
 
     [Fact]
+    public void NvidiaSettingReturnsToDriverDefaultOnRevert()
+    {
+        var tweak = Tweak("nvidia", new NvidiaSettingAction(0x1057EB71, "Power management mode", 1));
+        Assert.Equal("padrão do driver", Assert.Single(Engine.Detect(tweak)).Current);
+
+        Engine.Apply(tweak, dryRun: false);
+        Assert.Equal(1u, _windows.Nvidia[0x1057EB71]);
+        Assert.Empty(Engine.Detect(tweak));
+
+        Engine.RevertAll(dryRun: false);
+        Assert.False(_windows.Nvidia.ContainsKey(0x1057EB71));
+    }
+
+    [Fact]
+    public void DnsReturnsToAutomaticOnRevert()
+    {
+        var adapter = Guid.NewGuid();
+        var tweak = Tweak("dns", new DnsAction(adapter, "Ethernet", ["1.1.1.1", "1.0.0.1"]));
+
+        var change = Assert.Single(Engine.Apply(tweak, dryRun: false));
+        Assert.Equal("automático (DHCP)", change.Current);
+        Assert.Equal(["1.1.1.1", "1.0.0.1"], _windows.Dns[adapter]);
+
+        Engine.RevertAll(dryRun: false);
+        Assert.Empty(_windows.Dns[adapter]);
+    }
+
+    [Fact]
+    public void ActiveBackupListsAppliedTweakIds()
+    {
+        Engine.Apply(Tweak("first", RegistrySet("First")), dryRun: false);
+        Engine.Apply(Tweak("second", RegistrySet("Second")), dryRun: false);
+        Assert.Equal(["first", "second"], Snapshots.GetActive()!.TweakIds);
+    }
+
+    [Fact]
     public void AcceptedValueIsLeftUntouched()
     {
         var action = RegistrySet("Telemetry") with
@@ -393,7 +429,7 @@ public sealed class TweakEngineTests : IDisposable
     private SnapshotManager CreateSnapshots(string owner) => new(_directory, owner, _points, _log);
 
     private TweakEngine CreateEngine(string owner) =>
-        new(_windows, _windows, _windows, CreateSnapshots(owner), _log, _windows, _windows, _compatibility);
+        new(_windows, _windows, _windows, CreateSnapshots(owner), _log, _windows, _windows, _compatibility, _windows, _windows);
 
     private Func<TweakCompatibility, string?>? _compatibility;
 
@@ -411,8 +447,31 @@ public sealed class TweakEngineTests : IDisposable
             Directory.Delete(_directory, recursive: true);
     }
 
-    private sealed class FakeWindows : IRegistry, IServiceController, IPowerConfig, IScheduledTasks, IPowerPlans
+    private sealed class FakeWindows : IRegistry, IServiceController, IPowerConfig, IScheduledTasks, IPowerPlans, INvidiaSettings, IDnsSettings
     {
+        public Dictionary<uint, uint> Nvidia { get; } = [];
+        public Dictionary<Guid, string[]> Dns { get; } = [];
+
+        public NvidiaSettingState Read(uint settingId) =>
+            Nvidia.TryGetValue(settingId, out var value) ? new NvidiaSettingState(true, value) : new NvidiaSettingState(false, 0);
+
+        public void Write(uint settingId, NvidiaSettingState state)
+        {
+            OnWrite();
+            if (state.Defined)
+                Nvidia[settingId] = state.Value;
+            else
+                Nvidia.Remove(settingId);
+        }
+
+        public DnsState Read(DnsAction action) => new(Dns.GetValueOrDefault(action.InterfaceId, []));
+
+        public void Write(DnsAction action, DnsState state)
+        {
+            OnWrite();
+            Dns[action.InterfaceId] = state.Servers;
+        }
+
         public Dictionary<string, bool> Tasks { get; } = [];
         public Dictionary<Guid, PowerSettingValue[]> Plans { get; } = [];
         public int MissingSegments { get; set; }

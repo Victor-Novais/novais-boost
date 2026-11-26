@@ -1,0 +1,322 @@
+[
+  {
+    "names": [
+      "Discord",
+      "Discord PTB",
+      "Discord Canary"
+    ],
+    "label": "Discord",
+    "category": "communication",
+    "description": "Voz e chat. Nunca é rebaixado durante o jogo.",
+    "lowerDuringGame": false
+  },
+  {
+    "names": [
+      "TeamSpeak",
+      "ts3client_win64"
+    ],
+    "label": "TeamSpeak",
+    "category": "communication",
+    "description": "Voz.",
+    "lowerDuringGame": false
+  },
+  {
+    "names": [
+      "obs64",
+      "obs32",
+      "Streamlabs OBS",
+      "Streamlabs Desktop"
+    ],
+    "label": "OBS / Streamlabs",
+    "category": "streaming",
+    "description": "Transmissão e gravação. Ganha prioridade acima do normal durante o jogo.",
+    "lowerDuringGame": false
+  },
+  {
+    "names": [
+      "NVIDIA Overlay",
+      "nvcontainer",
+      "NVIDIA app"
+    ],
+    "label": "Overlay NVIDIA",
+    "category": "overlay",
+    "description": "Overlay, Reflex e gravação da NVIDIA.",
+    "lowerDuringGame": false
+  },
+  {
+    "names": [
+      "GameBar",
+      "GameBarFTServer",
+      "XboxGameBarWidgets"
+    ],
+    "label": "Xbox Game Bar",
+    "category": "overlay",
+    "description": "Necessária para Ryzen X3D de 2 CCDs.",
+    "lowerDuringGame": false
+  },
+  {
+    "names": [
+      "steam",
+      "steamwebhelper"
+    ],
+    "label": "Steam",
+    "category": "launcher",
+    "description": "Launcher. Fica em segundo plano durante o jogo.",
+    "lowerDuringGame": true
+  },
+  {
+    "names": [
+      "EpicGamesLauncher",
+      "EpicWebHelper"
+    ],
+    "label": "Epic Games Launcher",
+    "category": "launcher",
+    "description": "Launcher.",
+    "lowerDuringGame": true
+  },
+  {
+    "names": [
+      "Battle.net",
+      "Agent"
+    ],
+    "label": "Battle.net",
+    "category": "launcher",
+    "description": "Launcher.",
+    "lowerDuringGame": true
+  },
+  {
+    "names": [
+      "RiotClientServices",
+      "RiotClientUx",
+      "RiotClientUxRender"
+    ],
+    "label": "Riot Client",
+    "category": "launcher",
+    "description": "Launcher da Riot (o Vanguard não é tocado).",
+    "lowerDuringGame": true
+  },
+  {
+    "names": [
+      "EADesktop",
+      "EABackgroundService"
+    ],
+    "label": "EA App",
+    "category": "launcher",
+    "description": "Launcher.",
+    "lowerDuringGame": true
+  },
+  {
+    "names": [
+      "UbisoftConnect",
+      "upc"
+    ],
+    "label": "Ubisoft Connect",
+    "category": "launcher",
+    "description": "Launcher.",
+    "lowerDuringGame": true
+  },
+  {
+    "names": [
+      "msedge",
+      "chrome",
+      "firefox",
+      "opera",
+      "brave"
+    ],
+    "label": "Navegador",
+    "category": "optional",
+    "description": "Navegador em segundo plano consome CPU e RAM.",
+    "lowerDuringGame": true
+  },
+  {
+    "names": [
+      "Spotify"
+    ],
+    "label": "Spotify",
+    "category": "optional",
+    "description": "Música.",
+    "lowerDuringGame": true
+  },
+  {
+    "names": [
+      "OneDrive"
+    ],
+    "label": "OneDrive",
+    "category": "optional",
+    "description": "Sincronização pode usar disco e rede durante o jogo.",
+    "lowerDuringGame": true
+  },
+  {
+    "names": [
+      "Dropbox",
+      "GoogleDriveFS"
+    ],
+    "label": "Sincronização de nuvem",
+    "category": "optional",
+    "description": "Sincronização usa disco e rede.",
+    "lowerDuringGame": true
+  },
+  {
+    "names": [
+      "Teams",
+      "ms-teams"
+    ],
+    "label": "Microsoft Teams",
+    "category": "bloat",
+    "description": "Usa muita RAM em segundo plano.",
+    "lowerDuringGame": true
+  },
+  {
+    "names": [
+      "Widgets",
+      "WidgetService"
+    ],
+    "label": "Widgets do Windows",
+    "category": "bloat",
+    "description": "Notícias e clima em segundo plano.",
+    "lowerDuringGame": true
+  },
+  {
+    "names": [
+      "Copilot"
+    ],
+    "label": "Copilot",
+    "category": "bloat",
+    "description": "Assistente em segundo plano.",
+    "lowerDuringGame": true
+  },
+  {
+    "names": [
+      "PhoneExperienceHost",
+      "YourPhone"
+    ],
+    "label": "Link to Phone",
+    "category": "bloat",
+    "description": "Sincronização com o celular.",
+    "lowerDuringGame": true
+  },
+  {
+    "names": [
+      "ArmouryCrate",
+      "ArmouryCrateService",
+      "ArmourySocketServer",
+      "AsusCertService"
+    ],
+    "label": "ASUS Armoury Crate",
+    "category": "bloat",
+    "description": "Software da placa-mãe ASUS.",
+    "lowerDuringGame": true
+  },
+  {
+    "names": [
+      "MSI.CentralServer",
+      "MSI_Central_Service",
+      "MSI Center"
+    ],
+    "label": "MSI Center",
+    "category": "bloat",
+    "description": "Software da placa-mãe MSI.",
+    "lowerDuringGame": true
+  },
+  {
+    "names": [
+      "GCC",
+      "GigabyteUpdateService"
+    ],
+    "label": "Gigabyte Control Center",
+    "category": "bloat",
+    "description": "Software da placa-mãe Gigabyte.",
+    "lowerDuringGame": true
+  },
+  {
+    "names": [
+      "iCUE",
+      "Corsair.Service"
+    ],
+    "label": "Corsair iCUE",
+    "category": "optional",
+    "description": "RGB e periféricos Corsair.",
+    "lowerDuringGame": true
+  },
+  {
+    "names": [
+      "RazerCentralService",
+      "Razer Synapse Service",
+      "Razer Synapse 3"
+    ],
+    "label": "Razer Synapse",
+    "category": "optional",
+    "description": "Periféricos Razer.",
+    "lowerDuringGame": true
+  },
+  {
+    "names": [
+      "lghub",
+      "lghub_agent",
+      "lghub_updater"
+    ],
+    "label": "Logitech G HUB",
+    "category": "optional",
+    "description": "Periféricos Logitech.",
+    "lowerDuringGame": true
+  },
+  {
+    "names": [
+      "AdobeUpdateService",
+      "AdobeARM",
+      "CCXProcess",
+      "Creative Cloud"
+    ],
+    "label": "Adobe",
+    "category": "bloat",
+    "description": "Atualizadores da Adobe.",
+    "lowerDuringGame": true
+  },
+  {
+    "names": [
+      "GoogleUpdate",
+      "GoogleCrashHandler",
+      "GoogleCrashHandler64"
+    ],
+    "label": "Atualizador Google",
+    "category": "bloat",
+    "description": "Atualizador em segundo plano.",
+    "lowerDuringGame": true
+  },
+  {
+    "names": [
+      "vmmem",
+      "vmmemWSL",
+      "Docker Desktop",
+      "com.docker.backend"
+    ],
+    "label": "WSL / Docker",
+    "category": "virtualMachine",
+    "description": "Máquina virtual que reserva muita RAM. Feche o Docker antes de jogar.",
+    "lowerDuringGame": true
+  },
+  {
+    "names": [
+      "vgc",
+      "vgtray"
+    ],
+    "label": "Riot Vanguard",
+    "category": "essential",
+    "description": "Anti-cheat. Nunca é tocado.",
+    "lowerDuringGame": false
+  },
+  {
+    "names": [
+      "EasyAntiCheat",
+      "EasyAntiCheat_EOS",
+      "BEService",
+      "BEService_x64",
+      "FACEIT",
+      "faceitservice"
+    ],
+    "label": "Anti-cheat",
+    "category": "essential",
+    "description": "Anti-cheat. Nunca é tocado.",
+    "lowerDuringGame": false
+  }
+]

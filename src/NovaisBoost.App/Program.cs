@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Reflection;
 using System.Security.Principal;
 using System.Text;
 using NovaisBoost.Core;
@@ -9,10 +10,27 @@ namespace NovaisBoost.App;
 
 internal static class Program
 {
+    public static string Version { get; } =
+        typeof(Program).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion.Split('+')[0] ?? "dev";
+
     public static int Main(string[] args)
     {
         Console.OutputEncoding = new UTF8Encoding(false);
-        ConsoleUi.DrawBanner();
+        bool Has(string flag) => args.Contains(flag, StringComparer.OrdinalIgnoreCase);
+
+        if (Has("--versao") || Has("--version"))
+        {
+            Console.WriteLine($"NOVAIS boost {Version}");
+            return 0;
+        }
+        var background = Has("--guardian") || Has("--tarefa");
+        if (!background)
+            ConsoleUi.DrawBanner();
+        if (Has("--ajuda") || Has("--help") || Has("/?"))
+        {
+            Help();
+            return 0;
+        }
         if (!OperatingSystem.IsWindowsVersionAtLeast(10, 0, 22000))
         {
             AnsiConsole.MarkupLine("[red]O NOVAIS boost requer Windows 11.[/]");
@@ -24,47 +42,46 @@ internal static class Program
         {
             using var identity = WindowsIdentity.GetCurrent();
             var isAdmin = new WindowsPrincipal(identity).IsInRole(WindowsBuiltInRole.Administrator);
+            var owner = identity.User?.Value ?? throw new InvalidOperationException("Não foi possível identificar a conta do Windows.");
 
-            // Read-only diagnosis; works without elevation (no log or report file in that case).
-            if (args.Contains("--diagnostico", StringComparer.OrdinalIgnoreCase))
+            // Read-only modes: work without elevation; nothing is written.
+            if (Has("--diagnostico"))
             {
                 var directory = isAdmin ? AppStorage.Open() : null;
                 log = directory is null ? new NullLog() : new DailyLog(directory);
-                DiagnosticView.Run(new WindowsHardwareProbe(log), log, directory is null ? null : Path.Combine(directory, "reports"));
+                var probe = new WindowsHardwareProbe(log);
+                DiagnosticView.Run(probe.Capture, log, directory is null ? null : Path.Combine(directory, "reports"));
                 return 0;
             }
-
-            // Read-only preview of the universal optimization; never writes (dry-run only).
-            if (args.Contains("--simular", StringComparer.OrdinalIgnoreCase))
+            if (Has("--simular"))
             {
                 log = new NullLog();
-                var previewProbe = new WindowsHardwareProbe(log);
-                HardwareSnapshot? previewPc = null;
-                var previewSnapshots = new SnapshotManager(Path.Combine(Path.GetTempPath(), "NOVAIS boost preview"), identity.User?.Value ?? "preview",
-                    new WindowsRestorePoints(), log);
-                var previewEngine = new TweakEngine(new WindowsRegistry(), new WindowsServiceController(), new WindowsPowerConfig(), previewSnapshots, log,
-                    new WindowsScheduledTasks(log), new WindowsPowerPlans(), compat => Compatibility.Check(compat, previewPc ??= previewProbe.Capture()));
-                new ConsoleUi(previewEngine, previewSnapshots, TweakCatalog.LoadEmbedded(), log, () => { }).Preview(TweakLevel.Competitive);
+                var preview = AppServices.Create(Path.Combine(Path.GetTempPath(), "NOVAIS boost preview"), log, owner);
+                new ConsoleUi(preview).Preview(Has("--extremo") ? TweakLevel.Extreme : TweakLevel.Competitive);
                 return 0;
             }
 
             if (!isAdmin)
-                return RequestElevation();
+                return background ? 1 : RequestElevation(args);
 
             var dataDirectory = AppStorage.Open();
             log = new DailyLog(dataDirectory);
-            log.Info("NOVAIS boost iniciado.");
-            var owner = identity.User?.Value ?? throw new InvalidOperationException("Não foi possível identificar a conta do Windows.");
-            var snapshots = new SnapshotManager(dataDirectory, owner, new WindowsRestorePoints(), log);
-            var probe = new WindowsHardwareProbe(log);
-            HardwareSnapshot? pc = null;
-            var engine = new TweakEngine(new WindowsRegistry(), new WindowsServiceController(), new WindowsPowerConfig(), snapshots, log,
-                new WindowsScheduledTasks(log), new WindowsPowerPlans(),
-                compat => Compatibility.Check(compat, pc ??= probe.Capture()));
+            var app = AppServices.Create(dataDirectory, log, owner);
+
+            if (Has("--guardian"))
+            {
+                using var stop = new CancellationTokenSource();
+                Console.CancelKeyPress += (_, eventArgs) => { eventArgs.Cancel = true; stop.Cancel(); };
+                new GuardianService(app.GuardianPolicy(), log, echo: !Console.IsOutputRedirected).Run(stop.Token);
+                return 0;
+            }
+            var task = Array.FindIndex(args, arg => string.Equals(arg, "--tarefa", StringComparison.OrdinalIgnoreCase));
+            if (task >= 0)
+                return task + 1 < args.Length ? MaintenanceTasks.Run(args[task + 1], app) : 1;
+
+            log.Info($"NOVAIS boost {Version} iniciado.");
             HardwareCard.Draw(log);
-            var reports = Path.Combine(dataDirectory, "reports");
-            new ConsoleUi(engine, snapshots, TweakCatalog.LoadEmbedded(), log,
-                () => DiagnosticView.Run(probe, log, reports)).Run();
+            new ConsoleUi(app).Run();
             log.Info("NOVAIS boost encerrado.");
             return 0;
         }
@@ -83,16 +100,33 @@ internal static class Program
         }
     }
 
-    private static int RequestElevation()
+    private static void Help()
+    {
+        var table = new Table().Border(TableBorder.Rounded).AddColumn("Comando").AddColumn("O que faz");
+        table.AddRow("(sem argumentos)", "Abre o menu (pede administrador).");
+        table.AddRow("--diagnostico", "Diagnóstico completo, somente leitura, sem administrador.");
+        table.AddRow("--simular [[--extremo]]", "Mostra o que a otimização mudaria neste PC, sem alterar nada.");
+        table.AddRow("--guardian", "Roda o Process Guardian (usado pela tarefa de logon).");
+        table.AddRow("--tarefa <id>", "Executa uma tarefa agendada: reaplicar, limpeza, ssd, saude.");
+        table.AddRow("--versao", "Mostra a versão.");
+        AnsiConsole.Write(table);
+    }
+
+    private static int RequestElevation(string[] args)
     {
         AnsiConsole.MarkupLine("[yellow]O NOVAIS boost precisa ser executado como administrador.[/]");
         if (Console.IsInputRedirected || !ConsoleUi.Confirm("Reabrir como administrador?"))
             return 1;
 
-        var executable = Environment.ProcessPath ?? throw new InvalidOperationException("Não foi possível localizar o executável.");
-        var info = new ProcessStartInfo(executable) { UseShellExecute = true, Verb = "runas" };
-        if (string.Equals(Path.GetFileNameWithoutExtension(executable), "dotnet", StringComparison.OrdinalIgnoreCase))
-            info.ArgumentList.Add(Path.GetFullPath(Environment.GetCommandLineArgs()[0]));
+        var (command, arguments) = Launcher.Command(string.Join(' ', args.Select(arg => $"\"{arg}\"")), hidden: false);
+        var info = new ProcessStartInfo(command.Trim('"')) { UseShellExecute = true, Verb = "runas", Arguments = arguments };
+        if (command.Contains("\" \"", StringComparison.Ordinal))
+        {
+            // dotnet "app.dll": split the host from the dll argument.
+            var parts = command.Split("\" \"", 2);
+            info.FileName = parts[0].Trim('"');
+            info.Arguments = $"\"{parts[1].Trim('"')}\" {arguments}";
+        }
 
         try
         {

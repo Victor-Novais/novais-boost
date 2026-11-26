@@ -22,6 +22,8 @@ public sealed record TweakDefinition(
 [JsonDerivedType(typeof(PowerAction), "powercfg")]
 [JsonDerivedType(typeof(ScheduledTaskAction), "scheduledTask")]
 [JsonDerivedType(typeof(PowerPlanAction), "powerPlan")]
+[JsonDerivedType(typeof(NvidiaSettingAction), "nvidiaSetting")]
+[JsonDerivedType(typeof(DnsAction), "dns")]
 public abstract record TweakAction
 {
     internal abstract string Target { get; }
@@ -54,6 +56,20 @@ public sealed record ScheduledTaskAction(string Path, TaskSetting Expected) : Tw
 }
 
 public sealed record PowerSettingValue(Guid Subgroup, Guid Setting, uint Ac, uint Dc);
+
+/// <summary>A DWORD setting in the NVIDIA driver's global (base) profile.</summary>
+public sealed record NvidiaSettingAction(uint SettingId, string Name, uint Expected) : TweakAction
+{
+    internal override string Target => $"NVIDIA: {Name}";
+    internal override string Identity => $"nvidia:{SettingId:X8}";
+}
+
+/// <summary>IPv4 DNS servers of one network adapter. An empty list means "automatic (DHCP)".</summary>
+public sealed record DnsAction(Guid InterfaceId, string Alias, string[] Servers) : TweakAction
+{
+    internal override string Target => $"DNS de {Alias}";
+    internal override string Identity => $"dns:{InterfaceId:D}";
+}
 
 /// <summary>A power plan owned by NOVAIS boost: created from a template on apply, deleted on revert.</summary>
 public sealed record PowerPlanAction(Guid Id, string Name, Guid Template, PowerSettingValue[] Settings) : TweakAction

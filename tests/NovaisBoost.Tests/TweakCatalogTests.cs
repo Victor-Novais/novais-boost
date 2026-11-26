@@ -23,10 +23,12 @@ public sealed class TweakCatalogTests
     public void EmbeddedCatalogLoadsBothUniversalLevels()
     {
         var tweaks = TweakCatalog.LoadEmbedded();
-        Assert.Equal(27, tweaks.Count);
+        Assert.Equal(33, tweaks.Count);
         Assert.Equal(19, tweaks.Count(tweak => tweak.Level == TweakLevel.Safe));
-        Assert.Equal(8, tweaks.Count(tweak => tweak.Level == TweakLevel.Competitive));
-        Assert.DoesNotContain(tweaks, tweak => tweak.Level == TweakLevel.Extreme);
+        Assert.Equal(11, tweaks.Count(tweak => tweak.Level == TweakLevel.Competitive));
+        Assert.Equal(3, tweaks.Count(tweak => tweak.Level == TweakLevel.Extreme));
+        Assert.All(tweaks.Where(tweak => tweak.Actions.Any(action => action is NvidiaSettingAction)),
+            tweak => Assert.Contains("gpu-nvidia", tweak.Compat.Hardware));
         Assert.Contains(tweaks, tweak => tweak.Actions.OfType<PowerPlanAction>().Any());
         Assert.Contains(tweaks, tweak => tweak.Actions.OfType<ScheduledTaskAction>().Any());
     }
@@ -41,6 +43,7 @@ public sealed class TweakCatalogTests
                 ServiceAction service => "service|" + service.Name.ToLowerInvariant(),
                 ScheduledTaskAction task => "task|" + task.Path.ToLowerInvariant(),
                 PowerPlanAction plan => "plan|" + plan.Id,
+                NvidiaSettingAction nvidia => "nvidia|" + nvidia.SettingId,
                 _ => throw new InvalidOperationException()
             })))
             .GroupBy(item => item.Key).Where(group => group.Count() > 1).Select(group => group.Key);
