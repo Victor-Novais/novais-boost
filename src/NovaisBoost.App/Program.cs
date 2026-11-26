@@ -34,6 +34,20 @@ internal static class Program
                 return 0;
             }
 
+            // Read-only preview of the universal optimization; never writes (dry-run only).
+            if (args.Contains("--simular", StringComparer.OrdinalIgnoreCase))
+            {
+                log = new NullLog();
+                var previewProbe = new WindowsHardwareProbe(log);
+                HardwareSnapshot? previewPc = null;
+                var previewSnapshots = new SnapshotManager(Path.Combine(Path.GetTempPath(), "NOVAIS boost preview"), identity.User?.Value ?? "preview",
+                    new WindowsRestorePoints(), log);
+                var previewEngine = new TweakEngine(new WindowsRegistry(), new WindowsServiceController(), new WindowsPowerConfig(), previewSnapshots, log,
+                    new WindowsScheduledTasks(log), new WindowsPowerPlans(), compat => Compatibility.Check(compat, previewPc ??= previewProbe.Capture()));
+                new ConsoleUi(previewEngine, previewSnapshots, TweakCatalog.LoadEmbedded(), log, () => { }).Preview(TweakLevel.Competitive);
+                return 0;
+            }
+
             if (!isAdmin)
                 return RequestElevation();
 
@@ -42,9 +56,12 @@ internal static class Program
             log.Info("NOVAIS boost iniciado.");
             var owner = identity.User?.Value ?? throw new InvalidOperationException("Não foi possível identificar a conta do Windows.");
             var snapshots = new SnapshotManager(dataDirectory, owner, new WindowsRestorePoints(), log);
-            var engine = new TweakEngine(new WindowsRegistry(), new WindowsServiceController(), new WindowsPowerConfig(), snapshots, log);
-            HardwareCard.Draw(log);
             var probe = new WindowsHardwareProbe(log);
+            HardwareSnapshot? pc = null;
+            var engine = new TweakEngine(new WindowsRegistry(), new WindowsServiceController(), new WindowsPowerConfig(), snapshots, log,
+                new WindowsScheduledTasks(log), new WindowsPowerPlans(),
+                compat => Compatibility.Check(compat, pc ??= probe.Capture()));
+            HardwareCard.Draw(log);
             var reports = Path.Combine(dataDirectory, "reports");
             new ConsoleUi(engine, snapshots, TweakCatalog.LoadEmbedded(), log,
                 () => DiagnosticView.Run(probe, log, reports)).Run();

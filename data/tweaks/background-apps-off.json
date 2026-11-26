@@ -1,0 +1,26 @@
+{
+  "id": "background-apps-off",
+  "name": "Bloquear apps da Store em segundo plano",
+  "description": "Impede apps da Microsoft Store de rodar em segundo plano.",
+  "category": "Sistema",
+  "level": "competitive",
+  "risk": "Médio. Apps da Store (como Phone Link) param de notificar com a janela fechada.",
+  "requiresReboot": false,
+  "compat": {
+    "hardware": [],
+    "antiCheat": []
+  },
+  "actions": [
+    {
+      "type": "registry",
+      "hive": "localMachine",
+      "path": "SOFTWARE\\Policies\\Microsoft\\Windows\\AppPrivacy",
+      "valueName": "LetAppsRunInBackground",
+      "operation": "set",
+      "expected": {
+        "kind": "dword",
+        "value": 2
+      }
+    }
+  ]
+}

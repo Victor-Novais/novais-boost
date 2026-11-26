@@ -1,0 +1,35 @@
+{
+  "id": "unused-services",
+  "name": "Desligar serviços sem uso",
+  "description": "Desativa Fax, Mapas offline, Modo de demonstração de loja e Registro remoto. Serviços que não existem neste PC são ignorados.",
+  "category": "Serviços",
+  "level": "competitive",
+  "risk": "Baixo. Fax e mapas offline deixam de funcionar.",
+  "requiresReboot": true,
+  "compat": {
+    "hardware": [],
+    "antiCheat": []
+  },
+  "actions": [
+    {
+      "type": "service",
+      "name": "Fax",
+      "expected": "disabled"
+    },
+    {
+      "type": "service",
+      "name": "MapsBroker",
+      "expected": "disabled"
+    },
+    {
+      "type": "service",
+      "name": "RetailDemo",
+      "expected": "disabled"
+    },
+    {
+      "type": "service",
+      "name": "RemoteRegistry",
+      "expected": "disabled"
+    }
+  ]
+}

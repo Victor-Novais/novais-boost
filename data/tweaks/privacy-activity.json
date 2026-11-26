@@ -1,0 +1,37 @@
+{
+  "id": "privacy-activity",
+  "name": "Desligar o histórico de atividades",
+  "description": "Para de registrar e enviar o histórico de apps e arquivos usados.",
+  "category": "Privacidade",
+  "level": "safe",
+  "risk": "Nenhum.",
+  "requiresReboot": false,
+  "compat": {
+    "hardware": [],
+    "antiCheat": []
+  },
+  "actions": [
+    {
+      "type": "registry",
+      "hive": "localMachine",
+      "path": "SOFTWARE\\Policies\\Microsoft\\Windows\\System",
+      "valueName": "PublishUserActivities",
+      "operation": "set",
+      "expected": {
+        "kind": "dword",
+        "value": 0
+      }
+    },
+    {
+      "type": "registry",
+      "hive": "localMachine",
+      "path": "SOFTWARE\\Policies\\Microsoft\\Windows\\System",
+      "valueName": "UploadUserActivities",
+      "operation": "set",
+      "expected": {
+        "kind": "dword",
+        "value": 0
+      }
+    }
+  ]
+}

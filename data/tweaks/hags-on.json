@@ -1,0 +1,28 @@
+{
+  "id": "hags-on",
+  "name": "Ligar o agendamento de GPU por hardware (HAGS)",
+  "description": "A GPU gerencia a própria memória de vídeo. Necessário para Frame Generation (DLSS 3/4, FSR 3) e reduz a carga da CPU.",
+  "category": "GPU",
+  "level": "safe",
+  "risk": "Baixo. Reinicie o PC para ativar.",
+  "requiresReboot": true,
+  "compat": {
+    "hardware": [
+      "gpu-hags"
+    ],
+    "antiCheat": []
+  },
+  "actions": [
+    {
+      "type": "registry",
+      "hive": "localMachine",
+      "path": "SYSTEM\\CurrentControlSet\\Control\\GraphicsDrivers",
+      "valueName": "HwSchMode",
+      "operation": "set",
+      "expected": {
+        "kind": "dword",
+        "value": 2
+      }
+    }
+  ]
+}

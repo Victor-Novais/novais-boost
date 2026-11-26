@@ -1,0 +1,37 @@
+{
+  "id": "game-mode",
+  "name": "Ligar o Modo de Jogo",
+  "description": "Dá prioridade de CPU/GPU ao jogo em primeiro plano e segura o Windows Update durante a partida.",
+  "category": "Jogos",
+  "level": "safe",
+  "risk": "Nenhum. É um recurso padrão do Windows.",
+  "requiresReboot": false,
+  "compat": {
+    "hardware": [],
+    "antiCheat": []
+  },
+  "actions": [
+    {
+      "type": "registry",
+      "hive": "currentUser",
+      "path": "Software\\Microsoft\\GameBar",
+      "valueName": "AutoGameModeEnabled",
+      "operation": "set",
+      "expected": {
+        "kind": "dword",
+        "value": 1
+      }
+    },
+    {
+      "type": "registry",
+      "hive": "currentUser",
+      "path": "Software\\Microsoft\\GameBar",
+      "valueName": "AllowAutoGameMode",
+      "operation": "set",
+      "expected": {
+        "kind": "dword",
+        "value": 1
+      }
+    }
+  ]
+}

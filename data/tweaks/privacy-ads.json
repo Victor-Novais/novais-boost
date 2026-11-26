@@ -1,0 +1,37 @@
+{
+  "id": "privacy-ads",
+  "name": "Desligar ID de anúncios e experiências personalizadas",
+  "description": "Para de usar seus dados de diagnóstico para anúncios e dicas personalizadas.",
+  "category": "Privacidade",
+  "level": "safe",
+  "risk": "Nenhum.",
+  "requiresReboot": false,
+  "compat": {
+    "hardware": [],
+    "antiCheat": []
+  },
+  "actions": [
+    {
+      "type": "registry",
+      "hive": "currentUser",
+      "path": "Software\\Microsoft\\Windows\\CurrentVersion\\AdvertisingInfo",
+      "valueName": "Enabled",
+      "operation": "set",
+      "expected": {
+        "kind": "dword",
+        "value": 0
+      }
+    },
+    {
+      "type": "registry",
+      "hive": "currentUser",
+      "path": "Software\\Microsoft\\Windows\\CurrentVersion\\Privacy",
+      "valueName": "TailoredExperiencesWithDiagnosticDataEnabled",
+      "operation": "set",
+      "expected": {
+        "kind": "dword",
+        "value": 0
+      }
+    }
+  ]
+}

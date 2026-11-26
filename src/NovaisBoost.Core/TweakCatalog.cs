@@ -54,7 +54,11 @@ public static class TweakCatalog
             if (tweak.Actions.Select(action => action.Identity).Distinct(StringComparer.OrdinalIgnoreCase).Count() != tweak.Actions.Length)
                 throw new InvalidDataException("o mesmo alvo aparece mais de uma vez.");
             foreach (var action in tweak.Actions.OfType<RegistryAction>())
+            {
                 action.Expected?.Validate();
+                foreach (var accepted in action.Accept ?? [])
+                    accepted.Validate();
+            }
             return tweak;
         }
         catch (JsonException error)

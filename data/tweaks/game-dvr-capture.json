@@ -1,0 +1,37 @@
+{
+  "id": "game-dvr-capture",
+  "name": "Desligar a gravação do Game DVR",
+  "description": "Desliga a gravação de clipes do Windows (Win+Alt+R). A Xbox Game Bar continua instalada e funcionando.",
+  "category": "Jogos",
+  "level": "safe",
+  "risk": "Baixo. Clipes pelo Windows deixam de funcionar; use OBS ou o app da GPU.",
+  "requiresReboot": false,
+  "compat": {
+    "hardware": [],
+    "antiCheat": []
+  },
+  "actions": [
+    {
+      "type": "registry",
+      "hive": "currentUser",
+      "path": "System\\GameConfigStore",
+      "valueName": "GameDVR_Enabled",
+      "operation": "set",
+      "expected": {
+        "kind": "dword",
+        "value": 0
+      }
+    },
+    {
+      "type": "registry",
+      "hive": "currentUser",
+      "path": "Software\\Microsoft\\Windows\\CurrentVersion\\GameDVR",
+      "valueName": "AppCaptureEnabled",
+      "operation": "set",
+      "expected": {
+        "kind": "dword",
+        "value": 0
+      }
+    }
+  ]
+}

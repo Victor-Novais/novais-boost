@@ -126,7 +126,8 @@ public sealed class TweakEngineTests : IDisposable
     [Fact]
     public void EmbeddedExamplesRestoreACombinationOfMissingKeysMissingValuesAndExistingValues()
     {
-        var examples = TweakCatalog.LoadEmbedded();
+        string[] ids = ["game-dvr-background", "mouse-acceleration", "visual-transparency"];
+        var examples = TweakCatalog.LoadEmbedded().Where(tweak => ids.Contains(tweak.Id)).ToArray();
         var actions = examples.SelectMany(tweak => tweak.Actions).Cast<RegistryAction>().ToArray();
         var mouse = actions.Single(action => action.ValueName == "MouseSpeed");
         var capture = actions.First(action => action.ValueName == "HistoricalCaptureEnabled");
@@ -271,9 +272,130 @@ public sealed class TweakEngineTests : IDisposable
         Assert.Equal(0, _windows.Writes);
     }
 
+    [Fact]
+    public void ScheduledTaskRoundTripsAndMissingTasksAreSkipped()
+    {
+        _windows.Tasks[@"\Telemetry"] = true;
+        var tweak = Tweak("tasks", new ScheduledTaskAction(@"\Telemetry", TaskSetting.Disabled),
+            new ScheduledTaskAction(@"\DoesNotExist", TaskSetting.Disabled));
+
+        Assert.Single(Engine.Detect(tweak));
+        Engine.Apply(tweak, dryRun: false);
+        Assert.False(_windows.Tasks[@"\Telemetry"]);
+        Assert.False(_windows.Tasks.ContainsKey(@"\DoesNotExist"));
+        Engine.RevertAll(dryRun: false);
+
+        Assert.True(_windows.Tasks[@"\Telemetry"]);
+    }
+
+    [Fact]
+    public void AcceptedValueIsLeftUntouched()
+    {
+        var action = RegistrySet("Telemetry") with
+        {
+            Expected = RegistryValue.From(RegistryValueType.Dword, 1),
+            Accept = [RegistryValue.From(RegistryValueType.Dword, 0)]
+        };
+        _windows.Seed(action, RegistryValue.From(RegistryValueType.Dword, 0));
+        Assert.Empty(Engine.Detect(Tweak("accept", action)));
+
+        _windows.Seed(action, RegistryValue.From(RegistryValueType.Dword, 3));
+        Assert.Single(Engine.Detect(Tweak("accept", action)));
+    }
+
+    [Fact]
+    public void MissingServicesAreSkipped()
+    {
+        _windows.Services["Installed"] = ServiceStartup.Manual;
+        var tweak = Tweak("services", new ServiceAction("Installed", ServiceStartup.Disabled), new ServiceAction("Missing", ServiceStartup.Disabled));
+
+        Assert.Single(Engine.Apply(tweak, dryRun: false));
+        Assert.False(_windows.Services.ContainsKey("Missing"));
+    }
+
+    [Fact]
+    public void OwnPowerPlanIsCreatedActivatedAndDeletedOnRevert()
+    {
+        var original = _windows.Scheme;
+        var id = Guid.NewGuid();
+        PowerSettingValue[] settings = [new(Guid.NewGuid(), Guid.NewGuid(), 100, 100), new(Guid.NewGuid(), Guid.NewGuid(), 0, 0)];
+        var tweak = Tweak("plan", new PowerPlanAction(id, "NOVAIS boost", Guid.NewGuid(), settings), new PowerAction(id));
+
+        Assert.Equal(2, Engine.Apply(tweak, dryRun: false).Count);
+        Assert.Equal(id, _windows.Scheme);
+        Assert.Equal(settings, _windows.Plans[id]);
+        Assert.Empty(Engine.Detect(tweak));
+
+        // A setting changed by hand is detected and fixed on the next apply.
+        _windows.Plans[id] = [settings[0] with { Ac = 50 }, settings[1]];
+        Assert.Single(Engine.Detect(tweak));
+
+        Engine.RevertAll(dryRun: false);
+        Assert.Equal(original, _windows.Scheme);
+        Assert.False(_windows.Plans.ContainsKey(id));
+    }
+
+    [Fact]
+    public void RevertRemovesTheAncestorKeysTheTweakCreated()
+    {
+        _windows.MissingSegments = 3;
+        Engine.Apply(Tweak("policy", RegistrySet("Policy")), dryRun: false);
+        _windows.MissingSegments = 0;
+        Engine.RevertAll(dryRun: false);
+
+        Assert.Equal(3, _windows.LastRegistryWrite!.MissingSegments);
+        Assert.False(_windows.LastRegistryWrite.KeyExists);
+    }
+
+    [Fact]
+    public void HardwareRequirementsAreCheckedBeforeWriting()
+    {
+        var tweak = Tweak("desktop-only", RegistrySet("Value")) with { Compat = new(["desktop"], []) };
+        Assert.Throws<InvalidOperationException>(() => Engine.Apply(tweak, dryRun: false));
+
+        _compatibility = _ => "requer um desktop";
+        var error = Assert.Throws<InvalidOperationException>(() => Engine.Apply(tweak, dryRun: false));
+        Assert.Contains("requer um desktop", error.Message);
+        Assert.Equal(0, _windows.Writes);
+
+        _compatibility = _ => null;
+        Assert.Single(Engine.Apply(tweak, dryRun: false));
+    }
+
+    [Fact]
+    public void BatchUsesOneRestorePointAndContinuesAfterAFailure()
+    {
+        var first = Tweak("first", RegistrySet("First"));
+        var broken = Tweak("broken", RegistrySet("Broken"));
+        var third = Tweak("third", RegistrySet("Third"));
+        var engine = Engine;
+        var reviewed = new[] { first, broken, third }.ToDictionary(tweak => tweak.Id, engine.Detect);
+        _windows.BeforeWrite = () =>
+        {
+            if (_windows.Writes == 1)
+            {
+                _windows.BeforeWrite = null;
+                throw new IOException("Simulated failure.");
+            }
+        };
+
+        var results = engine.ApplyBatch([first, broken, third], reviewed);
+
+        Assert.Equal([null, "Simulated failure.", null], results.Select(result => result.Error));
+        Assert.Equal(1, _points.Requests);
+        Assert.Null(_windows.Read(RegistrySet("Broken")).Value);
+        Assert.Equal(2, Snapshots.GetActive()!.TweakCount);
+        engine.RevertAll(dryRun: false);
+        Assert.False(_windows.Read(RegistrySet("First")).KeyExists);
+        Assert.False(_windows.Read(RegistrySet("Third")).KeyExists);
+    }
+
     private SnapshotManager CreateSnapshots(string owner) => new(_directory, owner, _points, _log);
 
-    private TweakEngine CreateEngine(string owner) => new(_windows, _windows, _windows, CreateSnapshots(owner), _log);
+    private TweakEngine CreateEngine(string owner) =>
+        new(_windows, _windows, _windows, CreateSnapshots(owner), _log, _windows, _windows, _compatibility);
+
+    private Func<TweakCompatibility, string?>? _compatibility;
 
     private static RegistryAction RegistrySet(string name) =>
         new(RegistryHiveName.CurrentUser, RegistryPath, name, RegistryOperation.Set, RegistryValue.From(RegistryValueType.Dword, 0));
@@ -289,8 +411,36 @@ public sealed class TweakEngineTests : IDisposable
             Directory.Delete(_directory, recursive: true);
     }
 
-    private sealed class FakeWindows : IRegistry, IServiceController, IPowerConfig
+    private sealed class FakeWindows : IRegistry, IServiceController, IPowerConfig, IScheduledTasks, IPowerPlans
     {
+        public Dictionary<string, bool> Tasks { get; } = [];
+        public Dictionary<Guid, PowerSettingValue[]> Plans { get; } = [];
+        public int MissingSegments { get; set; }
+        public RegistryState? LastRegistryWrite { get; private set; }
+
+        public TaskState Get(string path) => Tasks.TryGetValue(path, out var enabled) ? new TaskState(true, enabled) : new TaskState(false, false);
+
+        public void SetEnabled(string path, bool enabled)
+        {
+            OnWrite();
+            Tasks[path] = enabled;
+        }
+
+        public PowerPlanState Read(PowerPlanAction plan) =>
+            Plans.TryGetValue(plan.Id, out var settings) ? new PowerPlanState(true, settings) : new PowerPlanState(false, null);
+
+        public void Write(PowerPlanAction plan, PowerPlanState state)
+        {
+            OnWrite();
+            if (state.Exists)
+                Plans[plan.Id] = state.Settings!;
+            else
+            {
+                Assert.NotEqual(plan.Id, Scheme);
+                Plans.Remove(plan.Id);
+            }
+        }
+
         private readonly Dictionary<(RegistryHiveName Hive, string Path), Dictionary<string, RegistryValue>> _keys = [];
         public Dictionary<string, ServiceStartup> Services { get; } = [];
         public Guid Scheme { get; private set; } = Guid.NewGuid();
@@ -299,13 +449,14 @@ public sealed class TweakEngineTests : IDisposable
 
         public RegistryState Read(RegistryAction action) => _keys.TryGetValue((action.Hive, action.Path), out var key)
             ? new RegistryState(true, key.GetValueOrDefault(action.ValueName))
-            : new RegistryState(false, null);
+            : new RegistryState(false, null, null, MissingSegments);
 
         public void Seed(RegistryAction action, RegistryValue value) => SetValue(action, new RegistryState(true, value));
 
         public void Write(RegistryAction action, RegistryState state)
         {
             OnWrite();
+            LastRegistryWrite = state;
             SetValue(action, state);
         }
 
@@ -328,7 +479,7 @@ public sealed class TweakEngineTests : IDisposable
                 _keys.Remove(address);
         }
 
-        public ServiceStartup GetStartup(string name) => Services[name];
+        public ServiceStartup? GetStartup(string name) => Services.TryGetValue(name, out var startup) ? startup : null;
 
         public void SetStartup(string name, ServiceStartup startup)
         {

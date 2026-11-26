@@ -2,10 +2,62 @@ namespace NovaisBoost.Core;
 
 public sealed record SettingChange(string Target, string Current, string Expected);
 
+public sealed record BatchResult(TweakDefinition Tweak, IReadOnlyList<SettingChange> Changes, string? Error);
+
+/// <param name="compatibility">Returns null when the hardware requirements are met, or the reason they are not.</param>
 public sealed class TweakEngine(
     IRegistry registry, IServiceController services, IPowerConfig power,
-    SnapshotManager snapshots, IActionLog log)
+    SnapshotManager snapshots, IActionLog log,
+    IScheduledTasks? tasks = null, IPowerPlans? plans = null,
+    Func<TweakCompatibility, string?>? compatibility = null)
 {
+    private RestorePoint? _batchPoint;
+    private bool _inBatch;
+
+    /// <summary>
+    /// Applies reviewed tweaks one by one under a single restore point. A failed tweak is rolled back
+    /// and reported; the others continue. Stops only when recovery itself fails or protection is off.
+    /// </summary>
+    public IReadOnlyList<BatchResult> ApplyBatch(IReadOnlyList<TweakDefinition> batch,
+        IReadOnlyDictionary<string, IReadOnlyList<SettingChange>> reviewed, Action<TweakDefinition>? progress = null)
+    {
+        var results = new List<BatchResult>();
+        _inBatch = true;
+        try
+        {
+            foreach (var tweak in batch)
+            {
+                progress?.Invoke(tweak);
+                try
+                {
+                    var changes = Apply(tweak, dryRun: false,
+                        reviewed.TryGetValue(tweak.Id, out var preview) ? preview : throw new InvalidOperationException("Ajuste não revisado."));
+                    results.Add(new BatchResult(tweak, changes, null));
+                }
+                catch (Exception error) when (error is not (AggregateException or SystemProtectionDisabledException or OutOfMemoryException))
+                {
+                    log.Warning($"Lote: {tweak.Id} não aplicado: {error.Message}");
+                    results.Add(new BatchResult(tweak, [], error.Message));
+                }
+            }
+        }
+        finally
+        {
+            _inBatch = false;
+            _batchPoint = null;
+        }
+        return results;
+    }
+
+    /// <summary>Null when the tweak can run on this PC; otherwise the reason it cannot.</summary>
+    public string? CheckCompatibility(TweakDefinition tweak)
+    {
+        if (tweak.Compat.AntiCheat.Length > 0)
+            return "a verificação de anti-cheat ainda não está disponível";
+        if (tweak.Compat.Hardware.Length == 0)
+            return null;
+        return compatibility is null ? "a verificação de hardware não está disponível" : compatibility(tweak.Compat);
+    }
     public IReadOnlyList<SettingChange> Detect(TweakDefinition tweak)
     {
         var changes = Describe(Plan(tweak));
@@ -26,8 +78,8 @@ public sealed class TweakEngine(
         var active = snapshots.ReadActive();
         if (active?.State.Pending == true)
             throw new InvalidOperationException("Há um ajuste incompleto. Use Reverter tudo antes de aplicar outro ajuste.");
-        if (tweak.Compat.Hardware.Length > 0 || tweak.Compat.AntiCheat.Length > 0)
-            throw new InvalidOperationException("Este ajuste exige uma verificação de compatibilidade ainda indisponível.");
+        if (CheckCompatibility(tweak) is { } reason)
+            throw new InvalidOperationException($"Ajuste incompatível com este PC: {reason}.");
 
         var plan = Plan(tweak);
         var changes = Describe(plan);
@@ -38,7 +90,9 @@ public sealed class TweakEngine(
             return [];
         }
 
-        var point = snapshots.EnsureRestorePoint();
+        var point = _batchPoint ?? snapshots.EnsureRestorePoint();
+        if (_inBatch)
+            _batchPoint = point;
         plan = Plan(tweak);
         changes = Describe(plan);
         EnsureReviewed(changes, reviewedChanges);
@@ -101,16 +155,17 @@ public sealed class TweakEngine(
         // The first capture of a target contains its state before this batch.
         var original = selected.SelectMany(tweak => tweak.Settings)
             .DistinctBy(entry => entry.Action.Identity, StringComparer.OrdinalIgnoreCase).ToArray();
+        // A key first seen absent must end absent, keeping how many ancestors were created with it.
         var absentKeys = original.Where(entry => entry.Action is RegistryAction)
             .GroupBy(entry => ((RegistryAction)entry.Action).Key, StringComparer.OrdinalIgnoreCase)
             .Where(group => group.First().Before is RegistryState { KeyExists: false })
-            .Select(group => group.Key).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            .ToDictionary(group => group.Key, group => (RegistryState)group.First().Before, StringComparer.OrdinalIgnoreCase);
         for (var index = 0; index < original.Length; index++)
         {
             var entry = original[index];
-            if (entry.Action is RegistryAction registryEntry && absentKeys.Contains(registryEntry.Key) &&
+            if (entry.Action is RegistryAction registryEntry && absentKeys.TryGetValue(registryEntry.Key, out var absent) &&
                 entry.Before is RegistryState { Value: null })
-                original[index] = entry with { Before = new RegistryState(false, null) };
+                original[index] = entry with { Before = absent };
         }
         var (current, changes) = PreviewRevert(original);
         EnsureReviewed(changes, reviewedChanges);
@@ -154,11 +209,18 @@ public sealed class TweakEngine(
         var before = Read(action);
         SettingState expected = action switch
         {
+            RegistryAction { Operation: RegistryOperation.Set, Accept: { } accept } when
+                before is RegistryState { Value: { } current } && accept.Any(value => value.Matches(current)) => before,
             RegistryAction { Operation: RegistryOperation.Set, Expected: not null } set => new RegistryState(true, set.Expected),
             RegistryAction { Operation: RegistryOperation.Delete, Expected: null } when before is RegistryState state =>
-                new RegistryState(state.KeyExists, null),
+                state with { Value = null, Native = null },
+            // Not installed / not present on this Windows build: nothing to change.
+            ServiceAction when before is ServiceState { Startup: null } => before,
             ServiceAction service => new ServiceState(service.Expected),
             PowerAction scheme => new PowerState(scheme.Expected),
+            ScheduledTaskAction when before is TaskState { Exists: false } => before,
+            ScheduledTaskAction task => new TaskState(true, task.Expected == TaskSetting.Enabled),
+            PowerPlanAction powerPlan => new PowerPlanState(true, powerPlan.Settings),
             _ => throw new InvalidDataException("Operação de ajuste inválida.")
         };
         return new PlannedChange(action, before, expected);
@@ -169,8 +231,13 @@ public sealed class TweakEngine(
         RegistryAction entry => registry.Read(entry),
         ServiceAction service => new ServiceState(services.GetStartup(service.Name)),
         PowerAction => new PowerState(power.GetActiveScheme()),
+        ScheduledTaskAction task => Require(tasks).Get(task.Path),
+        PowerPlanAction powerPlan => Require(plans).Read(powerPlan),
         _ => throw new InvalidDataException("Tipo de ajuste desconhecido.")
     };
+
+    private static T Require<T>(T? dependency) where T : class =>
+        dependency ?? throw new InvalidOperationException($"{typeof(T).Name} não foi configurado.");
 
     private void Write(TweakAction action, SettingState state)
     {
@@ -180,11 +247,17 @@ public sealed class TweakEngine(
             case (RegistryAction entry, RegistryState value):
                 registry.Write(entry, value);
                 break;
-            case (ServiceAction service, ServiceState startup):
-                services.SetStartup(service.Name, startup.Startup);
+            case (ServiceAction service, ServiceState { Startup: { } startup }):
+                services.SetStartup(service.Name, startup);
                 break;
             case (PowerAction, PowerState scheme):
                 power.SetActiveScheme(scheme.Scheme);
+                break;
+            case (ScheduledTaskAction task, TaskState { Exists: true } taskState):
+                Require(tasks).SetEnabled(task.Path, taskState.Enabled);
+                break;
+            case (PowerPlanAction powerPlan, PowerPlanState planState):
+                Require(plans).Write(powerPlan, planState);
                 break;
             default:
                 throw new InvalidDataException("O estado do backup não corresponde à operação.");

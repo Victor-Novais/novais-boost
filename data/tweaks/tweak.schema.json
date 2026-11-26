@@ -3,78 +3,375 @@
   "title": "NOVAIS boost tweak",
   "type": "object",
   "additionalProperties": false,
-  "required": ["id", "name", "description", "category", "level", "risk", "requiresReboot", "compat", "actions"],
+  "required": [
+    "id",
+    "name",
+    "description",
+    "category",
+    "level",
+    "risk",
+    "requiresReboot",
+    "compat",
+    "actions"
+  ],
   "properties": {
-    "id": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
-    "name": { "$ref": "#/$defs/nonblank" },
-    "description": { "$ref": "#/$defs/nonblank" },
-    "category": { "$ref": "#/$defs/nonblank" },
-    "level": { "enum": ["safe", "competitive", "extreme"] },
-    "risk": { "$ref": "#/$defs/nonblank" },
-    "requiresReboot": { "type": "boolean" },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+    },
+    "name": {
+      "$ref": "#/$defs/nonblank"
+    },
+    "description": {
+      "$ref": "#/$defs/nonblank"
+    },
+    "category": {
+      "$ref": "#/$defs/nonblank"
+    },
+    "level": {
+      "enum": [
+        "safe",
+        "competitive",
+        "extreme"
+      ]
+    },
+    "risk": {
+      "$ref": "#/$defs/nonblank"
+    },
+    "requiresReboot": {
+      "type": "boolean"
+    },
     "compat": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["hardware", "antiCheat"],
+      "required": [
+        "hardware",
+        "antiCheat"
+      ],
       "properties": {
-        "hardware": { "type": "array", "items": { "$ref": "#/$defs/nonblank" }, "uniqueItems": true },
-        "antiCheat": { "type": "array", "items": { "$ref": "#/$defs/nonblank" }, "uniqueItems": true }
+        "hardware": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "desktop",
+              "gpu-discrete",
+              "gpu-hags",
+              "not-dual-ccd-x3d"
+            ]
+          }
+        },
+        "antiCheat": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/nonblank"
+          },
+          "uniqueItems": true
+        }
       }
     },
     "actions": {
       "type": "array",
       "minItems": 1,
-      "items": { "oneOf": [{ "$ref": "#/$defs/registry" }, { "$ref": "#/$defs/service" }, { "$ref": "#/$defs/powercfg" }] }
+      "items": {
+        "oneOf": [
+          {
+            "$ref": "#/$defs/registry"
+          },
+          {
+            "$ref": "#/$defs/service"
+          },
+          {
+            "$ref": "#/$defs/powercfg"
+          },
+          {
+            "$ref": "#/$defs/scheduledTask"
+          },
+          {
+            "$ref": "#/$defs/powerPlan"
+          }
+        ]
+      }
     }
   },
   "$defs": {
-    "nonblank": { "type": "string", "pattern": "\\S" },
+    "nonblank": {
+      "type": "string",
+      "pattern": "\\S"
+    },
     "registryValue": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["kind", "value"],
-      "properties": { "kind": { "type": "string" }, "value": {} },
+      "required": [
+        "kind",
+        "value"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string"
+        },
+        "value": {}
+      },
       "oneOf": [
-        { "properties": { "kind": { "enum": ["string", "expandString"] }, "value": { "type": "string" } } },
-        { "properties": { "kind": { "const": "dword" }, "value": { "type": "integer", "minimum": -2147483648, "maximum": 2147483647 } } },
-        { "properties": { "kind": { "const": "qword" }, "value": { "type": "integer" } } },
-        { "properties": { "kind": { "const": "multiString" }, "value": { "type": "array", "items": { "type": "string" } } } },
-        { "properties": { "kind": { "enum": ["binary", "none"] }, "value": { "type": "array", "items": { "type": "integer", "minimum": 0, "maximum": 255 } } } }
+        {
+          "properties": {
+            "kind": {
+              "enum": [
+                "string",
+                "expandString"
+              ]
+            },
+            "value": {
+              "type": "string"
+            }
+          }
+        },
+        {
+          "properties": {
+            "kind": {
+              "const": "dword"
+            },
+            "value": {
+              "type": "integer",
+              "minimum": -2147483648,
+              "maximum": 2147483647
+            }
+          }
+        },
+        {
+          "properties": {
+            "kind": {
+              "const": "qword"
+            },
+            "value": {
+              "type": "integer"
+            }
+          }
+        },
+        {
+          "properties": {
+            "kind": {
+              "const": "multiString"
+            },
+            "value": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        {
+          "properties": {
+            "kind": {
+              "enum": [
+                "binary",
+                "none"
+              ]
+            },
+            "value": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 255
+              }
+            }
+          }
+        }
       ]
     },
     "registry": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["type", "hive", "path", "valueName", "operation", "expected"],
+      "required": [
+        "type",
+        "hive",
+        "path",
+        "valueName",
+        "operation",
+        "expected"
+      ],
       "properties": {
-        "type": { "const": "registry" },
-        "hive": { "enum": ["currentUser", "localMachine"] },
-        "path": { "type": "string", "pattern": "^[^\\u0000\\\\]+(\\\\[^\\u0000\\\\]+)+$" },
-        "valueName": { "type": "string", "pattern": "^[^\\u0000]*$" },
-        "operation": { "enum": ["set", "delete"] },
-        "expected": {}
+        "type": {
+          "const": "registry"
+        },
+        "hive": {
+          "enum": [
+            "currentUser",
+            "localMachine"
+          ]
+        },
+        "path": {
+          "type": "string",
+          "pattern": "^[^\\u0000\\\\]+(\\\\[^\\u0000\\\\]+)+$"
+        },
+        "valueName": {
+          "type": "string",
+          "pattern": "^[^\\u0000]*$"
+        },
+        "operation": {
+          "enum": [
+            "set",
+            "delete"
+          ]
+        },
+        "expected": {},
+        "accept": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/registryValue"
+          }
+        }
       },
-      "if": { "properties": { "operation": { "const": "set" } } },
-      "then": { "properties": { "expected": { "$ref": "#/$defs/registryValue" } } },
-      "else": { "properties": { "expected": { "type": "null" } } }
+      "if": {
+        "properties": {
+          "operation": {
+            "const": "set"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "expected": {
+            "$ref": "#/$defs/registryValue"
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "expected": {
+            "type": "null"
+          }
+        }
+      }
     },
     "service": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["type", "name", "expected"],
+      "required": [
+        "type",
+        "name",
+        "expected"
+      ],
       "properties": {
-        "type": { "const": "service" },
-        "name": { "type": "string", "pattern": "^[a-zA-Z0-9_.-]+$" },
-        "expected": { "enum": ["automatic", "automaticDelayed", "manual", "disabled"] }
+        "type": {
+          "const": "service"
+        },
+        "name": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$"
+        },
+        "expected": {
+          "enum": [
+            "automatic",
+            "automaticDelayed",
+            "manual",
+            "disabled"
+          ]
+        }
       }
     },
     "powercfg": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["type", "expected"],
+      "required": [
+        "type",
+        "expected"
+      ],
       "properties": {
-        "type": { "const": "powercfg" },
-        "expected": { "type": "string", "pattern": "^[0-9a-fA-F]{8}(-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}$" }
+        "type": {
+          "const": "powercfg"
+        },
+        "expected": {
+          "$ref": "#/$defs/guid"
+        }
+      }
+    },
+    "guid": {
+      "type": "string",
+      "pattern": "^[0-9a-fA-F]{8}(-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}$"
+    },
+    "scheduledTask": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "path",
+        "expected"
+      ],
+      "properties": {
+        "type": {
+          "const": "scheduledTask"
+        },
+        "path": {
+          "type": "string",
+          "pattern": "^\\\\[^\u0000\"]+$"
+        },
+        "expected": {
+          "enum": [
+            "enabled",
+            "disabled"
+          ]
+        }
+      }
+    },
+    "powerPlan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "id",
+        "name",
+        "template",
+        "settings"
+      ],
+      "properties": {
+        "type": {
+          "const": "powerPlan"
+        },
+        "id": {
+          "$ref": "#/$defs/guid"
+        },
+        "name": {
+          "$ref": "#/$defs/nonblank"
+        },
+        "template": {
+          "$ref": "#/$defs/guid"
+        },
+        "settings": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "subgroup",
+              "setting",
+              "ac",
+              "dc"
+            ],
+            "properties": {
+              "subgroup": {
+                "$ref": "#/$defs/guid"
+              },
+              "setting": {
+                "$ref": "#/$defs/guid"
+              },
+              "ac": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 4294967295
+              },
+              "dc": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 4294967295
+              }
+            }
+          }
+        }
       }
     }
   }

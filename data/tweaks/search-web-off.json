@@ -1,0 +1,26 @@
+{
+  "id": "search-web-off",
+  "name": "Tirar a pesquisa na web do Iniciar",
+  "description": "A busca do Iniciar passa a procurar só no PC, sem enviar o que você digita ao Bing. Fica mais rápida.",
+  "category": "Privacidade",
+  "level": "safe",
+  "risk": "Baixo. Resultados da web somem do Iniciar.",
+  "requiresReboot": false,
+  "compat": {
+    "hardware": [],
+    "antiCheat": []
+  },
+  "actions": [
+    {
+      "type": "registry",
+      "hive": "currentUser",
+      "path": "Software\\Policies\\Microsoft\\Windows\\Explorer",
+      "valueName": "DisableSearchBoxSuggestions",
+      "operation": "set",
+      "expected": {
+        "kind": "dword",
+        "value": 1
+      }
+    }
+  ]
+}

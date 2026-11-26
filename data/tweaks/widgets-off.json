@@ -1,0 +1,26 @@
+{
+  "id": "widgets-off",
+  "name": "Desligar Widgets",
+  "description": "Remove o painel de Widgets (notícias e clima), que roda em segundo plano consumindo RAM e rede.",
+  "category": "Sistema",
+  "level": "safe",
+  "risk": "Baixo. O painel de Widgets deixa de existir.",
+  "requiresReboot": false,
+  "compat": {
+    "hardware": [],
+    "antiCheat": []
+  },
+  "actions": [
+    {
+      "type": "registry",
+      "hive": "localMachine",
+      "path": "SOFTWARE\\Policies\\Microsoft\\Dsh",
+      "valueName": "AllowNewsAndInterests",
+      "operation": "set",
+      "expected": {
+        "kind": "dword",
+        "value": 0
+      }
+    }
+  ]
+}

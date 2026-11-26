@@ -1,0 +1,37 @@
+{
+  "id": "ntfs-tweaks",
+  "name": "Reduzir escritas extras do NTFS",
+  "description": "Para de gravar a data de último acesso de cada arquivo e de criar nomes curtos 8.3. Menos escrita em disco ao carregar jogos.",
+  "category": "Armazenamento",
+  "level": "competitive",
+  "risk": "Baixo. Programas muito antigos que dependem de nomes 8.3 podem falhar em pastas novas.",
+  "requiresReboot": true,
+  "compat": {
+    "hardware": [],
+    "antiCheat": []
+  },
+  "actions": [
+    {
+      "type": "registry",
+      "hive": "localMachine",
+      "path": "SYSTEM\\CurrentControlSet\\Control\\FileSystem",
+      "valueName": "NtfsDisableLastAccessUpdate",
+      "operation": "set",
+      "expected": {
+        "kind": "dword",
+        "value": -2147483647
+      }
+    },
+    {
+      "type": "registry",
+      "hive": "localMachine",
+      "path": "SYSTEM\\CurrentControlSet\\Control\\FileSystem",
+      "valueName": "NtfsDisable8dot3NameCreation",
+      "operation": "set",
+      "expected": {
+        "kind": "dword",
+        "value": 1
+      }
+    }
+  ]
+}

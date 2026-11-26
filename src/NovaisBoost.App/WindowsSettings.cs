@@ -17,7 +17,7 @@ internal sealed class WindowsRegistry : IRegistry
         using var root = OpenHive(action.Hive);
         using var key = root.OpenSubKey(action.Path);
         if (key is null)
-            return new RegistryState(false, null);
+            return new RegistryState(false, null, null, CountMissingSegments(root, action.Path));
         var native = ReadValue(key.Handle, action.ValueName);
         if (native is null)
             return new RegistryState(true, null);
@@ -28,38 +28,60 @@ internal sealed class WindowsRegistry : IRegistry
     public void Write(RegistryAction action, RegistryState state)
     {
         using var root = OpenHive(action.Hive);
-        var separator = action.Path.LastIndexOf('\\');
-        using var parent = root.OpenSubKey(action.Path[..separator], writable: true);
-        if (parent is null)
+        if (state.KeyExists)
         {
-            if (!state.KeyExists)
-                return;
-            throw new InvalidOperationException($"A chave pai de {action.Path} está ausente.");
-        }
-
-        var leaf = action.Path[(separator + 1)..];
-        using var key = state.KeyExists ? parent.CreateSubKey(leaf) : parent.OpenSubKey(leaf, writable: true);
-        if (key is null)
-            return;
-        if (state.Value is { } value)
-        {
-            if (state.Native is { } native)
-            {
+            // Creates every missing key in the path (policy keys usually do not exist yet).
+            using var key = root.CreateSubKey(action.Path, writable: true)
+                ?? throw new InvalidOperationException($"Não foi possível criar a chave {action.Path}.");
+            if (state.Value is null)
+                key.DeleteValue(action.ValueName, throwOnMissingValue: false);
+            else if (state.Native is { } native)
                 CheckRegistryResult(RegSetValueEx(key.Handle, action.ValueName, 0, native.Type, native.Data, native.Data.Length));
-                return;
+            else
+            {
+                var (data, kind) = ToNative(state.Value);
+                key.SetValue(action.ValueName, data, kind);
             }
-
-            var (data, kind) = ToNative(value);
-            key.SetValue(action.ValueName, data, kind);
             return;
         }
 
-        key.DeleteValue(action.ValueName, throwOnMissingValue: false);
-        if (!state.KeyExists && key.ValueCount == 0 && key.SubKeyCount == 0)
+        using (var key = root.OpenSubKey(action.Path, writable: true))
         {
-            key.Close();
-            parent.DeleteSubKey(leaf, throwOnMissingSubKey: false);
+            if (key is null)
+                return;
+            key.DeleteValue(action.ValueName, throwOnMissingValue: false);
+            if (key.ValueCount > 0 || key.SubKeyCount > 0)
+                return;
         }
+
+        // Remove the keys created by the tweak, from the leaf upwards, stopping at the first one in use.
+        var parts = action.Path.Split('\\');
+        for (var removed = 0; removed < Math.Max(1, state.MissingSegments) && parts.Length - removed > 1; removed++)
+        {
+            var path = string.Join('\\', parts[..(parts.Length - removed)]);
+            using (var key = root.OpenSubKey(path))
+            {
+                if (key is null)
+                    continue;
+                if (key.ValueCount > 0 || key.SubKeyCount > 0)
+                    break;
+            }
+            root.DeleteSubKey(path, throwOnMissingSubKey: false);
+        }
+    }
+
+    private static int CountMissingSegments(RegistryKey root, string path)
+    {
+        var parts = path.Split('\\');
+        var missing = 1;
+        while (missing < parts.Length)
+        {
+            using var ancestor = root.OpenSubKey(string.Join('\\', parts[..(parts.Length - missing)]));
+            if (ancestor is not null)
+                break;
+            missing++;
+        }
+        return missing;
     }
 
     private static NativeRegistryValue? ReadValue(SafeRegistryHandle key, string name)
@@ -144,13 +166,16 @@ internal sealed class WindowsRegistry : IRegistry
 
 internal sealed class WindowsServiceController : IServiceController
 {
-    public ServiceStartup GetStartup(string name)
+    public ServiceStartup? GetStartup(string name)
     {
         if (!Regex.IsMatch(name, @"\A[a-zA-Z0-9_.-]+\z"))
             throw new InvalidDataException("Nome de serviço inválido.");
 
-        return Wmi.Query($"SELECT StartMode, DelayedAutoStart FROM Win32_Service WHERE Name = '{name}'", item =>
-            (item["StartMode"] as string, item["DelayedAutoStart"] as bool?)).SingleOrDefault() switch
+        var rows = Wmi.Query($"SELECT StartMode, DelayedAutoStart FROM Win32_Service WHERE Name = '{name}'", item =>
+            (item["StartMode"] as string, item["DelayedAutoStart"] as bool?));
+        if (rows.Length == 0)
+            return null;
+        return rows.Single() switch
         {
             ("Auto", true) => ServiceStartup.AutomaticDelayed,
             ("Auto", false) => ServiceStartup.Automatic,

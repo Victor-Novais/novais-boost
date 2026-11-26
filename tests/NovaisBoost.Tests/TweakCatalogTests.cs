@@ -20,11 +20,68 @@ public sealed class TweakCatalogTests
         """;
 
     [Fact]
-    public void LoadsTheThreeEmbeddedExamples()
+    public void EmbeddedCatalogLoadsBothUniversalLevels()
     {
         var tweaks = TweakCatalog.LoadEmbedded();
-        Assert.Equal(new[] { "game-dvr-background", "mouse-acceleration", "visual-transparency" }, tweaks.Select(tweak => tweak.Id));
-        Assert.All(tweaks, tweak => Assert.All(tweak.Actions, action => Assert.IsType<RegistryAction>(action)));
+        Assert.Equal(27, tweaks.Count);
+        Assert.Equal(19, tweaks.Count(tweak => tweak.Level == TweakLevel.Safe));
+        Assert.Equal(8, tweaks.Count(tweak => tweak.Level == TweakLevel.Competitive));
+        Assert.DoesNotContain(tweaks, tweak => tweak.Level == TweakLevel.Extreme);
+        Assert.Contains(tweaks, tweak => tweak.Actions.OfType<PowerPlanAction>().Any());
+        Assert.Contains(tweaks, tweak => tweak.Actions.OfType<ScheduledTaskAction>().Any());
+    }
+
+    [Fact]
+    public void EachSystemTargetBelongsToASingleTweak()
+    {
+        var shared = TweakCatalog.LoadEmbedded()
+            .SelectMany(tweak => tweak.Actions.Where(action => action is not PowerAction).Select(action => (tweak.Id, Key: action switch
+            {
+                RegistryAction registry => $"{registry.Hive}|{registry.Path}|{registry.ValueName}".ToLowerInvariant(),
+                ServiceAction service => "service|" + service.Name.ToLowerInvariant(),
+                ScheduledTaskAction task => "task|" + task.Path.ToLowerInvariant(),
+                PowerPlanAction plan => "plan|" + plan.Id,
+                _ => throw new InvalidOperationException()
+            })))
+            .GroupBy(item => item.Key).Where(group => group.Count() > 1).Select(group => group.Key);
+        Assert.Empty(shared);
+    }
+
+    [Fact]
+    public void PowerPlanIsNeverOfferedToDualCcdX3dOrLaptops()
+    {
+        var plan = TweakCatalog.LoadEmbedded().Single(tweak => tweak.Id == "power-plan");
+        Assert.Contains("not-dual-ccd-x3d", plan.Compat.Hardware);
+        Assert.Contains("desktop", plan.Compat.Hardware);
+    }
+
+    [Fact]
+    public void SchemaRejectsUnknownHardwareRequirement()
+    {
+        var json = JsonNode.Parse(Valid)!.AsObject();
+        json["compat"]!["hardware"] = new JsonArray("quantum-cpu");
+        Assert.Throws<InvalidDataException>(() => TweakCatalog.Parse(json.ToJsonString(), "compat.json"));
+    }
+
+    [Fact]
+    public void ParsesScheduledTaskAndPowerPlanActions()
+    {
+        var json = JsonNode.Parse(Valid)!.AsObject();
+        json["actions"] = new JsonArray(
+            new JsonObject { ["type"] = "scheduledTask", ["path"] = @"\Microsoft\Windows\Example", ["expected"] = "disabled" },
+            new JsonObject
+            {
+                ["type"] = "powerPlan", ["id"] = "4e6f7661-6973-426f-6f73-740000000001", ["name"] = "Teste",
+                ["template"] = "e9a42b02-d5df-448d-aa00-03f14749eb61",
+                ["settings"] = new JsonArray(new JsonObject
+                {
+                    ["subgroup"] = "54533251-82be-4824-96c1-47b60b740d00", ["setting"] = "0cc5b647-c1df-4637-891a-dec35c318583",
+                    ["ac"] = 100, ["dc"] = 100
+                })
+            });
+        var tweak = TweakCatalog.Parse(json.ToJsonString(), "new-types.json");
+        Assert.Equal(@"\Microsoft\Windows\Example", Assert.IsType<ScheduledTaskAction>(tweak.Actions[0]).Path);
+        Assert.Equal(100u, Assert.IsType<PowerPlanAction>(tweak.Actions[1]).Settings[0].Ac);
     }
 
     [Fact]

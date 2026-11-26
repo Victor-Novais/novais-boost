@@ -1,0 +1,43 @@
+{
+  "id": "privacy-telemetry",
+  "name": "Telemetria no mínimo",
+  "description": "Reduz a telemetria ao nível obrigatório (o mínimo permitido no Windows Pro/Home). Se já estiver em 0, é mantido.",
+  "category": "Privacidade",
+  "level": "safe",
+  "risk": "Nenhum.",
+  "requiresReboot": false,
+  "compat": {
+    "hardware": [],
+    "antiCheat": []
+  },
+  "actions": [
+    {
+      "type": "registry",
+      "hive": "localMachine",
+      "path": "SOFTWARE\\Policies\\Microsoft\\Windows\\DataCollection",
+      "valueName": "AllowTelemetry",
+      "operation": "set",
+      "expected": {
+        "kind": "dword",
+        "value": 1
+      },
+      "accept": [
+        {
+          "kind": "dword",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "type": "registry",
+      "hive": "localMachine",
+      "path": "SOFTWARE\\Policies\\Microsoft\\Windows\\DataCollection",
+      "valueName": "LimitDiagnosticLogCollection",
+      "operation": "set",
+      "expected": {
+        "kind": "dword",
+        "value": 1
+      }
+    }
+  ]
+}

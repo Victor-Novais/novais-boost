@@ -1,0 +1,26 @@
+{
+  "id": "fast-startup-off",
+  "name": "Desligar a inicialização rápida",
+  "description": "Faz o Windows desligar de verdade. Evita drivers e memória acumulados entre sessões.",
+  "category": "Energia",
+  "level": "safe",
+  "risk": "Baixo. O boot pode demorar alguns segundos a mais.",
+  "requiresReboot": true,
+  "compat": {
+    "hardware": [],
+    "antiCheat": []
+  },
+  "actions": [
+    {
+      "type": "registry",
+      "hive": "localMachine",
+      "path": "SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Power",
+      "valueName": "HiberbootEnabled",
+      "operation": "set",
+      "expected": {
+        "kind": "dword",
+        "value": 0
+      }
+    }
+  ]
+}

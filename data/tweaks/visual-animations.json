@@ -1,0 +1,48 @@
+{
+  "id": "visual-animations",
+  "name": "Reduzir animações do Windows",
+  "description": "Desliga animações de minimizar e da barra de tarefas e remove o atraso dos menus. Reabra a sessão para ver o efeito.",
+  "category": "Visual",
+  "level": "safe",
+  "risk": "Nenhum. Muda só a aparência.",
+  "requiresReboot": false,
+  "compat": {
+    "hardware": [],
+    "antiCheat": []
+  },
+  "actions": [
+    {
+      "type": "registry",
+      "hive": "currentUser",
+      "path": "Control Panel\\Desktop\\WindowMetrics",
+      "valueName": "MinAnimate",
+      "operation": "set",
+      "expected": {
+        "kind": "string",
+        "value": "0"
+      }
+    },
+    {
+      "type": "registry",
+      "hive": "currentUser",
+      "path": "Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced",
+      "valueName": "TaskbarAnimations",
+      "operation": "set",
+      "expected": {
+        "kind": "dword",
+        "value": 0
+      }
+    },
+    {
+      "type": "registry",
+      "hive": "currentUser",
+      "path": "Control Panel\\Desktop",
+      "valueName": "MenuShowDelay",
+      "operation": "set",
+      "expected": {
+        "kind": "string",
+        "value": "0"
+      }
+    }
+  ]
+}

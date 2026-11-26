@@ -1,0 +1,26 @@
+{
+  "id": "priority-separation",
+  "name": "Prioridade para o programa em primeiro plano",
+  "description": "Dá fatias de tempo de CPU mais curtas e com mais prioridade para o jogo em foco (Win32PrioritySeparation 0x26).",
+  "category": "CPU",
+  "level": "competitive",
+  "risk": "Baixo. Tarefas em segundo plano ficam um pouco mais lentas.",
+  "requiresReboot": false,
+  "compat": {
+    "hardware": [],
+    "antiCheat": []
+  },
+  "actions": [
+    {
+      "type": "registry",
+      "hive": "localMachine",
+      "path": "SYSTEM\\CurrentControlSet\\Control\\PriorityControl",
+      "valueName": "Win32PrioritySeparation",
+      "operation": "set",
+      "expected": {
+        "kind": "dword",
+        "value": 38
+      }
+    }
+  ]
+}

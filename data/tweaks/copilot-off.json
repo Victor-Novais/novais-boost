@@ -1,0 +1,37 @@
+{
+  "id": "copilot-off",
+  "name": "Desligar o Copilot do Windows",
+  "description": "Desativa o Copilot integrado ao Windows por política.",
+  "category": "Sistema",
+  "level": "safe",
+  "risk": "Baixo. O Copilot do sistema deixa de abrir.",
+  "requiresReboot": false,
+  "compat": {
+    "hardware": [],
+    "antiCheat": []
+  },
+  "actions": [
+    {
+      "type": "registry",
+      "hive": "currentUser",
+      "path": "Software\\Policies\\Microsoft\\Windows\\WindowsCopilot",
+      "valueName": "TurnOffWindowsCopilot",
+      "operation": "set",
+      "expected": {
+        "kind": "dword",
+        "value": 1
+      }
+    },
+    {
+      "type": "registry",
+      "hive": "localMachine",
+      "path": "SOFTWARE\\Policies\\Microsoft\\Windows\\WindowsCopilot",
+      "valueName": "TurnOffWindowsCopilot",
+      "operation": "set",
+      "expected": {
+        "kind": "dword",
+        "value": 1
+      }
+    }
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "id": "recall-off",
+  "name": "Desligar o Recall",
+  "description": "Impede o Recall de tirar capturas de tela contínuas, que custam disco, CPU e privacidade.",
+  "category": "Privacidade",
+  "level": "safe",
+  "risk": "Nenhum.",
+  "requiresReboot": false,
+  "compat": {
+    "hardware": [],
+    "antiCheat": []
+  },
+  "actions": [
+    {
+      "type": "registry",
+      "hive": "localMachine",
+      "path": "SOFTWARE\\Policies\\Microsoft\\Windows\\WindowsAI",
+      "valueName": "DisableAIDataAnalysis",
+      "operation": "set",
+      "expected": {
+        "kind": "dword",
+        "value": 1
+      }
+    },
+    {
+      "type": "registry",
+      "hive": "currentUser",
+      "path": "Software\\Policies\\Microsoft\\Windows\\WindowsAI",
+      "valueName": "DisableAIDataAnalysis",
+      "operation": "set",
+      "expected": {
+        "kind": "dword",
+        "value": 1
+      }
+    }
+  ]
+}

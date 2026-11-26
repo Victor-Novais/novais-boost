@@ -1,0 +1,28 @@
+{
+  "id": "power-throttling-off",
+  "name": "Desligar o Power Throttling",
+  "description": "Impede o Windows de reduzir o clock de processos que ele considera em segundo plano (como Discord e OBS durante o jogo).",
+  "category": "CPU",
+  "level": "competitive",
+  "risk": "Baixo. Consumo um pouco maior.",
+  "requiresReboot": true,
+  "compat": {
+    "hardware": [
+      "desktop"
+    ],
+    "antiCheat": []
+  },
+  "actions": [
+    {
+      "type": "registry",
+      "hive": "localMachine",
+      "path": "SYSTEM\\CurrentControlSet\\Control\\Power\\PowerThrottling",
+      "valueName": "PowerThrottlingOff",
+      "operation": "set",
+      "expected": {
+        "kind": "dword",
+        "value": 1
+      }
+    }
+  ]
+}

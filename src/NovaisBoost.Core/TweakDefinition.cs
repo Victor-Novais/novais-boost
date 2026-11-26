@@ -8,6 +8,7 @@ public enum RegistryHiveName { CurrentUser, LocalMachine }
 public enum RegistryOperation { Set, Delete }
 public enum RegistryValueType { String, ExpandString, Dword, Qword, MultiString, Binary, None }
 public enum ServiceStartup { Automatic, AutomaticDelayed, Manual, Disabled }
+public enum TaskSetting { Enabled, Disabled }
 
 public sealed record TweakCompatibility(string[] Hardware, string[] AntiCheat);
 
@@ -19,15 +20,18 @@ public sealed record TweakDefinition(
 [JsonDerivedType(typeof(RegistryAction), "registry")]
 [JsonDerivedType(typeof(ServiceAction), "service")]
 [JsonDerivedType(typeof(PowerAction), "powercfg")]
+[JsonDerivedType(typeof(ScheduledTaskAction), "scheduledTask")]
+[JsonDerivedType(typeof(PowerPlanAction), "powerPlan")]
 public abstract record TweakAction
 {
     internal abstract string Target { get; }
     internal virtual string Identity => Target;
 }
 
+/// <param name="Accept">Other values that already satisfy the tweak (e.g. a stricter setting made by the user).</param>
 public sealed record RegistryAction(
     RegistryHiveName Hive, string Path, string ValueName, RegistryOperation Operation,
-    RegistryValue? Expected) : TweakAction
+    RegistryValue? Expected, RegistryValue[]? Accept = null) : TweakAction
 {
     internal override string Target => $@"{Key} [{(ValueName.Length == 0 ? "(Padrão)" : ValueName)}]";
     internal override string Identity => $"{Key}\0{ValueName}";
@@ -42,6 +46,20 @@ public sealed record ServiceAction(string Name, ServiceStartup Expected) : Tweak
 public sealed record PowerAction(Guid Expected) : TweakAction
 {
     internal override string Target => "Plano de energia ativo";
+}
+
+public sealed record ScheduledTaskAction(string Path, TaskSetting Expected) : TweakAction
+{
+    internal override string Target => $"Tarefa {Path}";
+}
+
+public sealed record PowerSettingValue(Guid Subgroup, Guid Setting, uint Ac, uint Dc);
+
+/// <summary>A power plan owned by NOVAIS boost: created from a template on apply, deleted on revert.</summary>
+public sealed record PowerPlanAction(Guid Id, string Name, Guid Template, PowerSettingValue[] Settings) : TweakAction
+{
+    internal override string Target => $"Plano de energia {Name}";
+    internal override string Identity => $"plan:{Id:D}";
 }
 
 public sealed record RegistryValue(RegistryValueType Kind, JsonElement Value)

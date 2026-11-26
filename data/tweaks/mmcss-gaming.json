@@ -1,0 +1,81 @@
+{
+  "id": "mmcss-gaming",
+  "name": "Prioridade multimídia para jogos",
+  "description": "Ajusta o agendador multimídia (MMCSS): menos CPU reservada para tarefas de fundo, sem limite de rede para multimídia e prioridade alta para jogos.",
+  "category": "CPU",
+  "level": "competitive",
+  "risk": "Baixo.",
+  "requiresReboot": true,
+  "compat": {
+    "hardware": [],
+    "antiCheat": []
+  },
+  "actions": [
+    {
+      "type": "registry",
+      "hive": "localMachine",
+      "path": "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile",
+      "valueName": "SystemResponsiveness",
+      "operation": "set",
+      "expected": {
+        "kind": "dword",
+        "value": 10
+      }
+    },
+    {
+      "type": "registry",
+      "hive": "localMachine",
+      "path": "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile",
+      "valueName": "NetworkThrottlingIndex",
+      "operation": "set",
+      "expected": {
+        "kind": "dword",
+        "value": -1
+      }
+    },
+    {
+      "type": "registry",
+      "hive": "localMachine",
+      "path": "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile\\Tasks\\Games",
+      "valueName": "GPU Priority",
+      "operation": "set",
+      "expected": {
+        "kind": "dword",
+        "value": 8
+      }
+    },
+    {
+      "type": "registry",
+      "hive": "localMachine",
+      "path": "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile\\Tasks\\Games",
+      "valueName": "Priority",
+      "operation": "set",
+      "expected": {
+        "kind": "dword",
+        "value": 6
+      }
+    },
+    {
+      "type": "registry",
+      "hive": "localMachine",
+      "path": "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile\\Tasks\\Games",
+      "valueName": "Scheduling Category",
+      "operation": "set",
+      "expected": {
+        "kind": "string",
+        "value": "High"
+      }
+    },
+    {
+      "type": "registry",
+      "hive": "localMachine",
+      "path": "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile\\Tasks\\Games",
+      "valueName": "SFIO Priority",
+      "operation": "set",
+      "expected": {
+        "kind": "string",
+        "value": "High"
+      }
+    }
+  ]
+}

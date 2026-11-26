@@ -1,0 +1,25 @@
+{
+  "id": "telemetry-services",
+  "name": "Desligar serviços de telemetria",
+  "description": "Desativa o serviço de telemetria (DiagTrack) e o roteador de mensagens push (dmwappushservice).",
+  "category": "Serviços",
+  "level": "competitive",
+  "risk": "Baixo. Diagnósticos enviados à Microsoft param.",
+  "requiresReboot": true,
+  "compat": {
+    "hardware": [],
+    "antiCheat": []
+  },
+  "actions": [
+    {
+      "type": "service",
+      "name": "DiagTrack",
+      "expected": "disabled"
+    },
+    {
+      "type": "service",
+      "name": "dmwappushservice",
+      "expected": "disabled"
+    }
+  ]
+}

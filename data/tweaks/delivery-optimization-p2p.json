@@ -1,0 +1,26 @@
+{
+  "id": "delivery-optimization-p2p",
+  "name": "Desligar o compartilhamento de atualizações (P2P)",
+  "description": "Impede o Windows de usar sua internet para enviar atualizações a outros PCs, o que pode causar lag no jogo.",
+  "category": "Rede",
+  "level": "safe",
+  "risk": "Nenhum. As atualizações continuam vindo da Microsoft.",
+  "requiresReboot": false,
+  "compat": {
+    "hardware": [],
+    "antiCheat": []
+  },
+  "actions": [
+    {
+      "type": "registry",
+      "hive": "localMachine",
+      "path": "SOFTWARE\\Policies\\Microsoft\\Windows\\DeliveryOptimization",
+      "valueName": "DODownloadMode",
+      "operation": "set",
+      "expected": {
+        "kind": "dword",
+        "value": 0
+      }
+    }
+  ]
+}
