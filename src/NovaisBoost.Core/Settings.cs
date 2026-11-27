@@ -9,6 +9,8 @@ namespace NovaisBoost.Core;
 /// <param name="GameCpuSets">Experimental opt-in: pin the game to P-cores / the V-Cache CCD (never a protected game).</param>
 /// <param name="PowerPlanDuringGame">Opt-in: NOVAIS boost plan only while a game runs, previous plan otherwise.</param>
 /// <param name="StandbyPurge">Opt-in: purge the standby list when free memory is short (at most every 5 min).</param>
+/// <param name="ObsCpuSets">Opt-in (F19): OBS/Streamlabs on the background cores (E-cores / CCD without V-Cache) during the game.</param>
+/// <param name="WifiScanOff">F19: pause Wi-Fi background scans while a game runs (restored when it closes).</param>
 /// <param name="Lower">Process names to lower during the game. <paramref name="Efficiency"/>: to put in efficiency mode.
 /// <paramref name="Ignore"/>: never touched.</param>
 public sealed record GuardianSettings(
@@ -21,7 +23,9 @@ public sealed record GuardianSettings(
     bool StandbyPurge = false,
     string[]? Lower = null,
     string[]? Efficiency = null,
-    string[]? Ignore = null);
+    string[]? Ignore = null,
+    bool ObsCpuSets = false,
+    bool WifiScanOff = true);
 
 /// <summary>Opt-in caches for the weekly cleanup (23.1). Browsers and launchers are only cleaned while closed.</summary>
 public sealed record CleanupSettings(bool Browsers = false, bool Launchers = false);

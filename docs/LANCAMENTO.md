@@ -115,6 +115,19 @@ Faça um snapshot da VM antes. Para cada item, confira o log em `C:\ProgramData\
       só ou XMP desligado mostra "Memória lenta".
 - [ ] Perfil do meu Hardware → informar fonte de 550 W numa RTX 4080 → aviso de fonte no diagnóstico; `settings.json` ganha `pc`.
 
+- [ ] **F19:** Benchmark → 8 com mouse de 1.000 Hz → ~1.000 Hz e estabilidade alta; num mouse de 4K/8K Hz, comparar com o software do fabricante.
+- [ ] Diagnóstico num PC com webcam/placa de captura no mesmo controlador do mouse → "Mouse no mesmo controlador USB"; trocando a porta → some.
+- [ ] Cartão de hardware mostra temperatura, desgaste e horas dos SSDs NVMe (como administrador) e a linha BypassIO.
+- [ ] Otimizações para jogos em janela: aplicar → Configurações > Sistema > Tela > Gráficos > "Otimizações para jogos em janela" ligado;
+      a opção de VRR continua como estava; reverter → volta ao estado anterior.
+- [ ] Áudio sem melhorias: aplicar → Configurações > Som > dispositivo → "Melhorias de áudio" desligado; reverter → volta. Se o Windows negar
+      a escrita, o ajuste falha sozinho e o resto do lote continua.
+- [ ] Saída HDMI da placa de vídeo desativada → some do Gerenciador de Dispositivos (desativado); reverter → volta e o som pelo monitor funciona.
+- [ ] Rede → 4 → CS2: lista relays da Valve com ping (São Paulo primeiro no Brasil); Fortnite: regiões da AWS com ping por TCP.
+- [ ] Guardian em notebook com Wi-Fi: abrir um jogo → log "varredura Wi-Fi pausada"; fechar → "religada".
+- [ ] `guardian.obsCpuSets: true` num Intel híbrido ou X3D de 2 CCDs com OBS aberto → OBS só nos E-cores / CCD sem V-Cache durante o jogo.
+- [ ] Jogos & Streaming com OBS instalado → teste de upload termina e mostra o bitrate sugerido.
+
 ## 3. Assinatura de código (evita alerta do SmartScreen e falso positivo de antivírus)
 
 Um otimizador que mexe no registro e roda como administrador **precisa** ser assinado.

@@ -98,7 +98,18 @@ internal static class DiagnosticView
         Row("Placa-mãe", pc.Board is { } board
             ? $"{board.Manufacturer} {board.Product} · BIOS {board.BiosVersion}{(board.BiosDate is { } date ? $" ({date:dd/MM/yyyy})" : "")}" : null);
         foreach (var disk in pc.Disks)
-            Row(disk.IsSystem ? "Disco (sistema)" : "Disco", $"{disk.Name} · {disk.Bus} {disk.Media} · {Core.Diagnostics.Gb(disk.SizeBytes)}");
+        {
+            var health = pc.Deep?.Reliability?.FirstOrDefault(item => item.Name == disk.Name);
+            Row(disk.IsSystem ? "Disco (sistema)" : "Disco", string.Join(" · ", new[]
+            {
+                $"{disk.Name} · {disk.Bus} {disk.Media} · {Core.Diagnostics.Gb(disk.SizeBytes)}",
+                health?.TemperatureC is { } temperature ? $"{temperature} °C" : null,
+                health?.Wear is { } wear ? $"{wear}% da vida útil usada" : null,
+                health?.PowerOnHours is { } hours ? $"{hours:N0} h ligado" : null
+            }.OfType<string>()));
+        }
+        if (pc.Deep?.BypassIo is { } bypass)
+            Row("BypassIO", bypass);
         foreach (var volume in pc.Volumes)
             Row($"Unidade {volume.Letter}", $"{Core.Diagnostics.Gb(volume.FreeBytes)} livres de {Core.Diagnostics.Gb(volume.TotalBytes)} ({volume.FreePercent:0}%)");
         foreach (var display in pc.Displays)

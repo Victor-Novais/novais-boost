@@ -59,6 +59,8 @@ public static class TweakLevels
 [JsonDerivedType(typeof(DefenderExclusionAction), "defenderExclusion")]
 [JsonDerivedType(typeof(AppxPackageAction), "appxPackage")]
 [JsonDerivedType(typeof(SystemFeatureAction), "systemFeature")]
+[JsonDerivedType(typeof(DirectXSettingAction), "directxSetting")]
+[JsonDerivedType(typeof(DeviceAction), "device")]
 public abstract record TweakAction
 {
     internal abstract string Target { get; }
@@ -210,6 +212,23 @@ public sealed record SystemFeatureAction(SystemFeature Feature, bool Enabled) : 
         _ => Feature.ToString()
     };
     internal override string Identity => $"feature:{Feature}";
+}
+
+/// <summary>
+/// One "Key=Value;" entry of HKCU\Software\Microsoft\DirectX\UserGpuPreferences [DirectXUserGlobalSettings] (F19), keeping the
+/// other entries (VRR, auto HDR...) that Windows stores in the same string. Value null removes the entry.
+/// </summary>
+public sealed record DirectXSettingAction(string Key, string? Value) : TweakAction
+{
+    internal override string Target => $"DirectX (gráficos do Windows): {Key}";
+    internal override string Identity => $"directx:{Key.ToLowerInvariant()}";
+}
+
+/// <summary>A device turned off or on in Device Manager (F19: unused HDMI/DisplayPort audio). Revert turns it back.</summary>
+public sealed record DeviceAction(string InstanceId, string Name, bool Enabled) : TweakAction
+{
+    internal override string Target => $"Dispositivo {Name}";
+    internal override string Identity => $"device:{InstanceId.ToLowerInvariant()}";
 }
 
 /// <summary>A power plan owned by NOVAIS boost: created from a template on apply, deleted on revert.</summary>

@@ -13,7 +13,7 @@ public sealed class TweakEngine(
     INvidiaSettings? nvidia = null, IDnsSettings? dns = null,
     IBcdStore? bcd = null, IPagefile? pagefile = null, ITcpSettings? tcp = null, IConfigFiles? configs = null,
     INvidiaProfiles? nvidiaProfiles = null, IAmdSettings? amd = null, IDefenderExclusions? defender = null,
-    IAppxPackages? appx = null, ISystemFeatures? features = null)
+    IAppxPackages? appx = null, ISystemFeatures? features = null, IDirectXSettings? directx = null, IDevices? devices = null)
 {
     private RestorePoint? _batchPoint;
     private bool _inBatch;
@@ -278,6 +278,9 @@ public sealed class TweakEngine(
             AppxPackageAction => new AppxPackageState(false),
             SystemFeatureAction when before is SystemFeatureState { Enabled: null } => before,
             SystemFeatureAction feature => new SystemFeatureState(feature.Enabled),
+            DirectXSettingAction setting => new DirectXSettingState(setting.Value),
+            DeviceAction when before is DeviceState { Enabled: null } => before,
+            DeviceAction device => new DeviceState(device.Enabled),
             _ => throw new InvalidDataException("Operação de ajuste inválida.")
         };
         return new PlannedChange(action, before, expected);
@@ -301,6 +304,8 @@ public sealed class TweakEngine(
         DefenderExclusionAction exclusion => new DefenderExclusionState(Require(defender).Contains(exclusion.Path)),
         AppxPackageAction package => new AppxPackageState(Require(appx).IsInstalled(package.Name)),
         SystemFeatureAction feature => new SystemFeatureState(Require(features).IsEnabled(feature.Feature)),
+        DirectXSettingAction setting => new DirectXSettingState(Require(directx).Read(setting.Key)),
+        DeviceAction device => new DeviceState(Require(devices).IsEnabled(device.InstanceId)),
         _ => throw new InvalidDataException("Tipo de ajuste desconhecido.")
     };
 
@@ -362,6 +367,12 @@ public sealed class TweakEngine(
                 break;
             case (SystemFeatureAction feature, SystemFeatureState { Enabled: { } enabled }):
                 Require(features).Set(feature.Feature, enabled);
+                break;
+            case (DirectXSettingAction setting, DirectXSettingState directxState):
+                Require(directx).Write(setting.Key, directxState.Value);
+                break;
+            case (DeviceAction device, DeviceState { Enabled: { } deviceEnabled }):
+                Require(devices).SetEnabled(device.InstanceId, deviceEnabled);
                 break;
             default:
                 throw new InvalidDataException("O estado do backup não corresponde à operação.");

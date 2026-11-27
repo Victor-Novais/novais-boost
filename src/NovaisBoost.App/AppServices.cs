@@ -23,7 +23,8 @@ internal sealed class AppServices
         Engine = new TweakEngine(new WindowsRegistry(), new WindowsServiceController(), new WindowsPowerConfig(), snapshots, log,
             new WindowsScheduledTasks(log), new WindowsPowerPlans(), compat => Compatibility.Check(compat, Pc),
             nvidia, new WindowsDnsSettings(), new WindowsBcdStore(), new WindowsPagefile(), new WindowsTcpSettings(), new WindowsConfigFiles(),
-            nvidia, Amd, new WindowsDefenderExclusions(), Appx, new WindowsSystemFeatures());
+            nvidia, Amd, new WindowsDefenderExclusions(), Appx, new WindowsSystemFeatures(),
+            new WindowsDirectXSettings(), new WindowsDevices());
     }
 
     public string DataDirectory { get; }

@@ -77,6 +77,8 @@ internal sealed class GuardianService(GuardianPolicy policy, IActionLog log, boo
             Say(policy.MayTouchGame(game) ? $"Jogo detectado: {game}."
                 : $"Jogo detectado: {game} (anti-cheat protegido: o processo do jogo não é alterado).");
             SwitchPowerPlan(gameStarted: true);
+            if (policy.Settings.WifiScanOff && WifiScan.Pause(log) > 0)
+                Say("Varredura de redes Wi-Fi em segundo plano pausada durante o jogo.");
         }
         _gameRunning = true;
 
@@ -95,9 +97,17 @@ internal sealed class GuardianService(GuardianPolicy policy, IActionLog log, boo
 
         var background = _environment.Topology?.BackgroundSets() ?? [];
         if (background.Count > 0)
+        {
             foreach (var id in policy.CpuSetTargets(samples).Where(id => !_cpuSets.ContainsKey(id)))
                 if (ProcessControl.SetCpuSets(id, background))
                     _cpuSets[id] = names[id];
+            foreach (var id in policy.StreamingCpuSetTargets(samples).Where(id => !_cpuSets.ContainsKey(id)))
+                if (ProcessControl.SetCpuSets(id, background))
+                {
+                    _cpuSets[id] = names[id];
+                    Say($"{names[id]}: transmissão nos núcleos de segundo plano, separada do jogo.");
+                }
+        }
         var gameSets = _environment.Topology?.GameSets() ?? [];
         if (gameSets.Count > 0)
             foreach (var id in policy.GameCpuSetTargets(samples).Where(id => !_cpuSets.ContainsKey(id)))
@@ -208,6 +218,7 @@ internal sealed class GuardianService(GuardianPolicy policy, IActionLog log, boo
         _efficiency.Clear();
         _cpuSets.Clear();
         SwitchPowerPlan(gameStarted: false);
+        WifiScan.Resume(log);
     }
 
     private static void WithProcess(int id, Action<Process> action)

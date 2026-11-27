@@ -142,6 +142,12 @@
           },
           {
             "$ref": "#/$defs/systemFeature"
+          },
+          {
+            "$ref": "#/$defs/directxSetting"
+          },
+          {
+            "$ref": "#/$defs/device"
           }
         ]
       }
@@ -772,6 +778,58 @@
             "hibernation",
             "memoryCompression"
           ]
+        },
+        "enabled": {
+          "type": "boolean"
+        }
+      }
+    },
+    "directxSetting": {
+      "description": "One Key=Value; entry of HKCU\\Software\\Microsoft\\DirectX\\UserGpuPreferences [DirectXUserGlobalSettings]; other entries are kept. value null removes the entry.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "key",
+        "value"
+      ],
+      "properties": {
+        "type": {
+          "const": "directxSetting"
+        },
+        "key": {
+          "type": "string",
+          "pattern": "^[A-Za-z][A-Za-z0-9]{1,63}$"
+        },
+        "value": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[A-Za-z0-9.]{1,32}$"
+        }
+      }
+    },
+    "device": {
+      "description": "A PnP device disabled or enabled (Device Manager). Generated per PC; the instance id differs on every machine.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "instanceId",
+        "name",
+        "enabled"
+      ],
+      "properties": {
+        "type": {
+          "const": "device"
+        },
+        "instanceId": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9\\\\&_.{}#-]+$"
+        },
+        "name": {
+          "$ref": "#/$defs/nonblank"
         },
         "enabled": {
           "type": "boolean"

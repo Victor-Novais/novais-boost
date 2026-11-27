@@ -101,6 +101,8 @@ internal sealed class Views(AppServices app, ConsoleUi ui)
         var gpu = app.Pc.Gpus.FirstOrDefault(item => !item.IsIntegrated) ?? app.Pc.Gpus.FirstOrDefault();
         if (gpu is not null)
             AnsiConsole.MarkupLine($"[bold]Streaming com {Markup.Escape(gpu.Name)}:[/] {Markup.Escape(EncoderAdvice(gpu))}");
+        if (games.Any(game => game.Game.Id == "obs"))
+            StreamingAdvice();
 
         var tweaks = app.DynamicTweaks.Where(tweak => tweak.Id is "games-gpu-preference" or "games-qos").ToArray();
         if (tweaks.Length > 0 && ConsoleUi.Confirm("Revisar os ajustes para os jogos detectados (GPU dedicada e prioridade de rede)?"))
@@ -159,6 +161,30 @@ internal sealed class Views(AppServices app, ConsoleUi ui)
                 AnsiConsole.MarkupLine("[grey]Radeon: ligue o Anti-Lag e desligue Chill, Boost, Enhanced Sync e HYPR-RX no AMD Software " +
                     "(a aplicação automática pelo ADLX ainda não está disponível nesta versão).[/]");
         }
+    }
+
+    /// <summary>F19 streaming: bitrate from the measured upload, the Guardian core split and the two-PC checklist.</summary>
+    private void StreamingAdvice()
+    {
+        if (ConsoleUi.Confirm("Medir o upload da internet para sugerir o bitrate da transmissão (~10 s, envia 25 MB de dados aleatórios)?"))
+        {
+            try
+            {
+                var upload = Spin("Medindo o upload...", GameNetwork.UploadMbps);
+                AnsiConsole.MarkupLine($"Upload: [bold]{upload:0.0} Mbps[/] → bitrate sugerido: Twitch [bold]{StreamSettings.SuggestBitrate(upload, "twitch")} kbps[/], " +
+                    $"Kick {StreamSettings.SuggestBitrate(upload, "kick")} kbps, YouTube {StreamSettings.SuggestBitrate(upload, "youtube")} kbps " +
+                    "[grey](75% do upload, para sobrar banda para o jogo)[/]");
+            }
+            catch (Exception error) when (error is HttpRequestException or TaskCanceledException)
+            {
+                AnsiConsole.MarkupLine($"[yellow]Não foi possível medir o upload: {Markup.Escape(error.Message)}[/]");
+            }
+        }
+        if (app.Pc.Cpu is { } cpu && (Compatibility.IsDualCcdX3d(cpu.Name) || cpu.Name.Contains("Core", StringComparison.OrdinalIgnoreCase)))
+            AnsiConsole.MarkupLine("[grey]Dica: com `guardian.obsCpuSets: true` em settings.json, o Guardian põe o OBS nos E-cores / no CCD sem V-Cache " +
+                "durante o jogo, separado dos núcleos do jogo.[/]");
+        AnsiConsole.MarkupLine("[bold]Dois PCs ou placa de captura:[/] [grey]PC do jogo sem OBS; placa de captura em porta USB de outro controlador " +
+            "(veja o diagnóstico); áudio pelo Voicemeeter ou cabo; no PC do jogo, limite de FPS e G-Sync como sempre — a captura não precisa de V-Sync.[/]");
     }
 
     private static string EncoderAdvice(GpuInfo gpu) => gpu.Vendor switch
@@ -401,6 +427,7 @@ internal sealed class Views(AppServices app, ConsoleUi ui)
         AnsiConsole.MarkupLine(ConsoleUi.Item(5, "Comparar capturas avulsas antes × depois"));
         AnsiConsole.MarkupLine(ConsoleUi.Item(6, "Abrir o último relatório"));
         AnsiConsole.MarkupLine(ConsoleUi.Item(7, "Teste rápido de gargalo: CPU, memória e disco — 30 segundos"));
+        AnsiConsole.MarkupLine(ConsoleUi.Item(8, "Teste de polling do mouse — mexa o mouse por 5 segundos"));
         AnsiConsole.MarkupLine(ConsoleUi.Item(0, "Voltar"));
         switch (ConsoleUi.ReadChoice())
         {
@@ -429,7 +456,31 @@ internal sealed class Views(AppServices app, ConsoleUi ui)
             case "7":
                 QuickBenchmark();
                 break;
+            case "8":
+                MouseTest();
+                break;
         }
+    }
+
+    private void MouseTest()
+    {
+        if (!ConsoleUi.Confirm("Ao confirmar, mexa o mouse em círculos rápidos por 5 segundos. Começar?"))
+            return;
+        var timestamps = Spin("Mexa o mouse sem parar...", () => MousePolling.Record(TimeSpan.FromSeconds(5)));
+        if (PollingRate.Analyze(timestamps) is not { } result)
+        {
+            AnsiConsole.MarkupLine("[yellow]Poucos movimentos registrados. Repita mexendo o mouse o tempo todo.[/]");
+            return;
+        }
+        app.Log.Info($"Polling do mouse: {result.AverageHz:0} Hz médio, {result.StabilityPercent:0}% estável, {result.Samples} amostras.");
+        AnsiConsole.MarkupLine($"Polling medido: [bold]{result.AverageHz:0} Hz[/] (configuração provável: {PollingRate.Nominal(result.AverageHz)} Hz) · " +
+            $"estabilidade: [bold]{result.StabilityPercent:0}%[/]");
+        var findings = PollingRate.Evaluate(result, app.Pc.Cpu);
+        if (findings.Count == 0)
+            AnsiConsole.MarkupLine("[green]Polling estável.[/]");
+        foreach (var finding in findings)
+            AnsiConsole.MarkupLine($"[yellow]{Markup.Escape(finding.Title)}[/] — {Markup.Escape(finding.Recommendation)}");
+        AnsiConsole.MarkupLine("[grey]Acima de 1.000 Hz a medição por mensagens do Windows pode ficar abaixo do real; compare com o software do mouse.[/]");
     }
 
     private void QuickBenchmark()
@@ -603,6 +654,7 @@ internal sealed class Views(AppServices app, ConsoleUi ui)
         AnsiConsole.MarkupLine(ConsoleUi.Item(1, "Teste de ping, jitter, perda e bufferbloat (~30 s, usa a internet)"));
         AnsiConsole.MarkupLine(ConsoleUi.Item(2, "Achar o DNS mais rápido"));
         AnsiConsole.MarkupLine(ConsoleUi.Item(3, "Ajustes da placa de rede e QoS"));
+        AnsiConsole.MarkupLine(ConsoleUi.Item(4, "Ping até os servidores dos jogos (CS2, Fortnite, Apex...)"));
         AnsiConsole.MarkupLine(ConsoleUi.Item(0, "Voltar"));
         switch (ConsoleUi.ReadChoice())
         {
@@ -619,7 +671,30 @@ internal sealed class Views(AppServices app, ConsoleUi ui)
                 else
                     ui.ReviewAndApply(tweaks);
                 break;
+            case "4":
+                GameServersPing();
+                break;
         }
+    }
+
+    /// <summary>F19: latency to the real servers (Valve relays) or to the cloud region each game runs on.</summary>
+    private void GameServersPing()
+    {
+        var catalog = DataCatalog.Servers();
+        var names = DataCatalog.Games().ToDictionary(game => game.Id, game => game.Name);
+        var entry = AnsiConsole.Prompt(new SelectionPrompt<GameServers>().Title("Qual jogo?")
+            .UseConverter(item => Markup.Escape(names.GetValueOrDefault(item.Game, item.Game))).AddChoices(catalog.Games));
+        var results = Spin("Medindo a latência até os servidores...", () => entry.ValveSdrAppId is { } appId
+            ? GameNetwork.ValveRelays(appId).Take(8).ToArray()
+            : GameServerCatalog.Rank(entry.Regions.Select(id => catalog.Regions.First(region => region.Id == id))
+                .Select(region => (region.Name, GameNetwork.Tcp(region.Host, region.Port)))).ToArray());
+        var table = new Table().Border(TableBorder.Rounded).BorderColor(Purple).AddColumn("Servidor").AddColumn(new TableColumn("Ping").RightAligned())
+            .AddColumn(new TableColumn("Jitter").RightAligned()).AddColumn(new TableColumn("Perda").RightAligned());
+        foreach (var (name, stats) in results)
+            table.AddRow(Markup.Escape(name), stats.Received == 0 ? "-" : $"{stats.AverageMs:0} ms", stats.Received == 0 ? "-" : $"{stats.JitterMs:0.0} ms", $"{stats.LossPercent:0.#}%");
+        AnsiConsole.Write(table);
+        AnsiConsole.MarkupLine($"[grey]{Markup.Escape(entry.Note)}[/]");
+        app.Log.Info($"Ping de servidores ({entry.Game}): {string.Join("; ", results.Select(item => $"{item.Name} {item.Stats.AverageMs:0} ms"))}.");
     }
 
     private void PingTest()

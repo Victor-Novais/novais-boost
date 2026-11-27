@@ -102,6 +102,20 @@ public interface ISystemFeatures
     void Set(SystemFeature feature, bool enabled);
 }
 
+/// <summary>Entries of DirectXUserGlobalSettings (see <see cref="DirectXSettings"/>).</summary>
+public interface IDirectXSettings
+{
+    string? Read(string key);
+    void Write(string key, string? value);
+}
+
+/// <summary>Devices by PnP instance id. IsEnabled is null when the device is not present.</summary>
+public interface IDevices
+{
+    bool? IsEnabled(string instanceId);
+    void SetEnabled(string instanceId, bool enabled);
+}
+
 public interface IPowerPlans
 {
     PowerPlanState Read(PowerPlanAction plan);
@@ -148,6 +162,8 @@ public interface IActionLog
 [JsonDerivedType(typeof(DefenderExclusionState), "defenderExclusion")]
 [JsonDerivedType(typeof(AppxPackageState), "appxPackage")]
 [JsonDerivedType(typeof(SystemFeatureState), "systemFeature")]
+[JsonDerivedType(typeof(DirectXSettingState), "directxSetting")]
+[JsonDerivedType(typeof(DeviceState), "device")]
 public abstract record SettingState
 {
     internal virtual bool Matches(SettingState other) => Equals(other);
@@ -271,6 +287,17 @@ public sealed record AppxPackageState(bool Installed) : SettingState
 public sealed record SystemFeatureState(bool? Enabled) : SettingState
 {
     internal override string Display => Enabled switch { true => "ligado", false => "desligado", null => "indisponível" };
+}
+
+public sealed record DirectXSettingState(string? Value) : SettingState
+{
+    internal override string Display => Value ?? "padrão do Windows";
+}
+
+/// <param name="Enabled">Null when the device is not present.</param>
+public sealed record DeviceState(bool? Enabled) : SettingState
+{
+    internal override string Display => Enabled switch { true => "ativado", false => "desativado", null => "não encontrado" };
 }
 
 public sealed record TcpState(string Value) : SettingState

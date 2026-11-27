@@ -102,6 +102,22 @@ Em Jogos & Streaming, o NOVAIS boost aplica um preset competitivo direto no arqu
   integração com o driver ainda não está nesta versão; a tela mostra as recomendações para fazer no AMD Software.
 - **Intel Arc:** leitura via IGCL ainda não implementada.
 
+## Entrada, áudio, rede e armazenamento
+
+| Onde | O quê |
+|---|---|
+| Benchmark → 8 | **Teste de polling do mouse** (Raw Input numa janela invisível, 5 s): Hz medido, configuração provável e estabilidade. Avisa quando 4.000/8.000 Hz pesam numa CPU com menos de 8 núcleos |
+| Diagnóstico | **Mapa USB**: mouse no mesmo controlador que webcam ou placa de captura. **SMART/NVMe**: temperatura, desgaste, erros de leitura e horas ligado (`MSFT_StorageReliabilityCounter`), cache de gravação. **Placa de rede**: RSS desligado e poucos buffers. **Afinidade de interrupções** forçada por outro otimizador. **Jogo em SSD SATA** com um NVMe disponível. BypassIO no cartão de hardware |
+| Nível 1 | **Otimizações para jogos em janela** (`SwapEffectUpgradeEnable` dentro de `DirectXUserGlobalSettings`, sem apagar VRR/Auto HDR) |
+| Nível 2 | **Áudio sem melhorias** nos dispositivos de reprodução ativos |
+| Individual | **MPO desligado** (`experimental`, só para flicker; pode não ter efeito no 24H2/25H2). **Saída de áudio HDMI/DisplayPort** desativada, uma por placa (`experimental`) |
+| Rede → 4 | **Ping até os servidores dos jogos**: relays oficiais da Valve (CS2, Dota 2) pela configuração pública do Steam, e a região da AWS para Fortnite, Apex e PUBG (`data/servers.json`) |
+| Guardian | **Varredura de Wi-Fi em segundo plano pausada** durante o jogo (`guardian.wifiScanOff`, padrão ligado) e **OBS nos núcleos de segundo plano** (`guardian.obsCpuSets`, opt-in) |
+| Jogos & Streaming | **Bitrate sugerido** pelo upload medido (Twitch, Kick, YouTube) e checklist de dois PCs / placa de captura |
+
+Tipos de ação da F19: `directxSetting` (uma entrada de `DirectXUserGlobalSettings`) e `device` (ligar/desligar um dispositivo pelo `pnputil`).
+Desligar o Nagle (`TcpAckFrequency`/`TCPNoDelay`) continua fora: não ajuda jogos modernos.
+
 ## Debloat
 
 | Item | O que faz | Nível | Como voltar |
@@ -197,6 +213,8 @@ Arquivo opcional `C:\ProgramData\NOVAIS boost\settings.json` (só administradore
 | `guardian.powerPlanDuringGame` | `true`/`false` | `false`: plano NOVAIS boost só com o jogo aberto (nunca em X3D de 2 CCDs) |
 | `guardian.standbyPurge` | `true`/`false` | `false`: limpa a lista standby só com menos de 1 GB livre e mais de 2 GB em standby, no máximo a cada 5 min |
 | `guardian.lower` / `efficiency` / `ignore` | lista de processos | vazias: baixar prioridade, modo de eficiência ou nunca mexer |
+| `guardian.wifiScanOff` | `true`/`false` | `true`: pausa a varredura de redes Wi-Fi em segundo plano enquanto o jogo roda |
+| `guardian.obsCpuSets` | `true`/`false` | `false`: OBS/Streamlabs nos E-cores / CCD sem V-Cache durante o jogo |
 | `cleanup.browsers` / `cleanup.launchers` | `true`/`false` | `false`: limpar o cache dos navegadores / launchers na limpeza semanal |
 | `pc.psuWatts` / `pc.psuRating` | 200 a 3000 / `bronze`, `gold`... | não informado: potência e certificação da fonte, usadas nos avisos |
 

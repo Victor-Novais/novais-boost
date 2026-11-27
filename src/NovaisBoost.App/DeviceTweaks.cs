@@ -47,6 +47,9 @@ internal sealed class DeviceTweaks(IActionLog log)
         var playable = games.Where(game => game.Game.Id != "obs").ToArray();
         Add("games-gpu-preference", () => GpuPreference(games, pc));
         Add("games-qos", () => Qos(playable));
+        Add("audio-enhancements", AudioEnhancements);
+        foreach (var device in Try(DisplayAudio) ?? [])
+            tweaks.Add(device);
         return tweaks;
     }
 
@@ -153,6 +156,56 @@ internal sealed class DeviceTweaks(IActionLog log)
             "Marca os pacotes dos jogos com DSCP 46 (tráfego em tempo real). Roteadores com QoS/WMM priorizam esses pacotes.",
             "Rede", TweakLevel.Competitive, TweakEvidence.Documented, "Nenhum. Roteadores sem QoS ignoram a marcação.", true, None, actions.ToArray());
     }
+
+    private T? Try<T>(Func<T> read) where T : class
+    {
+        try
+        {
+            return read();
+        }
+        catch (Exception error) when (error is not OutOfMemoryException)
+        {
+            log.Warning($"Ajuste dinâmico indisponível: {error.Message}");
+            return null;
+        }
+    }
+
+    private const string RenderKey = @"SOFTWARE\Microsoft\Windows\CurrentVersion\MMDevices\Audio\Render";
+
+    /// <summary>PKEY_AudioEndpoint_Disable_SysFx: 1 turns off "audio enhancements" (Settings → Sound → device → Audio enhancements).</summary>
+    private const string DisableSysFx = "{1da5d803-d492-4edd-8c23-e0c0ffee7f0e},5";
+
+    /// <summary>F19: audio enhancements off on every active playback device that has them.</summary>
+    private static TweakDefinition? AudioEnhancements()
+    {
+        using var render = Registry.LocalMachine.OpenSubKey(RenderKey);
+        var actions = new List<TweakAction>();
+        foreach (var endpoint in render?.GetSubKeyNames() ?? [])
+        {
+            using var key = render!.OpenSubKey(endpoint);
+            using var fx = key?.OpenSubKey("FxProperties");
+            // DeviceState 1 = active; only endpoints whose driver offers effects (FxProperties exists).
+            if (key?.GetValue("DeviceState") is not 1 || fx is null || fx.GetValue(DisableSysFx) is 1)
+                continue;
+            actions.Add(Dword(RegistryHiveName.LocalMachine, $@"{RenderKey}\{endpoint}\FxProperties", DisableSysFx, 1));
+        }
+        return actions.Count == 0 ? null : new TweakDefinition("audio-enhancements-off", "Áudio sem \"melhorias\"",
+            "Desliga as melhorias de áudio (equalizador, som espacial do driver, realce de graves) nos dispositivos de reprodução. " +
+            "Elas adicionam processamento e atraso ao som, e mudam os passos e tiros que você ouve. Reinicie o app de áudio/jogo depois.",
+            "Áudio", TweakLevel.Competitive, TweakEvidence.Documented, "Baixo. O som fica \"cru\", como o jogo o gerou.", false, None, actions.ToArray());
+    }
+
+    /// <summary>F19: HDMI/DisplayPort audio of the graphics card, one tweak each (custom list: only if you do not use the monitor speakers).</summary>
+    private static IReadOnlyList<TweakDefinition> DisplayAudio() => Wmi.Query(
+            "SELECT PNPDeviceID, Name FROM Win32_PnPEntity WHERE PNPClass = 'MEDIA'",
+            item => (Id: item["PNPDeviceID"] as string, Name: (item["Name"] as string ?? "?").Trim()))
+        .Where(device => device.Id is not null && Regex.IsMatch(device.Name, @"NVIDIA High Definition Audio|AMD High Definition Audio|Intel\(R\) Display Audio|HDMI|DisplayPort", RegexOptions.IgnoreCase))
+        .Select((device, index) => new TweakDefinition($"display-audio-off-{index + 1}", $"Desativar {device.Name}",
+            $"Desativa a saída de áudio HDMI/DisplayPort \"{device.Name}\" no Gerenciador de Dispositivos. Use só se o som não sai pelo monitor/TV: " +
+            "evita o Windows ou o jogo trocarem a saída sozinhos e remove um driver a mais.",
+            "Áudio", TweakLevel.Extreme, TweakEvidence.Experimental, "Baixo. O som pelo monitor/TV deixa de funcionar até reverter.", false, None,
+            [new DeviceAction(device.Id!, device.Name, false)]))
+        .ToArray();
 
     private static RegistryAction Dword(RegistryHiveName hive, string path, string name, int value) =>
         new(hive, path, name, RegistryOperation.Set, RegistryValue.From(RegistryValueType.Dword, value));

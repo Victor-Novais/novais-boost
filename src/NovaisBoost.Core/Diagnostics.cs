@@ -50,6 +50,7 @@ public static class Diagnostics
         Network(pc, findings);
         Stability(pc, findings);
         Software(pc, findings);
+        DeviceRules.Evaluate(pc, findings);
 
         var ordered = findings.OrderBy(finding => finding.Severity).ThenBy(finding => finding.Id, StringComparer.Ordinal).ToArray();
         var lost = ordered.GroupBy(finding => finding.Category)
@@ -65,7 +66,7 @@ public static class Diagnostics
         _ when id.StartsWith("gpu-", StringComparison.Ordinal) => FindingCategory.Graphics,
         "refresh-rate" or "display-hdmi" or "vrr-off" => FindingCategory.Display,
         "on-battery" or "power-plan" or "custom-power-plan" or "cpu-throttling" or "cpu-below-base" => FindingCategory.Power,
-        "wifi" or "link-speed" => FindingCategory.Network,
+        "wifi" or "link-speed" or "nic-rss-off" or "nic-buffers" => FindingCategory.Network,
         "overlays" or "other-optimizers" => FindingCategory.Software,
         _ when id.StartsWith("disk-", StringComparison.Ordinal) || id is "system-disk-space" or "system-hdd" or "game-on-hdd" or "trim-off"
             or "pagefile-off" or "pagefile-hdd" => FindingCategory.Storage,
