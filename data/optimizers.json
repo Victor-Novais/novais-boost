@@ -1,0 +1,67 @@
+[
+  {
+    "name": "Razer Cortex",
+    "displayNames": [ "^Razer Cortex" ],
+    "processes": [ "RazerCortex", "CortexLauncherService" ]
+  },
+  {
+    "name": "Process Lasso",
+    "displayNames": [ "^Process Lasso" ],
+    "processes": [ "ProcessLasso", "ProcessGovernor" ]
+  },
+  {
+    "name": "Hone",
+    "displayNames": [ "^Hone\\b" ],
+    "processes": [ "Hone" ]
+  },
+  {
+    "name": "IObit Advanced SystemCare",
+    "displayNames": [ "^Advanced SystemCare" ],
+    "processes": [ "ASC", "ASCService" ]
+  },
+  {
+    "name": "IObit Smart Game Booster",
+    "displayNames": [ "^Smart Game Booster" ],
+    "processes": [ "GameBooster" ]
+  },
+  {
+    "name": "Wise Game Booster",
+    "displayNames": [ "^Wise Game Booster" ],
+    "processes": [ "WiseGameBooster" ]
+  },
+  {
+    "name": "Wise Registry Cleaner / Wise Care 365",
+    "displayNames": [ "^Wise Registry Cleaner", "^Wise Care 365" ],
+    "processes": [ "WiseRegCleaner", "WiseCare365" ]
+  },
+  {
+    "name": "CCleaner",
+    "displayNames": [ "^CCleaner" ],
+    "processes": [ "CCleaner64", "CCleaner" ]
+  },
+  {
+    "name": "Ashampoo WinOptimizer",
+    "displayNames": [ "^Ashampoo WinOptimizer" ],
+    "processes": [ "WinOptimizer" ]
+  },
+  {
+    "name": "AVG TuneUp / Avast Cleanup",
+    "displayNames": [ "^AVG TuneUp", "^Avast Cleanup" ],
+    "processes": [ "TuneupUI", "CleanupUI" ]
+  },
+  {
+    "name": "Glary Utilities",
+    "displayNames": [ "^Glary Utilities" ],
+    "processes": [ "Integrator" ]
+  },
+  {
+    "name": "Game Fire",
+    "displayNames": [ "^Game Fire" ],
+    "processes": [ "GameFire" ]
+  },
+  {
+    "name": "Optimizer (hellzerg)",
+    "displayNames": [],
+    "processes": [ "Optimizer" ]
+  }
+]

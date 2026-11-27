@@ -1,0 +1,27 @@
+[
+  {
+    "pattern": "Channel\\s*([A-D])",
+    "board": null,
+    "example": "ChannelA-DIMM1, P0 CHANNEL A (MSI, Gigabyte, muitos notebooks)"
+  },
+  {
+    "pattern": "\\bDIMM[_ -]?([A-D])[_ -]?\\d\\b",
+    "board": null,
+    "example": "DIMM_A2, DIMMA1, DIMM B2 (ASUS, ASRock, MSI)"
+  },
+  {
+    "pattern": "\\bDDR\\d?[_ -]([A-D])\\d\\b",
+    "board": null,
+    "example": "DDR5_A1, DDR4_B2 (Gigabyte)"
+  },
+  {
+    "pattern": "^\\s*([A-D])\\d\\s*$",
+    "board": null,
+    "example": "A1, B2 (ASRock, Dell)"
+  },
+  {
+    "pattern": "\\bCH(?:ANNEL)?[_ -]?([A-D])\\b",
+    "board": null,
+    "example": "CH A, CHA (placas OEM)"
+  }
+]

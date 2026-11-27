@@ -5,9 +5,9 @@ namespace NovaisBoost.Tests;
 public sealed class DiagnosticsTests
 {
     private const long Gib = 1_073_741_824;
-    private static readonly DateOnly Today = new(2026, 11, 26);
+    internal static readonly DateOnly Today = new(2026, 11, 26);
 
-    private static HardwareSnapshot HealthyPc() => new(
+    internal static HardwareSnapshot HealthyPc() => new(
         DateTimeOffset.Now,
         new OsInfo("Windows 11 Pro", "26200", "25H2", TimeSpan.FromHours(5), IsLaptop: false, OnBattery: false),
         new CpuInfo("AMD Ryzen 7 7800X3D 8-Core Processor", "AuthenticAMD", 8, 16, 4200),
@@ -146,7 +146,7 @@ public sealed class DiagnosticsTests
     }
 
     [Fact]
-    public void ScoreNeverDropsBelowZero()
+    public void ScoreStaysInRangeAndEachCategoryIsCapped()
     {
         var pc = HealthyPc() with
         {
@@ -157,7 +157,11 @@ public sealed class DiagnosticsTests
             PowerPlan = new PowerPlanInfo(PowerPlanInfo.PowerSaver, "Economia"),
             Os = HealthyPc().Os with { IsLaptop = true, OnBattery = true }
         };
-        Assert.Equal(0, Diagnostics.Evaluate(pc, Today).Score);
+        var report = Diagnostics.Evaluate(pc, Today);
+        Assert.InRange(report.Score, 0, 20);
+        Assert.All(report.Categories, pair => Assert.True(pair.Value <= Diagnostics.CategoryCaps[pair.Key]));
+        Assert.Equal(Diagnostics.CategoryCaps[FindingCategory.Storage], report.Categories[FindingCategory.Storage]);
+        Assert.Equal(100 - report.Categories.Values.Sum(), report.Score);
     }
 
     [Theory]

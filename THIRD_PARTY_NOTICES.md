@@ -9,6 +9,7 @@ O NOVAIS boost inclui ou usa os componentes abaixo. Todos têm licença MIT.
 | Spectre.Console | 0.54.0 | Interface no terminal | https://github.com/spectreconsole/spectre.console |
 | JsonSchema.Net | 9.5.0 | Validação do catálogo de ajustes | https://github.com/json-everything/json-everything |
 | System.Management | 10.0.9 | Consultas WMI | https://github.com/dotnet/runtime |
+| System.Diagnostics.EventLog | 10.0.9 | Leitura do log do Sistema no diagnóstico | https://github.com/dotnet/runtime |
 
 ## Intel PresentMon
 

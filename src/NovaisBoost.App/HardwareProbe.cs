@@ -9,14 +9,17 @@ using NovaisBoost.Core;
 namespace NovaisBoost.App;
 
 /// <summary>Read-only hardware and settings probe. Each area fails independently.</summary>
-internal sealed partial class WindowsHardwareProbe(IActionLog log) : IHardwareProbe
+/// <param name="games">Already detected games, to avoid scanning the launcher folders twice (null = scan here).</param>
+internal sealed partial class WindowsHardwareProbe(IActionLog log, Func<IReadOnlyList<InstalledGame>>? games = null) : IHardwareProbe
 {
     private readonly List<string> _errors = [];
+    private readonly Func<IReadOnlyList<InstalledGame>>? _games = games;
 
     public HardwareSnapshot Capture()
     {
         _errors.Clear();
         var gpus = Try("GPU", ReadGpus) ?? [];
+        var volumes = Try("Volumes", ReadVolumes) ?? [];
         return new HardwareSnapshot(
             DateTimeOffset.Now,
             Try("Windows", ReadOs) ?? new OsInfo("Windows", "?", null, TimeSpan.FromMilliseconds(Environment.TickCount64), false, false),
@@ -25,13 +28,15 @@ internal sealed partial class WindowsHardwareProbe(IActionLog log) : IHardwarePr
             Try("RAM", ReadMemory),
             Try("Placa-mãe", ReadBoard),
             Try("Discos", ReadDisks) ?? [],
-            Try("Volumes", ReadVolumes) ?? [],
+            volumes,
             Try("Monitores", ReadDisplays) ?? [],
             Try("Rede", ReadNetworks) ?? [],
             Try("Energia", ReadPowerPlan),
             ReadFlags(),
             Try("Processos", ReadTopProcesses) ?? [],
-            _errors.ToArray());
+            _errors.ToArray(),
+            ReadDeep(volumes),
+            AreaSources);
     }
 
     private T? Try<T>(string area, Func<T?> read) where T : class
@@ -73,6 +78,7 @@ internal sealed partial class WindowsHardwareProbe(IActionLog log) : IHardwarePr
     {
         var vram = ReadVramByName();
         var rebar = Try("Resizable BAR", ReadNvidiaBar1);
+        var sensors = Try("Sensores da GPU", Nvml.Read) ?? [];
         return Wmi.Query("SELECT Name, DriverVersion, DriverDate, PNPDeviceID FROM Win32_VideoController", item =>
             {
                 var name = ((string?)item["Name"] ?? "").Trim();
@@ -82,7 +88,8 @@ internal sealed partial class WindowsHardwareProbe(IActionLog log) : IHardwarePr
                 DateOnly? date = item["DriverDate"] is string text && text.Length > 0
                     ? DateOnly.FromDateTime(ManagementDateTimeConverter.ToDateTime(text)) : null;
                 bool? bar = GpuClassifier.Vendor(name) == GpuVendor.Nvidia && rebar is not null ? rebar.Value : null;
-                return new GpuInfo(name, item["DriverVersion"] as string, date, vram.GetValueOrDefault(name), bar);
+                return new GpuInfo(name, item["DriverVersion"] as string, date, vram.GetValueOrDefault(name), bar,
+                    Try("PCIe da GPU", () => ReadPcieLink(pnp)), sensors.GetValueOrDefault(name));
             })
             .OfType<GpuInfo>().ToArray();
     }
@@ -131,7 +138,7 @@ internal sealed partial class WindowsHardwareProbe(IActionLog log) : IHardwarePr
         // Perf class names are not localized, unlike performance counter paths.
         var (availableMb, nonPaged) = Wmi.Query("SELECT AvailableMBytes, PoolNonpagedBytes FROM Win32_PerfFormattedData_PerfOS_Memory",
             item => (Convert.ToInt64(item["AvailableMBytes"]), Convert.ToInt64(item["PoolNonpagedBytes"]))).Single();
-        var modules = Wmi.Query("SELECT DeviceLocator, Capacity, Speed, ConfiguredClockSpeed, SMBIOSMemoryType, Manufacturer, PartNumber FROM Win32_PhysicalMemory",
+        var modules = Wmi.Query("SELECT DeviceLocator, BankLabel, Capacity, Speed, ConfiguredClockSpeed, SMBIOSMemoryType, Manufacturer, PartNumber FROM Win32_PhysicalMemory",
             item => new MemoryModule(
                 ((string?)item["DeviceLocator"] ?? "?").Trim(),
                 Convert.ToInt64(item["Capacity"] ?? 0L),
@@ -139,7 +146,8 @@ internal sealed partial class WindowsHardwareProbe(IActionLog log) : IHardwarePr
                 Convert.ToInt32(item["ConfiguredClockSpeed"] ?? 0),
                 Convert.ToInt32(item["SMBIOSMemoryType"] ?? 0) switch { 24 => MemoryKind.Ddr3, 26 => MemoryKind.Ddr4, 34 => MemoryKind.Ddr5, _ => MemoryKind.Unknown },
                 ((string?)item["Manufacturer"])?.Trim(),
-                ((string?)item["PartNumber"])?.Trim()));
+                ((string?)item["PartNumber"])?.Trim(),
+                ((string?)item["BankLabel"])?.Trim()));
         return new MemoryInfo(totalKb * 1024, availableMb * 1_048_576, modules, nonPaged);
     }
 
@@ -169,13 +177,29 @@ internal sealed partial class WindowsHardwareProbe(IActionLog log) : IHardwarePr
             systemDisks.Contains(Convert.ToString(item["DeviceId"]))), scope);
     }
 
-    private static IReadOnlyList<VolumeInfo> ReadVolumes()
+    private IReadOnlyList<VolumeInfo> ReadVolumes()
     {
         var system = Path.GetPathRoot(Environment.SystemDirectory) ?? @"C:\";
+        var media = Try("Tipo de mídia dos volumes", ReadVolumeMedia) ?? [];
         return DriveInfo.GetDrives().Where(drive => drive.DriveType == DriveType.Fixed && drive.IsReady)
             .Select(drive => new VolumeInfo(drive.Name.TrimEnd('\\'), drive.TotalSize, drive.AvailableFreeSpace,
-                string.Equals(drive.Name, system, StringComparison.OrdinalIgnoreCase)))
+                string.Equals(drive.Name, system, StringComparison.OrdinalIgnoreCase),
+                media.GetValueOrDefault(char.ToUpperInvariant(drive.Name[0]), DiskMedia.Unknown)))
             .ToArray();
+    }
+
+    /// <summary>Drive letter → media of the physical disk that holds it.</summary>
+    private static Dictionary<char, DiskMedia> ReadVolumeMedia()
+    {
+        const string scope = @"root\Microsoft\Windows\Storage";
+        var disks = Wmi.Query("SELECT DeviceId, MediaType FROM MSFT_PhysicalDisk", item => (Id: Convert.ToString(item["DeviceId"]),
+                Media: Convert.ToInt32(item["MediaType"] ?? 0) switch { 3 => DiskMedia.Hdd, 4 => DiskMedia.Ssd, _ => DiskMedia.Unknown }), scope)
+            .Where(disk => disk.Id is not null).DistinctBy(disk => disk.Id).ToDictionary(disk => disk.Id!, disk => disk.Media);
+        return Wmi.Query("SELECT DriveLetter, DiskNumber FROM MSFT_Partition",
+                item => (Letter: char.ToUpperInvariant(Convert.ToChar(item["DriveLetter"] ?? '\0')), Disk: Convert.ToString(item["DiskNumber"])), scope)
+            .Where(partition => partition.Letter != '\0' && partition.Disk is not null && disks.ContainsKey(partition.Disk))
+            .DistinctBy(partition => partition.Letter)
+            .ToDictionary(partition => partition.Letter, partition => disks[partition.Disk!]);
     }
 
     private static IReadOnlyList<NetworkInfo> ReadNetworks() => Wmi.Query(
@@ -259,12 +283,13 @@ internal sealed partial class WindowsHardwareProbe(IActionLog log) : IHardwarePr
         }
     }
 
-    private static IReadOnlyList<DisplayInfo> ReadDisplays()
+    private IReadOnlyList<DisplayInfo> ReadDisplays()
     {
         const int attachedToDesktop = 0x1;
         const int currentSettings = -1;
         var displays = new List<DisplayInfo>();
         var friendly = ReadMonitorNames();
+        var connections = Try("Conexão dos monitores", ReadDisplayConnections) ?? [];
         for (uint index = 0; ; index++)
         {
             var adapter = new DisplayDevice { Size = Marshal.SizeOf<DisplayDevice>() };
@@ -291,7 +316,8 @@ internal sealed partial class WindowsHardwareProbe(IActionLog log) : IHardwarePr
             var hardwareId = found ? HardwareId(monitor.DeviceId) : null;
             var name = hardwareId is not null && friendly.TryGetValue(hardwareId, out var model) ? model
                 : found && !string.IsNullOrWhiteSpace(monitor.DeviceString) ? monitor.DeviceString : adapter.DeviceName;
-            displays.Add(new DisplayInfo(name.Trim(), current.PelsWidth, current.PelsHeight, current.DisplayFrequency, max));
+            displays.Add(new DisplayInfo(name.Trim(), current.PelsWidth, current.PelsHeight, current.DisplayFrequency, max,
+                connections.GetValueOrDefault(adapter.DeviceName, DisplayConnection.Unknown)));
         }
         return displays;
     }

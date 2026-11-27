@@ -9,7 +9,7 @@ Execute `NOVAIS boost.exe` (pede administrador). O menu tem:
 
 | # | Tela | O que faz |
 |---|---|---|
-| 1 | Diagnóstico completo | Lê todo o hardware e dá uma nota de 0 a 100 com os problemas encontrados |
+| 1 | Diagnóstico completo | Lê o hardware, o log de eventos e os sensores e dá uma nota de 0 a 100 com os problemas encontrados |
 | 2 | Otimização Universal | Níveis 1 (Seguro), 2 (Competitivo) e 3 (Extremo), ou ajustes individuais |
 | 3 | Perfil do meu Hardware | Recomendações e checklist de BIOS para a sua CPU, GPU, RAM e placa-mãe |
 | 4 | Jogos & Streaming | Detecta os jogos, dicas por jogo, GPU dedicada e QoS por jogo, codificador do OBS |
@@ -39,6 +39,26 @@ NOVAIS boost.exe --versao
   pode exigir de algumas contas: com o Valorant instalado, a revisão mostra um aviso antes de aplicar.
 - Os níveis só têm ajustes com efeito documentado ou medido. Os experimentais ficam em "Ajustes individuais".
 - Logs diários em `C:\ProgramData\NOVAIS boost\logs`.
+
+## Diagnóstico profundo
+
+Além de RAM, disco, monitor, energia e rede, o diagnóstico procura os problemas que mais custam FPS e estabilidade:
+
+| Verificação | De onde vem o dado |
+|---|---|
+| GPU em menos linhas PCIe do que suporta (slot errado, riser) | Propriedades PCI do dispositivo (`DEVPKEY_PciDevice_*`) |
+| Pentes de RAM no mesmo canal | Nome do slot (`Win32_PhysicalMemory`) + `data/memory-slots.json` |
+| Erros de hardware WHEA, telas azuis, desligamentos inesperados, driver de vídeo reiniciado (TDR) | Log do Sistema dos últimos 30 dias e `%SystemRoot%\Minidump` |
+| Microcódigo desatualizado nos Intel 13ª/14ª geração (mínimo 0x12B, recomendado 0x12F) | Registro do processador + `data/microcode.json` |
+| GPU limitada por temperatura ou energia | NVML (driver NVIDIA) |
+| CPU limitada sob carga (teste opcional de 20 s no fim do diagnóstico) | Contadores `% Performance Limit` e `% Processor Performance` |
+| Jogo ou arquivo de paginação em HD, paginação desligada, TRIM desligado | Pastas dos jogos, `Win32_PageFileUsage`, `fsutil` |
+| Monitor por HDMI preso em 60/120 Hz, VRR do Windows desligado | `QueryDisplayConfig`, configurações de gráficos do DirectX |
+| Overlays demais abertos, outro otimizador instalado | Processos, programas instalados + `data/optimizers.json` |
+
+**Nota v2:** cada categoria (estabilidade, memória, vídeo, armazenamento, monitor, energia, Windows, rede, programas) tem
+um teto de pontos que pode tirar. Dez avisos de disco não zeram a nota, e a estabilidade é a que pesa mais. O relatório
+JSON (`reports\diagnostico-*.json`) traz a fonte de cada dado e de cada problema.
 
 ## Benchmark e prova de resultado
 

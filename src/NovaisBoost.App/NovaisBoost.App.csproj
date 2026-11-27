@@ -17,6 +17,7 @@
     <!-- Real-time kernel sessions only use advapi32; the native helpers (KernelTraceControl, msdia) are for merging
          .etl files and symbols, which we do not use, so they are left out of the single exe. -->
     <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" Version="3.2.8" ExcludeAssets="build;buildTransitive" />
+    <PackageReference Include="System.Diagnostics.EventLog" Version="10.0.9" />
     <ProjectReference Include="../NovaisBoost.Core/NovaisBoost.Core.csproj" />
     <PackageReference Include="Spectre.Console" Version="0.54.0" />
     <PackageReference Include="System.Management" Version="10.0.9" />

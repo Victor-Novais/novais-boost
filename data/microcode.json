@@ -1,0 +1,12 @@
+[
+  {
+    "id": "raptor-lake-vmin",
+    "name": "Intel Core 13ª/14ª geração (Raptor Lake, desktop)",
+    "cpu": "\\bi[579]-1[34]\\d{3}(K|KF|KS|F|T)?\\b",
+    "minimum": "0x12B",
+    "recommended": "0x12F",
+    "detail": "Microcódigos anteriores ao 0x12B pedem tensão alta demais e degradam o processador (Vmin Shift). O 0x12F corrige casos raros que sobraram.",
+    "lastVerified": "2026-11-27",
+    "source": "https://community.intel.com/t5/Mobile-and-Desktop-Processors/Intel-Core-13th-and-14th-Gen-Vmin-Shift-Instabilty-Update-New/m-p/1686948"
+  }
+]

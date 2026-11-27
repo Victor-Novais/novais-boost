@@ -9,6 +9,9 @@ public static class DataCatalog
     public static IReadOnlyList<HardwareProfile> Profiles() => Load<HardwareProfile[]>("profiles.json");
     public static IReadOnlyList<ProcessEntry> Processes() => Load<ProcessEntry[]>("processes.json");
     public static IReadOnlyList<GameDefinition> Games() => Load<GameDefinition[]>("games.json");
+    public static IReadOnlyList<MicrocodeRequirement> Microcode() => Load<MicrocodeRequirement[]>("microcode.json");
+    public static IReadOnlyList<MemorySlotPattern> MemorySlots() => Load<MemorySlotPattern[]>("memory-slots.json");
+    public static IReadOnlyList<OptimizerDefinition> Optimizers() => Load<OptimizerDefinition[]>("optimizers.json");
 
     private static T Load<T>(string name)
     {

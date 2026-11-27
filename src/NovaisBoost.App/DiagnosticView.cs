@@ -24,7 +24,27 @@ internal static class DiagnosticView
         if (app.Profiles.Count > 0)
             AnsiConsole.MarkupLine($"[#C084FC]Perfis de hardware detectados:[/] {Markup.Escape(string.Join(", ", app.Profiles.Select(profile => profile.Name)))} " +
                 "[grey](veja o menu [[3]])[/]");
+        if (!Console.IsInputRedirected &&
+            ConsoleUi.Confirm("Testar o processador sob carga por 20 s? (usa 100% da CPU; feche jogos e programas pesados antes)"))
+            CpuLoad(app.Log);
         return report;
+    }
+
+    /// <summary>Optional 13.8 check: does the CPU hold its clocks with every core busy?</summary>
+    private static void CpuLoad(IActionLog log)
+    {
+        CpuLoadSample sample = null!;
+        AnsiConsole.Status().Spinner(Spinner.Known.Dots).SpinnerStyle(new Style(new Color(168, 85, 247)))
+            .Start("Processador em carga total por 20 s...", _ => sample = CpuLoadTest.Run(TimeSpan.FromSeconds(20)));
+        log.Info($"Teste de CPU sob carga: desempenho {sample.PerformancePercent:0}%, limite mínimo {sample.MinimumPerformanceLimitPercent:0}%.");
+        AnsiConsole.MarkupLine($"Desempenho médio: [bold]{sample.PerformancePercent:0}%[/] do clock base · " +
+            $"limite de desempenho mínimo: [bold]{sample.MinimumPerformanceLimitPercent:0}%[/] · " +
+            $"frequência: {sample.MaximumFrequencyPercent:0}% da máxima");
+        var findings = CpuLoadRules.Evaluate(sample);
+        if (findings.Count == 0)
+            AnsiConsole.MarkupLine("[green]O processador manteve o desempenho sob carga.[/]");
+        foreach (var finding in findings)
+            AnsiConsole.MarkupLine($"[yellow]{Markup.Escape(finding.Title)}[/] — {Markup.Escape(finding.Recommendation)}");
     }
 
     public static DiagnosticReport Run(Func<HardwareSnapshot> capture, IActionLog log, string? reportDirectory)
@@ -60,7 +80,9 @@ internal static class DiagnosticView
                 gpu.Name,
                 gpu.VramBytes is { } vram ? Core.Diagnostics.Gb(vram) : null,
                 gpu.DriverVersion is { } version ? $"driver {version}" : null,
-                gpu.ResizableBar switch { true => "ReBAR ligado", false => "ReBAR desligado", _ => null }
+                gpu.ResizableBar switch { true => "ReBAR ligado", false => "ReBAR desligado", _ => null },
+                !gpu.IsIntegrated && gpu.Pcie is { } link ? $"PCIe Gen {link.CurrentGeneration} x{link.CurrentWidth} (máx. Gen {link.MaxGeneration} x{link.MaxWidth})" : null,
+                gpu.Sensors is { } sensors ? $"{sensors.TemperatureC} °C" : null
             }.OfType<string>()));
         if (pc.Memory is { } memory)
         {
@@ -76,7 +98,12 @@ internal static class DiagnosticView
         foreach (var volume in pc.Volumes)
             Row($"Unidade {volume.Letter}", $"{Core.Diagnostics.Gb(volume.FreeBytes)} livres de {Core.Diagnostics.Gb(volume.TotalBytes)} ({volume.FreePercent:0}%)");
         foreach (var display in pc.Displays)
-            Row("Monitor", $"{display.Name} · {display.Width}x{display.Height} · {display.CurrentHz} Hz (máx. {display.MaxHz} Hz)");
+            Row("Monitor", $"{display.Name} · {display.Width}x{display.Height} · {display.CurrentHz} Hz (máx. {display.MaxHz} Hz)" +
+                display.Connection switch
+                {
+                    DisplayConnection.Hdmi => " · HDMI", DisplayConnection.DisplayPort => " · DisplayPort", DisplayConnection.Dvi => " · DVI",
+                    DisplayConnection.Internal => " · tela interna", _ => ""
+                });
         foreach (var network in pc.Networks.Where(network => network.Connected))
             Row("Rede", $"{network.Name} · {(network.Wired ? "cabo" : "Wi-Fi")} · {network.LinkBitsPerSecond / 1_000_000} Mbps");
         Row("Energia", pc.PowerPlan?.Name);
@@ -92,8 +119,25 @@ internal static class DiagnosticView
         AnsiConsole.WriteLine();
         AnsiConsole.MarkupLine($"  [bold]Nota de saúde:[/] [bold {color}]{report.Score}/100[/]");
         AnsiConsole.MarkupLine($"  [{color}]{new string('█', filled)}[/][grey]{new string('░', width - filled)}[/]");
+        if (report.Categories.Count > 0)
+            AnsiConsole.MarkupLine("  [grey]Pontos perdidos: " + Markup.Escape(string.Join(" · ", report.Categories
+                .OrderByDescending(pair => pair.Value).Select(pair => $"{Category(pair.Key)} -{pair.Value}" +
+                    (pair.Value >= Core.Diagnostics.CategoryCaps[pair.Key] ? " (teto)" : "")))) + "[/]");
         AnsiConsole.WriteLine();
     }
+
+    private static string Category(FindingCategory category) => category switch
+    {
+        FindingCategory.Stability => "estabilidade",
+        FindingCategory.Memory => "memória",
+        FindingCategory.Graphics => "vídeo",
+        FindingCategory.Storage => "armazenamento",
+        FindingCategory.Display => "monitor",
+        FindingCategory.Power => "energia",
+        FindingCategory.Network => "rede",
+        FindingCategory.Software => "programas",
+        _ => "Windows"
+    };
 
     private static void DrawFindings(DiagnosticReport report)
     {

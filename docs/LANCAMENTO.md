@@ -24,6 +24,16 @@ Faça um snapshot da VM antes. Para cada item, confira o log em `C:\ProgramData\
 - [ ] Guardian com `{ "guardian": { "gamePriority": "high" } }` em `C:\ProgramData\NOVAIS boost\settings.json` → jogo em High;
       com um valor inválido (ex.: `"realTime"`) → jogo em AboveNormal e aviso no log.
 - [ ] Limpar agora: mostra os tamanhos, apaga só arquivos antigos, não apaga nada fora das pastas listadas.
+- [ ] Diagnóstico (com e sem administrador): o cartão de hardware mostra o PCIe da GPU (Gen e linhas), a temperatura (NVIDIA)
+      e a conexão de cada monitor (HDMI/DisplayPort). Sem administrador, nada quebra (só a contagem de minidumps fica de fora).
+- [ ] GPU num slot x4/x8 ou com riser → "Placa de vídeo em PCIe x8 (suporta x16)" como crítico. No slot certo, nada aparece.
+- [ ] Dois pentes no mesmo canal (ex.: A1 e A2) → aviso; em A2 e B2 → nada. Conferir com o nome dos slots de placas ASUS, MSI e Gigabyte.
+- [ ] PC com telas azuis ou erros WHEA recentes (VM com `NotMyFault` ou log real) → os avisos de estabilidade aparecem com a contagem.
+- [ ] Intel 13ª/14ª geração com BIOS antiga → aviso de microcódigo com a versão atual e a mínima.
+- [ ] Teste de CPU sob carga (20 s) no fim do diagnóstico: termina, as ventoinhas voltam ao normal e um notebook na bateria mostra o limite.
+- [ ] Paginação desligada numa VM → crítico; voltando para "gerenciado pelo sistema" → some.
+- [ ] Com RTSS, Discord e o overlay da NVIDIA abertos → info de overlays. Com Razer Cortex ou Process Lasso instalados → info de otimizador.
+- [ ] O JSON em `reports\diagnostico-*.json` tem `sources` e `source` em cada problema novo.
 - [ ] Benchmark de carga de DPC/ISR (%) e captura avulsa de FPS geram resultados e a comparação antes × depois.
       A tela de carga mostra só porcentagem; microssegundos aparecem só na opção de latência por driver (ETW).
 - [ ] O pacote tem `tools\PresentMon-2.6.0-x64.exe` (assinado pela Intel) e o app o usa sem pedir download.

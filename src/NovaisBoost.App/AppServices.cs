@@ -16,7 +16,7 @@ internal sealed class AppServices
         DataDirectory = dataDirectory;
         Log = log;
         Snapshots = snapshots;
-        Probe = new WindowsHardwareProbe(log);
+        Probe = new WindowsHardwareProbe(log, () => Games);
         Engine = new TweakEngine(new WindowsRegistry(), new WindowsServiceController(), new WindowsPowerConfig(), snapshots, log,
             new WindowsScheduledTasks(log), new WindowsPowerPlans(), compat => Compatibility.Check(compat, Pc),
             new NvidiaDrs(), new WindowsDnsSettings());
