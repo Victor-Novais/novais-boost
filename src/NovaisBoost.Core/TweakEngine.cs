@@ -10,7 +10,8 @@ public sealed class TweakEngine(
     SnapshotManager snapshots, IActionLog log,
     IScheduledTasks? tasks = null, IPowerPlans? plans = null,
     Func<TweakCompatibility, string?>? compatibility = null,
-    INvidiaSettings? nvidia = null, IDnsSettings? dns = null)
+    INvidiaSettings? nvidia = null, IDnsSettings? dns = null,
+    IBcdStore? bcd = null, IPagefile? pagefile = null, ITcpSettings? tcp = null)
 {
     private RestorePoint? _batchPoint;
     private bool _inBatch;
@@ -233,13 +234,13 @@ public sealed class TweakEngine(
         var before = Read(action);
         SettingState expected = action switch
         {
-            RegistryAction { Operation: RegistryOperation.Set, Accept: { } accept } when
-                before is RegistryState { Value: { } current } && accept.Any(value => value.Matches(current)) => before,
+            RegistryAction registryAction when before is RegistryState { Value: { } current } && registryAction.Accepts(current) => before,
             RegistryAction { Operation: RegistryOperation.Set, Expected: not null } set => new RegistryState(true, set.Expected),
             RegistryAction { Operation: RegistryOperation.Delete, Expected: null } when before is RegistryState state =>
                 state with { Value = null, Native = null },
             // Not installed / not present on this Windows build: nothing to change.
             ServiceAction when before is ServiceState { Startup: null } => before,
+            ServiceAction { Accept: { } accepted } when before is ServiceState { Startup: { } startup } && accepted.Contains(startup) => before,
             ServiceAction service => new ServiceState(service.Expected),
             PowerAction scheme => new PowerState(scheme.Expected),
             ScheduledTaskAction when before is TaskState { Exists: false } => before,
@@ -247,6 +248,11 @@ public sealed class TweakEngine(
             PowerPlanAction powerPlan => new PowerPlanState(true, powerPlan.Settings),
             NvidiaSettingAction setting => new NvidiaSettingState(true, setting.Expected),
             DnsAction servers => new DnsState(servers.Servers),
+            BcdAction element => new BcdState(element.Expected),
+            // A manual paging file that exists is the user's choice; only "no paging file at all" is repaired.
+            PagefileAction when before is PagefileState { SystemManaged: false, Files.Length: > 0 } => before,
+            PagefileAction setting => new PagefileState(setting.SystemManaged, []),
+            TcpGlobalAction setting => new TcpState(setting.Expected),
             _ => throw new InvalidDataException("Operação de ajuste inválida.")
         };
         return new PlannedChange(action, before, expected);
@@ -261,6 +267,9 @@ public sealed class TweakEngine(
         PowerPlanAction powerPlan => Require(plans).Read(powerPlan),
         NvidiaSettingAction setting => Require(nvidia).Read(setting.SettingId),
         DnsAction servers => Require(dns).Read(servers),
+        BcdAction element => Require(bcd).Read(element.Element),
+        PagefileAction => Require(pagefile).Read(),
+        TcpGlobalAction setting => Require(tcp).Read(setting.Setting),
         _ => throw new InvalidDataException("Tipo de ajuste desconhecido.")
     };
 
@@ -292,6 +301,15 @@ public sealed class TweakEngine(
                 break;
             case (DnsAction servers, DnsState dnsState):
                 Require(dns).Write(servers, dnsState);
+                break;
+            case (BcdAction element, BcdState bcdState):
+                Require(bcd).Write(element.Element, bcdState);
+                break;
+            case (PagefileAction, PagefileState pagefileState):
+                Require(pagefile).Write(pagefileState);
+                break;
+            case (TcpGlobalAction setting, TcpState tcpState):
+                Require(tcp).Write(setting.Setting, tcpState);
                 break;
             default:
                 throw new InvalidDataException("O estado do backup não corresponde à operação.");

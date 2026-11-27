@@ -1,0 +1,20 @@
+{
+  "id": "repair-pagefile",
+  "name": "Arquivo de paginação desligado",
+  "description": "Liga o arquivo de paginação gerenciado pelo sistema. Sem ele, jogos e programas fecham sozinhos quando a RAM enche. Só age quando não há nenhum arquivo de paginação; um tamanho manual escolhido por você é mantido. Origem comum: otimizadores e guias que prometem \"liberar o disco\" ou \"mais desempenho\".",
+  "category": "Reparo",
+  "level": "safe",
+  "evidence": "documented",
+  "risk": "Nenhum. Usa espaço em disco; reinicie o PC.",
+  "requiresReboot": true,
+  "compat": {
+    "hardware": [],
+    "antiCheat": []
+  },
+  "actions": [
+    {
+      "type": "pagefile",
+      "systemManaged": true
+    }
+  ]
+}

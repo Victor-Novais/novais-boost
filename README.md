@@ -18,12 +18,14 @@ Execute `NOVAIS boost.exe` (pede administrador). O menu tem:
 | 7 | Benchmark | Provar ajustes (teste A/B com estatística e relatório HTML), latência de DPC/ISR por driver (µs), FPS/1% low com PresentMon |
 | 8 | Reverter / Backups | Desfaz tudo o que foi aplicado |
 | 9 | Rede & Latência | Ping, jitter, perda, bufferbloat, DNS mais rápido, ajustes da placa de rede |
+| 10 | Modo Reparar | Acha e desfaz o que "pacotes de FPS" e outros otimizadores deixaram alterado |
 
 Linha de comando:
 
 ```
 NOVAIS boost.exe --diagnostico         diagnóstico somente leitura (sem administrador)
 NOVAIS boost.exe --simular [--extremo] mostra o que seria alterado, sem alterar nada
+NOVAIS boost.exe --reparar             procura alterações de outros otimizadores, sem alterar nada
 NOVAIS boost.exe --guardian            Process Guardian (usado pela tarefa de logon)
 NOVAIS boost.exe --tarefa <id>         reaplicar | limpeza | ssd | saude
 NOVAIS boost.exe --versao
@@ -59,6 +61,29 @@ Além de RAM, disco, monitor, energia e rede, o diagnóstico procura os problema
 **Nota v2:** cada categoria (estabilidade, memória, vídeo, armazenamento, monitor, energia, Windows, rede, programas) tem
 um teto de pontos que pode tirar. Dez avisos de disco não zeram a nota, e a estabilidade é a que pesa mais. O relatório
 JSON (`reports\diagnostico-*.json`) traz a fonte de cada dado e de cada problema.
+
+## Modo Reparar
+
+Muitos jogadores já rodaram "pacotes de FPS" e otimizadores agressivos que deixam o Windows pior. O Modo Reparar
+(menu 10, ou `--reparar` só para ver) procura e volta ao padrão do Windows:
+
+| Reparo | Detecta | Restaura |
+|---|---|---|
+| Relógio de plataforma | `useplatformclock`, `useplatformtick`, `disabledynamictick`, `tscsyncpolicy` no BCD | Remove os elementos |
+| Paginação | Nenhum arquivo de paginação | Gerenciado pelo sistema (um tamanho manual seu é mantido) |
+| Serviços essenciais | WMI, BITS, Windows Update, áudio, DNS, DHCP, criptografia, agendador, log de eventos, firewall... **desativados** (`data/critical-services.json`) | Tipo de início padrão |
+| Mitigações da CPU | `FeatureSettingsOverride` desligando Spectre v2/Meltdown | Remove o valor (valores que só ligam proteções extras ficam) |
+| Defender e Windows Update | Políticas `DisableAntiSpyware`, `DisableRealtimeMonitoring`, `NoAutoUpdate`, `DisableWindowsUpdateAccess`... | Remove as políticas |
+| Latência | `Win32PrioritySeparation` > 0x3F, `SystemResponsiveness` > 100, `LargeSystemCache`/`DisablePagingExecutive` ligados | Padrão do Windows |
+| Pilha TCP | Ajuste automático da janela diferente de "normal", RSS desligado | `netsh int tcp set global` com o padrão |
+
+A varredura é somente leitura e roda sem administrador (o BCD precisa de administrador para ser lido). Os reparos passam
+pela mesma simulação, ponto de restauração e backup dos ajustes, e podem ser desfeitos em Reverter / Backups. Eles nunca
+entram nos níveis, só agem em valores estragados e não desfazem nenhum ajuste do próprio NOVAIS boost (teste
+`RepairsNeverUndoANovaisBoostTweak`). O diagnóstico avisa: "Encontramos N alterações de outros otimizadores".
+
+Novos tipos de ação: `bcd` (bcdedit), `pagefile` (WMI) e `tcpGlobal` (netsh), além de `acceptRange` e
+`acceptIfBitsClear` no registro e `accept` nos serviços, para que um reparo só aja em valores fora do padrão.
 
 ## Benchmark e prova de resultado
 

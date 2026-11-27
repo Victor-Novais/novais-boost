@@ -24,6 +24,10 @@ internal static class DiagnosticView
         if (app.Profiles.Count > 0)
             AnsiConsole.MarkupLine($"[#C084FC]Perfis de hardware detectados:[/] {Markup.Escape(string.Join(", ", app.Profiles.Select(profile => profile.Name)))} " +
                 "[grey](veja o menu [[3]])[/]");
+        var repairs = RepairView.Scan(app);
+        if (repairs.Found.Count > 0)
+            AnsiConsole.MarkupLine($"[bold yellow]Encontramos {repairs.Found.Count} alteração(ões) de outros otimizadores[/] " +
+                $"[grey]({Markup.Escape(string.Join(", ", repairs.Found.Select(item => item.Repair.Name)))})[/]. Use o menu [[10]] Modo Reparar.");
         if (!Console.IsInputRedirected &&
             ConsoleUi.Confirm("Testar o processador sob carga por 20 s? (usa 100% da CPU; feche jogos e programas pesados antes)"))
             CpuLoad(app.Log);

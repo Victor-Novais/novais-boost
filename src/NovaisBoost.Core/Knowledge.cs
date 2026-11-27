@@ -12,6 +12,7 @@ public static class DataCatalog
     public static IReadOnlyList<MicrocodeRequirement> Microcode() => Load<MicrocodeRequirement[]>("microcode.json");
     public static IReadOnlyList<MemorySlotPattern> MemorySlots() => Load<MemorySlotPattern[]>("memory-slots.json");
     public static IReadOnlyList<OptimizerDefinition> Optimizers() => Load<OptimizerDefinition[]>("optimizers.json");
+    public static IReadOnlyList<CriticalService> CriticalServices() => Load<CriticalService[]>("critical-services.json");
 
     private static T Load<T>(string name)
     {

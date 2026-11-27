@@ -10,6 +10,7 @@ internal sealed class AppServices
     private IReadOnlyList<TweakDefinition>? _dynamic;
     private IReadOnlyList<HardwareProfile>? _profiles;
     private LocalEvidence? _evidence;
+    private IReadOnlyList<TweakDefinition>? _repairs;
 
     private AppServices(string dataDirectory, IActionLog log, SnapshotManager snapshots)
     {
@@ -19,7 +20,7 @@ internal sealed class AppServices
         Probe = new WindowsHardwareProbe(log, () => Games);
         Engine = new TweakEngine(new WindowsRegistry(), new WindowsServiceController(), new WindowsPowerConfig(), snapshots, log,
             new WindowsScheduledTasks(log), new WindowsPowerPlans(), compat => Compatibility.Check(compat, Pc),
-            new NvidiaDrs(), new WindowsDnsSettings());
+            new NvidiaDrs(), new WindowsDnsSettings(), new WindowsBcdStore(), new WindowsPagefile(), new WindowsTcpSettings());
     }
 
     public string DataDirectory { get; }
@@ -36,6 +37,9 @@ internal sealed class AppServices
     public IReadOnlyList<InstalledGame> Games => _games ??= GameLibrary.Detect(DataCatalog.Games(), Log);
     public IReadOnlyList<TweakDefinition> DynamicTweaks => _dynamic ??= new DeviceTweaks(Log).Generate(Games, Pc);
     public IReadOnlyList<TweakDefinition> AllTweaks => [.. StaticTweaks, .. DynamicTweaks];
+
+    /// <summary>Repair mode items (never part of AllTweaks or the levels).</summary>
+    public IReadOnlyList<TweakDefinition> Repairs => _repairs ??= Core.Repairs.All(Environment.OSVersion.Version.Build.ToString(System.Globalization.CultureInfo.InvariantCulture));
     public IReadOnlyList<HardwareProfile> Profiles => _profiles ??= ProfileMatcher.Match(DataCatalog.Profiles(), Pc);
 
     /// <summary>A/B test results measured on this PC (evidence.json).</summary>

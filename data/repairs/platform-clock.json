@@ -1,0 +1,36 @@
+{
+  "id": "repair-platform-clock",
+  "name": "Relógio de plataforma forçado na inicialização",
+  "description": "Remove useplatformclock, useplatformtick, disabledynamictick e tscsyncpolicy da inicialização do Windows (BCD). Esses itens forçam o HPET ou desligam o tick dinâmico e costumam aumentar a latência e o tempo de quadro. Origem comum: \"pacotes de FPS\", scripts de latência e guias antigos.",
+  "category": "Reparo",
+  "level": "safe",
+  "evidence": "documented",
+  "risk": "Baixo. Volta ao padrão do Windows; reinicie o PC.",
+  "requiresReboot": true,
+  "compat": {
+    "hardware": [],
+    "antiCheat": []
+  },
+  "actions": [
+    {
+      "type": "bcd",
+      "element": "useplatformclock",
+      "expected": null
+    },
+    {
+      "type": "bcd",
+      "element": "useplatformtick",
+      "expected": null
+    },
+    {
+      "type": "bcd",
+      "element": "disabledynamictick",
+      "expected": null
+    },
+    {
+      "type": "bcd",
+      "element": "tscsyncpolicy",
+      "expected": null
+    }
+  ]
+}

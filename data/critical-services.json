@@ -1,0 +1,86 @@
+[
+  {
+    "name": "Winmgmt",
+    "label": "Instrumentação de Gerenciamento do Windows (WMI)",
+    "startup": "automatic",
+    "minBuild": 22000
+  },
+  {
+    "name": "BITS",
+    "label": "Serviço de Transferência Inteligente em Segundo Plano (BITS)",
+    "startup": "manual",
+    "minBuild": 22000
+  },
+  {
+    "name": "wuauserv",
+    "label": "Windows Update",
+    "startup": "manual",
+    "minBuild": 22000
+  },
+  {
+    "name": "UsoSvc",
+    "label": "Orquestrador de Atualizações",
+    "startup": "automaticDelayed",
+    "minBuild": 22000
+  },
+  {
+    "name": "Audiosrv",
+    "label": "Áudio do Windows",
+    "startup": "automatic",
+    "minBuild": 22000
+  },
+  {
+    "name": "AudioEndpointBuilder",
+    "label": "Construtor de Pontos de Extremidade de Áudio",
+    "startup": "automatic",
+    "minBuild": 22000
+  },
+  {
+    "name": "Dnscache",
+    "label": "Cliente DNS",
+    "startup": "automatic",
+    "minBuild": 22000
+  },
+  {
+    "name": "Dhcp",
+    "label": "Cliente DHCP",
+    "startup": "automatic",
+    "minBuild": 22000
+  },
+  {
+    "name": "CryptSvc",
+    "label": "Serviços de Criptografia",
+    "startup": "automatic",
+    "minBuild": 22000
+  },
+  {
+    "name": "Schedule",
+    "label": "Agendador de Tarefas",
+    "startup": "automatic",
+    "minBuild": 22000
+  },
+  {
+    "name": "EventLog",
+    "label": "Log de Eventos do Windows",
+    "startup": "automatic",
+    "minBuild": 22000
+  },
+  {
+    "name": "mpssvc",
+    "label": "Firewall do Windows Defender",
+    "startup": "automatic",
+    "minBuild": 22000
+  },
+  {
+    "name": "BFE",
+    "label": "Mecanismo de Filtragem Base",
+    "startup": "automatic",
+    "minBuild": 22000
+  },
+  {
+    "name": "TrustedInstaller",
+    "label": "Instalador de Módulos do Windows",
+    "startup": "manual",
+    "minBuild": 22000
+  }
+]

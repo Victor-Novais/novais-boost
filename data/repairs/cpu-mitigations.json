@@ -1,0 +1,25 @@
+{
+  "id": "repair-cpu-mitigations",
+  "name": "Proteções do processador (Spectre/Meltdown) desligadas",
+  "description": "Remove o FeatureSettingsOverride que desliga as mitigações de Spectre v2 e Meltdown. Valores que só ligam proteções extras (recomendados pela Microsoft) são mantidos. Origem comum: InSpectre e \"debloaters\" agressivos.",
+  "category": "Reparo",
+  "level": "safe",
+  "evidence": "documented",
+  "risk": "Baixo. Pode custar alguns % de desempenho em CPUs antigas, em troca da segurança; reinicie o PC.",
+  "requiresReboot": true,
+  "compat": {
+    "hardware": [],
+    "antiCheat": []
+  },
+  "actions": [
+    {
+      "type": "registry",
+      "hive": "localMachine",
+      "path": "SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Memory Management",
+      "valueName": "FeatureSettingsOverride",
+      "operation": "delete",
+      "expected": null,
+      "acceptIfBitsClear": 3
+    }
+  ]
+}

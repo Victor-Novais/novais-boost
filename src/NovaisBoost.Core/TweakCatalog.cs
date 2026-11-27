@@ -22,12 +22,26 @@ public static class TweakCatalog
         Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase, allowIntegerValues: false) }
     };
 
-    public static IReadOnlyList<TweakDefinition> LoadEmbedded()
+    private const string RepairPrefix = "Repairs.";
+
+    /// <summary>The optimization catalog (data/tweaks). Repairs are loaded separately and never take part in the levels.</summary>
+    public static IReadOnlyList<TweakDefinition> LoadEmbedded() => Load(ResourcePrefix);
+
+    /// <summary>Repairs of changes left by other optimizers (data/repairs), same schema with category "Reparo".</summary>
+    public static IReadOnlyList<TweakDefinition> LoadRepairs()
+    {
+        var repairs = Load(RepairPrefix);
+        if (repairs.FirstOrDefault(repair => repair.Category != Repairs.Category || !repair.Id.StartsWith("repair-", StringComparison.Ordinal)) is { } wrong)
+            throw new InvalidDataException($"O reparo {wrong.Id} precisa da categoria \"{Repairs.Category}\" e de um id começando com \"repair-\".");
+        return repairs;
+    }
+
+    private static TweakDefinition[] Load(string prefix)
     {
         var names = typeof(TweakCatalog).Assembly.GetManifestResourceNames()
-            .Where(name => name.StartsWith(ResourcePrefix, StringComparison.Ordinal) && name != SchemaResource)
+            .Where(name => name.StartsWith(prefix, StringComparison.Ordinal) && name != SchemaResource)
             .Order(StringComparer.Ordinal);
-        var tweaks = names.Select(name => Parse(ReadResource(name), name[ResourcePrefix.Length..])).ToArray();
+        var tweaks = names.Select(name => Parse(ReadResource(name), name[prefix.Length..])).ToArray();
         if (tweaks.Select(tweak => tweak.Id).Distinct(StringComparer.Ordinal).Count() != tweaks.Length)
             throw new InvalidDataException("O catálogo contém identificadores de ajuste repetidos.");
         return tweaks;

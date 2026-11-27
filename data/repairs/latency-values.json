@@ -1,0 +1,70 @@
+{
+  "id": "repair-latency-values",
+  "name": "Valores de agendador e memória fora do padrão",
+  "description": "Corrige só valores fora da faixa válida ou nocivos em PC de jogos: Win32PrioritySeparation acima de 0x3F, SystemResponsiveness acima de 100, LargeSystemCache e DisablePagingExecutive ligados. Valores válidos (incluindo os do NOVAIS boost) são mantidos. Origem comum: \"pacotes de FPS\" e arquivos .reg de latência.",
+  "category": "Reparo",
+  "level": "safe",
+  "evidence": "documented",
+  "risk": "Baixo. Volta ao padrão do Windows; reinicie o PC.",
+  "requiresReboot": true,
+  "compat": {
+    "hardware": [],
+    "antiCheat": []
+  },
+  "actions": [
+    {
+      "type": "registry",
+      "hive": "localMachine",
+      "path": "SYSTEM\\CurrentControlSet\\Control\\PriorityControl",
+      "valueName": "Win32PrioritySeparation",
+      "operation": "set",
+      "expected": {
+        "kind": "dword",
+        "value": 2
+      },
+      "acceptRange": {
+        "min": 0,
+        "max": 63
+      }
+    },
+    {
+      "type": "registry",
+      "hive": "localMachine",
+      "path": "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile",
+      "valueName": "SystemResponsiveness",
+      "operation": "set",
+      "expected": {
+        "kind": "dword",
+        "value": 20
+      },
+      "acceptRange": {
+        "min": 0,
+        "max": 100
+      }
+    },
+    {
+      "type": "registry",
+      "hive": "localMachine",
+      "path": "SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Memory Management",
+      "valueName": "LargeSystemCache",
+      "operation": "delete",
+      "expected": null,
+      "acceptRange": {
+        "min": 0,
+        "max": 0
+      }
+    },
+    {
+      "type": "registry",
+      "hive": "localMachine",
+      "path": "SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Memory Management",
+      "valueName": "DisablePagingExecutive",
+      "operation": "delete",
+      "expected": null,
+      "acceptRange": {
+        "min": 0,
+        "max": 0
+      }
+    }
+  ]
+}

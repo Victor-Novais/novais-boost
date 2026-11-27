@@ -24,6 +24,13 @@ Faça um snapshot da VM antes. Para cada item, confira o log em `C:\ProgramData\
 - [ ] Guardian com `{ "guardian": { "gamePriority": "high" } }` em `C:\ProgramData\NOVAIS boost\settings.json` → jogo em High;
       com um valor inválido (ex.: `"realTime"`) → jogo em AboveNormal e aviso no log.
 - [ ] Limpar agora: mostra os tamanhos, apaga só arquivos antigos, não apaga nada fora das pastas listadas.
+- [ ] **Modo Reparar, só em VM:** snapshot → `pwsh .\scripts\vm-damage.ps1 -IUnderstandThisIsAVm` → reiniciar →
+      `--reparar` lista BCD, paginação, BITS e Windows Update, mitigações, políticas, latência e TCP → menu [10] → restaurar →
+      reiniciar → `--reparar` sem itens, e a VM inicia, tem áudio, rede e Windows Update funcionando.
+- [ ] Depois do reparo, Reverter tudo devolve exatamente o estado "estragado" (confira com `bcdedit /enum {current}` e `netsh int tcp show global`).
+- [ ] O `vm-damage.ps1` se recusa a rodar num PC físico.
+- [ ] Num PC limpo, `--reparar` não encontra nada; com os ajustes do NOVAIS boost aplicados (níveis 1 a 3), também não.
+- [ ] O diagnóstico mostra "Encontramos N alterações de outros otimizadores" quando há itens.
 - [ ] Diagnóstico (com e sem administrador): o cartão de hardware mostra o PCIe da GPU (Gen e linhas), a temperatura (NVIDIA)
       e a conexão de cada monitor (HDMI/DisplayPort). Sem administrador, nada quebra (só a contagem de minidumps fica de fora).
 - [ ] GPU num slot x4/x8 ou com riser → "Placa de vídeo em PCIe x8 (suporta x16)" como crítico. No slot certo, nada aparece.

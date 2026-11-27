@@ -36,7 +36,7 @@ internal sealed class ConsoleUi
     private static readonly string[] Menu =
     [
         "Diagnóstico completo", "Otimização Universal", "Perfil do meu Hardware", "Jogos & Streaming", "Process Guardian",
-        "Cronogramas", "Benchmark antes/depois", "Reverter / Backups", "Rede & Latência"
+        "Cronogramas", "Benchmark antes/depois", "Reverter / Backups", "Rede & Latência", "Modo Reparar"
     ];
 
     private readonly AppServices _app;
@@ -104,6 +104,7 @@ internal sealed class ConsoleUi
                     case 7: _views.Benchmark(); break;
                     case 8: ShowBackups(); break;
                     case 9: _views.Network(); break;
+                    case 10: RepairView.Run(_app, this); break;
                 }
             });
             AnsiConsole.WriteLine();

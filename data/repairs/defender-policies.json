@@ -1,0 +1,64 @@
+{
+  "id": "repair-defender-policies",
+  "name": "Microsoft Defender desligado por política",
+  "description": "Remove as políticas que desligam o Defender ou a proteção em tempo real (DisableAntiSpyware, DisableAntiVirus, DisableRealtimeMonitoring, DisableBehaviorMonitoring). Origem comum: \"debloaters\" e otimizadores agressivos. Em PC de empresa, essas políticas podem ter sido postas pelo TI: nesse caso, não aplique.",
+  "category": "Reparo",
+  "level": "safe",
+  "evidence": "documented",
+  "risk": "Nenhum. Se a Proteção contra Adulteração bloquear, ligue o Defender pela Segurança do Windows.",
+  "requiresReboot": true,
+  "compat": {
+    "hardware": [],
+    "antiCheat": []
+  },
+  "actions": [
+    {
+      "type": "registry",
+      "hive": "localMachine",
+      "path": "SOFTWARE\\Policies\\Microsoft\\Windows Defender",
+      "valueName": "DisableAntiSpyware",
+      "operation": "delete",
+      "expected": null,
+      "acceptRange": {
+        "min": 0,
+        "max": 0
+      }
+    },
+    {
+      "type": "registry",
+      "hive": "localMachine",
+      "path": "SOFTWARE\\Policies\\Microsoft\\Windows Defender",
+      "valueName": "DisableAntiVirus",
+      "operation": "delete",
+      "expected": null,
+      "acceptRange": {
+        "min": 0,
+        "max": 0
+      }
+    },
+    {
+      "type": "registry",
+      "hive": "localMachine",
+      "path": "SOFTWARE\\Policies\\Microsoft\\Windows Defender\\Real-Time Protection",
+      "valueName": "DisableRealtimeMonitoring",
+      "operation": "delete",
+      "expected": null,
+      "acceptRange": {
+        "min": 0,
+        "max": 0
+      }
+    },
+    {
+      "type": "registry",
+      "hive": "localMachine",
+      "path": "SOFTWARE\\Policies\\Microsoft\\Windows Defender\\Real-Time Protection",
+      "valueName": "DisableBehaviorMonitoring",
+      "operation": "delete",
+      "expected": null,
+      "acceptRange": {
+        "min": 0,
+        "max": 0
+      }
+    }
+  ]
+}

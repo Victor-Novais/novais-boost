@@ -60,6 +60,14 @@ internal static class Program
                 new ConsoleUi(preview).Preview(Has("--extremo") ? TweakLevel.Extreme : TweakLevel.Competitive);
                 return 0;
             }
+            if (Has("--reparar"))
+            {
+                log = new NullLog();
+                var preview = AppServices.Create(Path.Combine(Path.GetTempPath(), "NOVAIS boost preview"), log, owner);
+                RepairView.Draw(RepairView.Scan(preview));
+                AnsiConsole.MarkupLine("[grey]Somente leitura: nada foi alterado. Para reparar, abra o menu [[10]] Modo Reparar (pede administrador).[/]");
+                return 0;
+            }
 
             if (!isAdmin)
                 return background ? 1 : RequestElevation(args);
@@ -106,6 +114,7 @@ internal static class Program
         table.AddRow("(sem argumentos)", "Abre o menu (pede administrador).");
         table.AddRow("--diagnostico", "Diagnóstico completo, somente leitura, sem administrador.");
         table.AddRow("--simular [[--extremo]]", "Mostra o que a otimização mudaria neste PC, sem alterar nada.");
+        table.AddRow("--reparar", "Procura alterações de outros otimizadores, sem alterar nada.");
         table.AddRow("--guardian", "Roda o Process Guardian (usado pela tarefa de logon).");
         table.AddRow("--tarefa <id>", "Executa uma tarefa agendada: reaplicar, limpeza, ssd, saude.");
         table.AddRow("--versao", "Mostra a versão.");

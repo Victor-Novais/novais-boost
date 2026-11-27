@@ -2,7 +2,7 @@ using NovaisBoost.Core;
 
 namespace NovaisBoost.Tests;
 
-public sealed class TweakEngineTests : IDisposable
+public sealed partial class TweakEngineTests : IDisposable
 {
     private const string Owner = "test-account";
     private const string RegistryPath = @"Software\Example";
@@ -528,7 +528,8 @@ public sealed class TweakEngineTests : IDisposable
     private SnapshotManager CreateSnapshots(string owner) => new(_directory, owner, _points, _log);
 
     private TweakEngine CreateEngine(string owner) =>
-        new(_windows, _windows, _windows, CreateSnapshots(owner), _log, _windows, _windows, _compatibility, _windows, _windows);
+        new(_windows, _windows, _windows, CreateSnapshots(owner), _log, _windows, _windows, _compatibility, _windows, _windows,
+            _windows, _windows, _windows);
 
     private Func<TweakCompatibility, string?>? _compatibility;
 
@@ -546,8 +547,40 @@ public sealed class TweakEngineTests : IDisposable
             Directory.Delete(_directory, recursive: true);
     }
 
-    private sealed class FakeWindows : IRegistry, IServiceController, IPowerConfig, IScheduledTasks, IPowerPlans, INvidiaSettings, IDnsSettings
+    private sealed class FakeWindows : IRegistry, IServiceController, IPowerConfig, IScheduledTasks, IPowerPlans, INvidiaSettings, IDnsSettings,
+        IBcdStore, IPagefile, ITcpSettings
     {
+        public Dictionary<string, string> Bcd { get; } = new(StringComparer.OrdinalIgnoreCase);
+        public PagefileState Pagefile { get; set; } = new(true, []);
+        public Dictionary<string, string> Tcp { get; } = new(StringComparer.OrdinalIgnoreCase) { ["autotuninglevel"] = "normal", ["rss"] = "enabled" };
+
+        BcdState IBcdStore.Read(string element) => new(Bcd.GetValueOrDefault(element));
+
+        void IBcdStore.Write(string element, BcdState state)
+        {
+            OnWrite();
+            if (state.Value is null)
+                Bcd.Remove(element);
+            else
+                Bcd[element] = state.Value;
+        }
+
+        PagefileState IPagefile.Read() => Pagefile;
+
+        void IPagefile.Write(PagefileState state)
+        {
+            OnWrite();
+            Pagefile = state.SystemManaged ? new PagefileState(true, []) : state;
+        }
+
+        TcpState ITcpSettings.Read(string setting) => new(Tcp[setting]);
+
+        void ITcpSettings.Write(string setting, TcpState state)
+        {
+            OnWrite();
+            Tcp[setting] = state.Value;
+        }
+
         public Dictionary<uint, uint> Nvidia { get; } = [];
         public Dictionary<Guid, string[]> Dns { get; } = [];
 

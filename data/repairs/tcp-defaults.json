@@ -1,0 +1,26 @@
+{
+  "id": "repair-tcp-defaults",
+  "name": "Pilha TCP fora do padrão",
+  "description": "Volta o ajuste automático da janela de recepção para \"normal\" e liga o RSS (Receive Side Scaling). Com o ajuste automático desligado, downloads e jogos ficam presos a uma janela pequena; sem RSS, a rede usa um único núcleo. Origem comum: \"otimizadores de ping\" e scripts de netsh.",
+  "category": "Reparo",
+  "level": "safe",
+  "evidence": "documented",
+  "risk": "Nenhum.",
+  "requiresReboot": false,
+  "compat": {
+    "hardware": [],
+    "antiCheat": []
+  },
+  "actions": [
+    {
+      "type": "tcpGlobal",
+      "setting": "autotuninglevel",
+      "expected": "normal"
+    },
+    {
+      "type": "tcpGlobal",
+      "setting": "rss",
+      "expected": "enabled"
+    }
+  ]
+}

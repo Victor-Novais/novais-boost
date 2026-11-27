@@ -33,6 +33,26 @@ public interface IDnsSettings
     void Write(DnsAction action, DnsState state);
 }
 
+/// <summary>Boot configuration of the running Windows ({current}). Values come back canonical ("yes"/"no" for booleans).</summary>
+public interface IBcdStore
+{
+    BcdState Read(string element);
+    void Write(string element, BcdState state);
+}
+
+public interface IPagefile
+{
+    PagefileState Read();
+    void Write(PagefileState state);
+}
+
+/// <summary>Global TCP settings (netsh int tcp ... global).</summary>
+public interface ITcpSettings
+{
+    TcpState Read(string setting);
+    void Write(string setting, TcpState state);
+}
+
 public interface IPowerPlans
 {
     PowerPlanState Read(PowerPlanAction plan);
@@ -70,6 +90,9 @@ public interface IActionLog
 [JsonDerivedType(typeof(PowerPlanState), "powerPlan")]
 [JsonDerivedType(typeof(NvidiaSettingState), "nvidiaSetting")]
 [JsonDerivedType(typeof(DnsState), "dns")]
+[JsonDerivedType(typeof(BcdState), "bcd")]
+[JsonDerivedType(typeof(PagefileState), "pagefile")]
+[JsonDerivedType(typeof(TcpState), "tcpGlobal")]
 public abstract record SettingState
 {
     internal virtual bool Matches(SettingState other) => Equals(other);
@@ -129,6 +152,37 @@ public sealed record DnsState(string[] Servers) : SettingState
 {
     internal override bool Matches(SettingState other) => other is DnsState dns && Servers.SequenceEqual(dns.Servers);
     internal override string Display => Servers.Length == 0 ? "automático (DHCP)" : string.Join(", ", Servers);
+}
+
+/// <param name="Value">Null when the element is not set (Windows default).</param>
+public sealed record BcdState(string? Value) : SettingState
+{
+    internal override bool Matches(SettingState other) =>
+        other is BcdState bcd && string.Equals(Value, bcd.Value, StringComparison.OrdinalIgnoreCase);
+    internal override string Display => Value ?? "padrão do Windows (não definido)";
+}
+
+/// <summary>One manual paging file (sizes in MB; 0 and 0 = size managed by the system on that drive).</summary>
+public sealed record PagefileSetting(string Path, uint InitialMb, uint MaximumMb);
+
+/// <param name="Files">Manual paging files. Ignored when SystemManaged is true.</param>
+public sealed record PagefileState(bool SystemManaged, PagefileSetting[] Files) : SettingState
+{
+    internal override bool Matches(SettingState other) =>
+        other is PagefileState pagefile && SystemManaged == pagefile.SystemManaged &&
+        (SystemManaged || Files.OrderBy(file => file.Path, StringComparer.OrdinalIgnoreCase)
+            .SequenceEqual(pagefile.Files.OrderBy(file => file.Path, StringComparer.OrdinalIgnoreCase)));
+
+    internal override string Display => SystemManaged ? "gerenciado pelo sistema"
+        : Files.Length == 0 ? "desligado (sem arquivo de paginação)"
+        : string.Join(", ", Files.Select(file => file.InitialMb == 0 && file.MaximumMb == 0 ? $"{file.Path} (tamanho do sistema)"
+            : $"{file.Path} ({file.InitialMb}-{file.MaximumMb} MB)"));
+}
+
+public sealed record TcpState(string Value) : SettingState
+{
+    internal override bool Matches(SettingState other) => other is TcpState tcp && string.Equals(Value, tcp.Value, StringComparison.OrdinalIgnoreCase);
+    internal override string Display => Value;
 }
 
 public sealed record PowerPlanState(bool Exists, PowerSettingValue[]? Settings) : SettingState

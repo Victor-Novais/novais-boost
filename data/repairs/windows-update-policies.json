@@ -1,0 +1,52 @@
+{
+  "id": "repair-windows-update-policies",
+  "name": "Windows Update desligado por política",
+  "description": "Remove as políticas que desligam as atualizações automáticas ou o acesso ao Windows Update (NoAutoUpdate, DisableWindowsUpdateAccess, SetDisableUXWUAccess). Sem atualizações, o PC fica sem correções de segurança e de jogos. O ajuste do NOVAIS boost que só segura drivers automáticos não é afetado. Em PC de empresa, não aplique.",
+  "category": "Reparo",
+  "level": "safe",
+  "evidence": "documented",
+  "risk": "Nenhum.",
+  "requiresReboot": false,
+  "compat": {
+    "hardware": [],
+    "antiCheat": []
+  },
+  "actions": [
+    {
+      "type": "registry",
+      "hive": "localMachine",
+      "path": "SOFTWARE\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU",
+      "valueName": "NoAutoUpdate",
+      "operation": "delete",
+      "expected": null,
+      "acceptRange": {
+        "min": 0,
+        "max": 0
+      }
+    },
+    {
+      "type": "registry",
+      "hive": "localMachine",
+      "path": "SOFTWARE\\Policies\\Microsoft\\Windows\\WindowsUpdate",
+      "valueName": "DisableWindowsUpdateAccess",
+      "operation": "delete",
+      "expected": null,
+      "acceptRange": {
+        "min": 0,
+        "max": 0
+      }
+    },
+    {
+      "type": "registry",
+      "hive": "localMachine",
+      "path": "SOFTWARE\\Policies\\Microsoft\\Windows\\WindowsUpdate",
+      "valueName": "SetDisableUXWUAccess",
+      "operation": "delete",
+      "expected": null,
+      "acceptRange": {
+        "min": 0,
+        "max": 0
+      }
+    }
+  ]
+}

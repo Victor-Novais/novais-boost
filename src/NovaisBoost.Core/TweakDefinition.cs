@@ -50,6 +50,9 @@ public static class TweakLevels
 [JsonDerivedType(typeof(PowerPlanAction), "powerPlan")]
 [JsonDerivedType(typeof(NvidiaSettingAction), "nvidiaSetting")]
 [JsonDerivedType(typeof(DnsAction), "dns")]
+[JsonDerivedType(typeof(BcdAction), "bcd")]
+[JsonDerivedType(typeof(PagefileAction), "pagefile")]
+[JsonDerivedType(typeof(TcpGlobalAction), "tcpGlobal")]
 public abstract record TweakAction
 {
     internal abstract string Target { get; }
@@ -57,16 +60,32 @@ public abstract record TweakAction
 }
 
 /// <param name="Accept">Other values that already satisfy the tweak (e.g. a stricter setting made by the user).</param>
+/// <param name="AcceptRange">A DWORD/QWORD inside this range already satisfies the tweak (repairs: only fix values out of range).</param>
+/// <param name="AcceptIfBitsClear">A DWORD with none of these bits set already satisfies the tweak.</param>
 public sealed record RegistryAction(
     RegistryHiveName Hive, string Path, string ValueName, RegistryOperation Operation,
-    RegistryValue? Expected, RegistryValue[]? Accept = null) : TweakAction
+    RegistryValue? Expected, RegistryValue[]? Accept = null, NumberRange? AcceptRange = null, long? AcceptIfBitsClear = null) : TweakAction
 {
+    /// <summary>True when <paramref name="current"/> already satisfies the tweak through Accept, AcceptRange or AcceptIfBitsClear.</summary>
+    public bool Accepts(RegistryValue current)
+    {
+        if (Accept?.Any(value => value.Matches(current)) == true)
+            return true;
+        if (current.Kind is not (RegistryValueType.Dword or RegistryValueType.Qword) || !current.Value.TryGetInt64(out var number))
+            return false;
+        if (current.Kind == RegistryValueType.Dword)
+            number = unchecked((uint)(int)number);
+        return AcceptRange is { } range && number >= range.Min && number <= range.Max ||
+            AcceptIfBitsClear is { } mask && (number & mask) == 0;
+    }
+
     internal override string Target => $@"{Key} [{(ValueName.Length == 0 ? "(Padrão)" : ValueName)}]";
     internal override string Identity => $"{Key}\0{ValueName}";
     internal string Key => $@"{(Hive == RegistryHiveName.CurrentUser ? "HKCU" : "HKLM")}\{Path}";
 }
 
-public sealed record ServiceAction(string Name, ServiceStartup Expected) : TweakAction
+/// <param name="Accept">Startup types that already satisfy the action (repairs: only fix a service that is disabled).</param>
+public sealed record ServiceAction(string Name, ServiceStartup Expected, ServiceStartup[]? Accept = null) : TweakAction
 {
     internal override string Target => $"Serviço {Name}";
 }
@@ -95,6 +114,36 @@ public sealed record DnsAction(Guid InterfaceId, string Alias, string[] Servers)
 {
     internal override string Target => $"DNS de {Alias}";
     internal override string Identity => $"dns:{InterfaceId:D}";
+}
+
+/// <summary>Inclusive range used by <see cref="RegistryAction.AcceptRange"/>. DWORDs are compared as unsigned.</summary>
+public sealed record NumberRange(long Min, long Max);
+
+/// <summary>
+/// One element of the boot entry of the running Windows ({current}), through bcdedit. Expected null = element removed
+/// (the Windows default). Boolean values are kept as "yes"/"no" whatever the language of Windows.
+/// </summary>
+public sealed record BcdAction(string Element, string? Expected) : TweakAction
+{
+    internal override string Target => $"Inicialização (BCD): {Element}";
+    internal override string Identity => $"bcd:{Element.ToLowerInvariant()}";
+}
+
+/// <summary>
+/// The paging file. SystemManaged true = "managed by the system". A manual paging file that exists is left alone:
+/// the repair only acts when there is no paging file at all.
+/// </summary>
+public sealed record PagefileAction(bool SystemManaged) : TweakAction
+{
+    internal override string Target => "Arquivo de paginação";
+    internal override string Identity => "pagefile";
+}
+
+/// <summary>A global TCP setting changed with "netsh int tcp set global" (autotuninglevel, rss).</summary>
+public sealed record TcpGlobalAction(string Setting, string Expected) : TweakAction
+{
+    internal override string Target => $"TCP: {Setting}";
+    internal override string Identity => $"tcp:{Setting.ToLowerInvariant()}";
 }
 
 /// <summary>A power plan owned by NOVAIS boost: created from a template on apply, deleted on revert.</summary>
