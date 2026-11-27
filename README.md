@@ -82,6 +82,15 @@ Em Jogos & Streaming, o NOVAIS boost aplica um preset competitivo direto no arqu
   mudam a cada título), Apex, Rainbow Six Siege e Overwatch 2 (chaves ainda não confirmadas). Esses jogos mostram só as dicas.
 - Opções de inicialização do Steam aparecem prontas para copiar (o `localconfig.vdf` não é editado).
 
+## Process Guardian v2
+
+- Acorda por evento quando um processo abre (`Win32_ProcessStartTrace`), sem varrer a lista de processos com o PC parado.
+- Durante o jogo: prioridades, modo de eficiência e CPU Sets do segundo plano, plano de energia (opcional), lista standby
+  (opcional) e alertas de RAM acima de 90%, VRAM acima de 95% (NVIDIA) e processo vazando memória (crescendo por 30 min).
+  Os alertas aparecem na janela do Guardian e no log. Tudo volta ao normal quando o jogo fecha.
+- O processo do jogo só é alterado se não tiver anti-cheat de kernel, ou com `guardian.touchProtectedGames`.
+- Exclusões do Defender para as pastas dos jogos: opcional, no menu do Guardian, reversível (o Defender continua ligado).
+
 ## GPU por jogo
 
 - **NVIDIA:** em Jogos & Streaming, cada jogo detectado pode ter o modo de energia em "Preferir desempenho máximo" no
@@ -147,6 +156,13 @@ Arquivo opcional `C:\ProgramData\NOVAIS boost\settings.json` (só administradore
 | Opção | Valores | Padrão |
 |---|---|---|
 | `guardian.gamePriority` | `aboveNormal` ou `high` | `aboveNormal` (prioridade "Acima do normal" para o jogo) |
+| `guardian.touchProtectedGames` | `true`/`false` | `false`: jogos com anti-cheat de kernel (Vanguard, EAC, BattlEye, Ricochet...) nunca têm o processo alterado |
+| `guardian.efficiencyMode` | `true`/`false` | `true`: processos pesados em segundo plano vão para o modo de eficiência (EcoQoS) durante o jogo |
+| `guardian.backgroundCpuSets` | `true`/`false` | `true`: em Intel híbrido, o segundo plano vai para os E-cores; em X3D de 2 CCDs, para o CCD sem V-Cache |
+| `guardian.gameCpuSets` | `true`/`false` | `false` (experimental): fixa o jogo nos P-cores / CCD com V-Cache; nunca um jogo protegido |
+| `guardian.powerPlanDuringGame` | `true`/`false` | `false`: plano NOVAIS boost só com o jogo aberto (nunca em X3D de 2 CCDs) |
+| `guardian.standbyPurge` | `true`/`false` | `false`: limpa a lista standby só com menos de 1 GB livre e mais de 2 GB em standby, no máximo a cada 5 min |
+| `guardian.lower` / `efficiency` / `ignore` | lista de processos | vazias: baixar prioridade, modo de eficiência ou nunca mexer |
 
 Um arquivo inválido é ignorado (com aviso no log) e o padrão é usado.
 

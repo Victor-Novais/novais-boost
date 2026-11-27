@@ -78,6 +78,13 @@ public interface IAmdSettings
     void Write(string feature, AmdSettingState state);
 }
 
+/// <summary>Microsoft Defender folder exclusions (MSFT_MpPreference).</summary>
+public interface IDefenderExclusions
+{
+    bool Contains(string path);
+    void Set(string path, bool excluded);
+}
+
 public interface IPowerPlans
 {
     PowerPlanState Read(PowerPlanAction plan);
@@ -121,6 +128,7 @@ public interface IActionLog
 [JsonDerivedType(typeof(ConfigFileState), "configFile")]
 [JsonDerivedType(typeof(NvidiaProfileState), "nvidiaProfile")]
 [JsonDerivedType(typeof(AmdSettingState), "amdSetting")]
+[JsonDerivedType(typeof(DefenderExclusionState), "defenderExclusion")]
 public abstract record SettingState
 {
     internal virtual bool Matches(SettingState other) => Equals(other);
@@ -228,6 +236,11 @@ public sealed record NvidiaProfileState(bool AppKnown, bool Defined, uint Value)
 public sealed record AmdSettingState(bool Enabled) : SettingState
 {
     internal override string Display => Enabled ? "ligado" : "desligado";
+}
+
+public sealed record DefenderExclusionState(bool Excluded) : SettingState
+{
+    internal override string Display => Excluded ? "excluída da verificação" : "verificada normalmente";
 }
 
 public sealed record TcpState(string Value) : SettingState

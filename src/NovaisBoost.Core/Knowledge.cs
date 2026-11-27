@@ -103,6 +103,14 @@ public sealed class ProcessCatalog(IEnumerable<ProcessEntry> entries)
 // ---------------------------------------------------------------- Games (F8)
 
 public sealed record GameDefinition(
-    string Id, string Name, string[] Executables, string AntiCheat, string? LaunchOptions, string[] Tips, string[] Folders);
+    string Id, string Name, string[] Executables, string AntiCheat, string? LaunchOptions, string[] Tips, string[] Folders)
+{
+    /// <summary>
+    /// Kernel or protected anti-cheat (everything except VAC and none): the Guardian never opens the game process
+    /// (priority, CPU sets) without the user's opt-in.
+    /// </summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public bool ProtectedByAntiCheat => AntiCheat is not ("VAC" or "nenhum");
+}
 
 public sealed record InstalledGame(GameDefinition Game, string ExecutablePath);

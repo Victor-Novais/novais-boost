@@ -56,6 +56,7 @@ public static class TweakLevels
 [JsonDerivedType(typeof(ConfigFileAction), "configFile")]
 [JsonDerivedType(typeof(NvidiaProfileAction), "nvidiaProfile")]
 [JsonDerivedType(typeof(AmdSettingAction), "amdSetting")]
+[JsonDerivedType(typeof(DefenderExclusionAction), "defenderExclusion")]
 public abstract record TweakAction
 {
     internal abstract string Target { get; }
@@ -175,6 +176,13 @@ public sealed record AmdSettingAction(string Feature, bool Enabled) : TweakActio
 {
     internal override string Target => $"AMD: {Feature}";
     internal override string Identity => $"amd:{Feature.ToLowerInvariant()}";
+}
+
+/// <summary>A Microsoft Defender folder exclusion (17.7). Revert removes it again; the antivirus itself is never turned off.</summary>
+public sealed record DefenderExclusionAction(string Path) : TweakAction
+{
+    internal override string Target => $"Exclusão do Defender: {Path}";
+    internal override string Identity => $"defender:{Path.TrimEnd('\\').ToLowerInvariant()}";
 }
 
 /// <summary>A power plan owned by NOVAIS boost: created from a template on apply, deleted on revert.</summary>

@@ -3,7 +3,25 @@ using System.Text.Json;
 namespace NovaisBoost.Core;
 
 /// <param name="GamePriority">Priority of the running game. AboveNormal by default; High is opt-in.</param>
-public sealed record GuardianSettings(PriorityLevel GamePriority = PriorityLevel.AboveNormal);
+/// <param name="TouchProtectedGames">Opt-in: also change games with a kernel anti-cheat (off: the game process is never touched).</param>
+/// <param name="EfficiencyMode">Put heavy background processes in efficiency mode (EcoQoS) during the game.</param>
+/// <param name="BackgroundCpuSets">Move heavy background processes to E-cores / the CCD without V-Cache during the game.</param>
+/// <param name="GameCpuSets">Experimental opt-in: pin the game to P-cores / the V-Cache CCD (never a protected game).</param>
+/// <param name="PowerPlanDuringGame">Opt-in: NOVAIS boost plan only while a game runs, previous plan otherwise.</param>
+/// <param name="StandbyPurge">Opt-in: purge the standby list when free memory is short (at most every 5 min).</param>
+/// <param name="Lower">Process names to lower during the game. <paramref name="Efficiency"/>: to put in efficiency mode.
+/// <paramref name="Ignore"/>: never touched.</param>
+public sealed record GuardianSettings(
+    PriorityLevel GamePriority = PriorityLevel.AboveNormal,
+    bool TouchProtectedGames = false,
+    bool EfficiencyMode = true,
+    bool BackgroundCpuSets = true,
+    bool GameCpuSets = false,
+    bool PowerPlanDuringGame = false,
+    bool StandbyPurge = false,
+    string[]? Lower = null,
+    string[]? Efficiency = null,
+    string[]? Ignore = null);
 
 /// <summary>
 /// User options in %ProgramData%\NOVAIS boost\settings.json (folder writable only by administrators). Example:

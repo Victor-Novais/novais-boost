@@ -345,6 +345,58 @@ internal static class Nvml
         public uint Gpu, Memory;
     }
 
+    private delegate int GetMemory(IntPtr device, out MemoryInfo memory);
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct MemoryInfo
+    {
+        public ulong Total, Free, Used;
+    }
+
+    /// <summary>GPU name → VRAM use (nvmlDeviceGetMemoryInfo). Empty without an NVIDIA driver.</summary>
+    public static Dictionary<string, (ulong Used, ulong Total, double UsedPercent)> ReadMemory()
+    {
+        var result = new Dictionary<string, (ulong Used, ulong Total, double UsedPercent)>(StringComparer.OrdinalIgnoreCase);
+        if (!NativeLibrary.TryLoad(Path.Combine(Environment.SystemDirectory, "nvml.dll"), out var library))
+            return result;
+        try
+        {
+            T Function<T>(string name) where T : Delegate => NativeLibrary.TryGetExport(library, name, out var address)
+                ? Marshal.GetDelegateForFunctionPointer<T>(address) : throw new EntryPointNotFoundException(name);
+            if (Function<Init>("nvmlInit_v2")() != 0)
+                return result;
+            try
+            {
+                if (Function<GetCount>("nvmlDeviceGetCount_v2")(out var count) != 0)
+                    return result;
+                for (uint index = 0; index < count; index++)
+                {
+                    if (Function<GetHandle>("nvmlDeviceGetHandleByIndex_v2")(index, out var device) != 0)
+                        continue;
+                    var buffer = new byte[96];
+                    if (Function<GetName>("nvmlDeviceGetName")(device, buffer, (uint)buffer.Length) != 0)
+                        continue;
+                    if (Function<GetMemory>("nvmlDeviceGetMemoryInfo")(device, out var memory) == 0 && memory.Total > 0)
+                        result.TryAdd(System.Text.Encoding.UTF8.GetString(buffer).TrimEnd('\0').Trim(),
+                            (memory.Used, memory.Total, 100d * memory.Used / memory.Total));
+                }
+            }
+            finally
+            {
+                Function<Shutdown>("nvmlShutdown")();
+            }
+        }
+        catch (EntryPointNotFoundException)
+        {
+            // Old driver without these functions: no VRAM alert.
+        }
+        finally
+        {
+            NativeLibrary.Free(library);
+        }
+        return result;
+    }
+
     /// <summary>GPU name → sensors. Empty when there is no NVIDIA driver.</summary>
     public static Dictionary<string, GpuSensors> Read()
     {

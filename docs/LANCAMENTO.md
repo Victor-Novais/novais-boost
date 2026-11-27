@@ -24,6 +24,14 @@ Faça um snapshot da VM antes. Para cada item, confira o log em `C:\ProgramData\
 - [ ] Guardian com `{ "guardian": { "gamePriority": "high" } }` em `C:\ProgramData\NOVAIS boost\settings.json` → jogo em High;
       com um valor inválido (ex.: `"realTime"`) → jogo em AboveNormal e aviso no log.
 - [ ] Limpar agora: mostra os tamanhos, apaga só arquivos antigos, não apaga nada fora das pastas listadas.
+- [ ] **Guardian v2:** parado, o processo do Guardian fica perto de 0% de CPU (Gerenciador de Tarefas por 5 min).
+- [ ] Com o VALORANT ou o Fortnite abertos, o log diz "anti-cheat protegido" e o jogo mantém a prioridade Normal; com o CS2, vai a AboveNormal.
+- [ ] Navegador aberto durante o jogo: aparece como "Eficiência" no Gerenciador de Tarefas e volta ao normal ao fechar o jogo.
+- [ ] Intel 12ª+ / X3D de 2 CCDs: com `backgroundCpuSets`, o navegador roda só nos E-cores / no CCD sem V-Cache durante o jogo (Process Explorer > Afinidade de CPU Sets).
+- [ ] `powerPlanDuringGame: true`: o plano NOVAIS boost entra com o jogo e o anterior volta ao fechar.
+- [ ] `standbyPurge: true` com pouca RAM livre: o log mostra a limpeza no máximo a cada 5 min.
+- [ ] Exclusões do Defender: aplicar → aparecem em Segurança do Windows > Exclusões; reverter → somem. Com a Proteção contra
+      Adulteração bloqueando, a mensagem explica como fazer manualmente.
 - [ ] **NVIDIA por jogo:** com um jogo sem perfil (ex.: um .exe qualquer cadastrado), aplicar → o NVIDIA Profile Inspector mostra
       o perfil "NOVAIS boost - jogo.exe" com "Prefer maximum performance"; reverter → o perfil some. Num jogo com perfil
       predefinido (CS2), reverter mantém o perfil e só a configuração volta.

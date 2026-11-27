@@ -161,6 +161,7 @@ internal sealed class Views(AppServices app, ConsoleUi ui)
         AnsiConsole.MarkupLine(ConsoleUi.Item(2, "Programas que abrem com o Windows"));
         AnsiConsole.MarkupLine(ConsoleUi.Item(3, "Rodar o Guardian agora nesta janela (Ctrl+C para parar)"));
         AnsiConsole.MarkupLine(ConsoleUi.Item(4, active ? "Desligar o início automático" : "Ligar o início automático"));
+        AnsiConsole.MarkupLine(ConsoleUi.Item(5, "Exclusões do Defender para as pastas dos jogos (opcional)"));
         AnsiConsole.MarkupLine(ConsoleUi.Item(0, "Voltar"));
         switch (ConsoleUi.ReadChoice())
         {
@@ -191,6 +192,17 @@ internal sealed class Views(AppServices app, ConsoleUi ui)
                 else
                     TaskSchedulerService.Register(guardian);
                 AnsiConsole.MarkupLine("[green]Feito.[/]");
+                break;
+            case "5":
+                var forbidden = new[]
+                {
+                    Environment.GetFolderPath(Environment.SpecialFolder.Windows), Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+                    Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)
+                }.Where(path => path.Length > 0);
+                if (DefenderExclusions.Build(app.Games, forbidden) is { } exclusions)
+                    ui.ReviewAndApply([exclusions]);
+                else
+                    AnsiConsole.MarkupLine("[grey]Nenhuma pasta de jogo detectada.[/]");
                 break;
         }
     }

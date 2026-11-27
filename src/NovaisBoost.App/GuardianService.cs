@@ -5,12 +5,25 @@ using Spectre.Console;
 
 namespace NovaisBoost.App;
 
-/// <summary>Background loop: applies GuardianPolicy while a game runs and restores every priority when it closes.</summary>
-internal sealed class GuardianService(GuardianPolicy policy, IActionLog log, bool echo)
+/// <summary>
+/// Background loop (F17): waits for process start events (no polling while idle), applies GuardianPolicy while a game runs
+/// and restores everything it changed when the game closes or the Guardian stops.
+/// </summary>
+internal sealed class GuardianService(GuardianPolicy policy, IActionLog log, bool echo, GuardianEnvironment? environment = null)
 {
+    private static readonly TimeSpan ActiveTick = TimeSpan.FromSeconds(2);
+    private static readonly TimeSpan IdleFallback = TimeSpan.FromSeconds(15);
+
+    private readonly GuardianEnvironment _environment = environment ?? new GuardianEnvironment();
     private readonly Dictionary<int, (string Name, ProcessPriorityClass Original)> _changed = [];
+    private readonly Dictionary<int, string> _efficiency = [];
+    private readonly Dictionary<int, string> _cpuSets = [];
     private readonly Dictionary<int, TimeSpan> _cpu = [];
+    private readonly LeakTracker _leaks = new();
     private DateTime _lastSample = DateTime.UtcNow;
+    private DateTimeOffset? _lastPurge;
+    private DateTimeOffset _lastAlert = DateTimeOffset.MinValue;
+    private Guid? _previousPlan;
     private bool _gameRunning;
 
     public void Run(CancellationToken cancel)
@@ -21,19 +34,26 @@ internal sealed class GuardianService(GuardianPolicy policy, IActionLog log, boo
             Say("O Process Guardian já está rodando.");
             return;
         }
-        Say("Process Guardian ativo. Aguardando um jogo abrir...");
+        using var starts = ProcessStartEvents.TryCreate(log);
+        Say(starts is null ? "Process Guardian ativo (verificação a cada 15 s). Aguardando um jogo abrir..."
+            : "Process Guardian ativo. Aguardando um jogo abrir...");
         try
         {
             while (!cancel.IsCancellationRequested)
             {
                 Tick();
-                cancel.WaitHandle.WaitOne(2000);
+                if (_gameRunning)
+                    cancel.WaitHandle.WaitOne(ActiveTick);
+                else
+                    // Idle: sleep until a process starts (event), with a slow fallback when the WMI event is unavailable.
+                    WaitHandle.WaitAny([cancel.WaitHandle, starts?.Signal ?? new ManualResetEvent(false)], IdleFallback);
+                starts?.Signal.Reset();
             }
         }
         finally
         {
             RestoreAll();
-            Say("Process Guardian encerrado. Prioridades restauradas.");
+            Say("Process Guardian encerrado. Tudo restaurado.");
         }
     }
 
@@ -46,36 +66,101 @@ internal sealed class GuardianService(GuardianPolicy policy, IActionLog log, boo
             if (_gameRunning)
             {
                 RestoreAll();
-                Say("Jogo fechado. Prioridades restauradas.");
+                Say("Jogo fechado. Prioridades, modo eficiência, núcleos e plano de energia restaurados.");
             }
             _gameRunning = false;
             return;
         }
         if (!_gameRunning)
-            Say($"Jogo detectado: {samples.First(sample => policy.IsGame(sample.Name)).Name}.");
+        {
+            var game = samples.First(sample => policy.IsGame(sample.Name)).Name;
+            Say(policy.MayTouchGame(game) ? $"Jogo detectado: {game}."
+                : $"Jogo detectado: {game} (anti-cheat protegido: o processo do jogo não é alterado).");
+            SwitchPowerPlan(gameStarted: true);
+        }
         _gameRunning = true;
 
         foreach (var change in policy.Plan(samples))
-        {
-            try
+            WithProcess(change.Id, process =>
             {
-                using var process = Process.GetProcessById(change.Id);
                 _changed.TryAdd(change.Id, (change.Name, process.PriorityClass));
                 process.PriorityClass = ToClass(change.To);
                 Say($"{change.Name}: {change.From} → {change.To} ({change.Reason}).");
-            }
-            catch (Exception error) when (error is ArgumentException or InvalidOperationException or System.ComponentModel.Win32Exception)
-            {
-                // Process exited or is protected; nothing to do.
-            }
+            });
+
+        var names = samples.ToDictionary(sample => sample.Id, sample => sample.Name);
+        foreach (var id in policy.EfficiencyTargets(samples).Where(id => !_efficiency.ContainsKey(id)))
+            if (ProcessControl.SetEfficiencyMode(id, true))
+                _efficiency[id] = names[id];
+
+        var background = _environment.Topology?.BackgroundSets() ?? [];
+        if (background.Count > 0)
+            foreach (var id in policy.CpuSetTargets(samples).Where(id => !_cpuSets.ContainsKey(id)))
+                if (ProcessControl.SetCpuSets(id, background))
+                    _cpuSets[id] = names[id];
+        var gameSets = _environment.Topology?.GameSets() ?? [];
+        if (gameSets.Count > 0)
+            foreach (var id in policy.GameCpuSetTargets(samples).Where(id => !_cpuSets.ContainsKey(id)))
+                if (ProcessControl.SetCpuSets(id, gameSets))
+                {
+                    _cpuSets[id] = names[id];
+                    Say($"{names[id]}: fixado nos núcleos do jogo (experimental).");
+                }
+
+        Memory();
+    }
+
+    private void Memory()
+    {
+        var now = DateTimeOffset.Now;
+        var memory = _environment.ReadMemory();
+        if (memory is { } stats && GuardianRules.ShouldPurgeStandby(policy.Settings, stats.FreeBytes, stats.StandbyBytes, _lastPurge, now))
+        {
+            _lastPurge = now;
+            Say(ProcessControl.PurgeStandbyList()
+                ? $"Lista standby limpa (livre {Core.Diagnostics.Gb(stats.FreeBytes)}, standby {Core.Diagnostics.Gb(stats.StandbyBytes)})."
+                : "Não foi possível limpar a lista standby.");
+        }
+        if (now - _lastAlert < TimeSpan.FromMinutes(5))
+            return;
+        var alerts = GuardianRules.Alerts(memory?.UsedPercent, _environment.ReadVramPercent()).ToList();
+        alerts.AddRange(_leaks.Record(now, Sample(includeCpu: false))
+            .Select(name => $"{name} está aumentando o uso de memória há 30 minutos sem parar (possível vazamento). Reinicie o programa."));
+        foreach (var alert in alerts)
+        {
+            _lastAlert = now;
+            log.Warning($"Guardian: alerta: {alert}");
+            if (echo)
+                AnsiConsole.MarkupLine($"[bold yellow]⚠ {Markup.Escape(alert)}[/]");
         }
     }
 
-    private List<ProcessSample> Sample()
+    private void SwitchPowerPlan(bool gameStarted)
+    {
+        if (gameStarted)
+        {
+            if (!GuardianRules.UseGamePowerPlan(policy.Settings, true, _environment.DualCcdX3d, PowerPlans.NovaisPlanInstalled()))
+                return;
+            _previousPlan = PowerPlans.Active();
+            if (_previousPlan != PowerPlans.Novais && PowerPlans.Activate(PowerPlans.Novais))
+                Say("Plano de energia NOVAIS boost ativado durante o jogo.");
+            else
+                _previousPlan = null;
+        }
+        else if (_previousPlan is { } previous)
+        {
+            PowerPlans.Activate(previous);
+            _previousPlan = null;
+            Say("Plano de energia anterior restaurado.");
+        }
+    }
+
+    private List<ProcessSample> Sample(bool includeCpu = true)
     {
         var now = DateTime.UtcNow;
         var elapsed = Math.Max((now - _lastSample).TotalMilliseconds, 1) * Environment.ProcessorCount;
-        _lastSample = now;
+        if (includeCpu)
+            _lastSample = now;
         var samples = new List<ProcessSample>();
         var seen = new HashSet<int>();
         foreach (var process in Process.GetProcesses())
@@ -84,11 +169,15 @@ internal sealed class GuardianService(GuardianPolicy policy, IActionLog log, boo
             {
                 try
                 {
-                    var cpu = process.TotalProcessorTime;
-                    var percent = _cpu.TryGetValue(process.Id, out var previous) ? (cpu - previous).TotalMilliseconds / elapsed * 100 : 0;
-                    _cpu[process.Id] = cpu;
-                    seen.Add(process.Id);
-                    samples.Add(new ProcessSample(process.Id, process.ProcessName, ToLevel(process.PriorityClass), percent));
+                    var percent = 0d;
+                    if (includeCpu)
+                    {
+                        var cpu = process.TotalProcessorTime;
+                        percent = _cpu.TryGetValue(process.Id, out var previous) ? (cpu - previous).TotalMilliseconds / elapsed * 100 : 0;
+                        _cpu[process.Id] = cpu;
+                        seen.Add(process.Id);
+                    }
+                    samples.Add(new ProcessSample(process.Id, process.ProcessName, ToLevel(process.PriorityClass), percent, process.WorkingSet64));
                 }
                 catch (Exception error) when (error is InvalidOperationException or System.ComponentModel.Win32Exception or NotSupportedException)
                 {
@@ -96,27 +185,41 @@ internal sealed class GuardianService(GuardianPolicy policy, IActionLog log, boo
                 }
             }
         }
-        foreach (var gone in _cpu.Keys.Where(id => !seen.Contains(id)).ToArray())
-            _cpu.Remove(gone);
+        if (includeCpu)
+            foreach (var gone in _cpu.Keys.Where(id => !seen.Contains(id)).ToArray())
+                _cpu.Remove(gone);
         return samples;
     }
 
     private void RestoreAll()
     {
         foreach (var (id, (name, original)) in _changed)
-        {
-            try
+            WithProcess(id, process =>
             {
-                using var process = Process.GetProcessById(id);
                 if (string.Equals(process.ProcessName, name, StringComparison.OrdinalIgnoreCase))
                     process.PriorityClass = original;
-            }
-            catch (Exception error) when (error is ArgumentException or InvalidOperationException or System.ComponentModel.Win32Exception)
-            {
-                // Exited meanwhile.
-            }
-        }
+            });
+        foreach (var id in _efficiency.Keys)
+            ProcessControl.SetEfficiencyMode(id, false);
+        foreach (var id in _cpuSets.Keys)
+            ProcessControl.SetCpuSets(id, []);
         _changed.Clear();
+        _efficiency.Clear();
+        _cpuSets.Clear();
+        SwitchPowerPlan(gameStarted: false);
+    }
+
+    private static void WithProcess(int id, Action<Process> action)
+    {
+        try
+        {
+            using var process = Process.GetProcessById(id);
+            action(process);
+        }
+        catch (Exception error) when (error is ArgumentException or InvalidOperationException or System.ComponentModel.Win32Exception)
+        {
+            // Exited meanwhile or protected; nothing to do.
+        }
     }
 
     private void Say(string message)

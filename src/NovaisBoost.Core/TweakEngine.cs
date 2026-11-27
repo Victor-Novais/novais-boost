@@ -12,7 +12,7 @@ public sealed class TweakEngine(
     Func<TweakCompatibility, string?>? compatibility = null,
     INvidiaSettings? nvidia = null, IDnsSettings? dns = null,
     IBcdStore? bcd = null, IPagefile? pagefile = null, ITcpSettings? tcp = null, IConfigFiles? configs = null,
-    INvidiaProfiles? nvidiaProfiles = null, IAmdSettings? amd = null)
+    INvidiaProfiles? nvidiaProfiles = null, IAmdSettings? amd = null, IDefenderExclusions? defender = null)
 {
     private RestorePoint? _batchPoint;
     private bool _inBatch;
@@ -271,6 +271,7 @@ public sealed class TweakEngine(
             ConfigFileAction config => new ConfigFileState(true, config.Value),
             NvidiaProfileAction profile => new NvidiaProfileState(true, true, profile.Expected),
             AmdSettingAction feature => new AmdSettingState(feature.Enabled),
+            DefenderExclusionAction => new DefenderExclusionState(true),
             _ => throw new InvalidDataException("Operação de ajuste inválida.")
         };
         return new PlannedChange(action, before, expected);
@@ -291,6 +292,7 @@ public sealed class TweakEngine(
         ConfigFileAction config => Require(configs).Read(config),
         NvidiaProfileAction profile => Require(nvidiaProfiles).Read(profile.Exe, profile.SettingId),
         AmdSettingAction feature => Require(amd).Read(feature.Feature),
+        DefenderExclusionAction exclusion => new DefenderExclusionState(Require(defender).Contains(exclusion.Path)),
         _ => throw new InvalidDataException("Tipo de ajuste desconhecido.")
     };
 
@@ -340,6 +342,9 @@ public sealed class TweakEngine(
                 break;
             case (AmdSettingAction feature, AmdSettingState featureState):
                 Require(amd).Write(feature.Feature, featureState);
+                break;
+            case (DefenderExclusionAction exclusion, DefenderExclusionState exclusionState):
+                Require(defender).Set(exclusion.Path, exclusionState.Excluded);
                 break;
             default:
                 throw new InvalidDataException("O estado do backup não corresponde à operação.");

@@ -529,7 +529,7 @@ public sealed partial class TweakEngineTests : IDisposable
 
     private TweakEngine CreateEngine(string owner) =>
         new(_windows, _windows, _windows, CreateSnapshots(owner), _log, _windows, _windows, _compatibility, _windows, _windows,
-            _windows, _windows, _windows, _windows, _windows, _windows);
+            _windows, _windows, _windows, _windows, _windows, _windows, _windows);
 
     private Func<TweakCompatibility, string?>? _compatibility;
 
@@ -548,8 +548,21 @@ public sealed partial class TweakEngineTests : IDisposable
     }
 
     private sealed class FakeWindows : IRegistry, IServiceController, IPowerConfig, IScheduledTasks, IPowerPlans, INvidiaSettings, IDnsSettings,
-        IBcdStore, IPagefile, ITcpSettings, IConfigFiles, INvidiaProfiles, IAmdSettings
+        IBcdStore, IPagefile, ITcpSettings, IConfigFiles, INvidiaProfiles, IAmdSettings, IDefenderExclusions
     {
+        public HashSet<string> Exclusions { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+        bool IDefenderExclusions.Contains(string path) => Exclusions.Contains(path);
+
+        void IDefenderExclusions.Set(string path, bool excluded)
+        {
+            OnWrite();
+            if (excluded)
+                Exclusions.Add(path);
+            else
+                Exclusions.Remove(path);
+        }
+
         /// <summary>Driver profiles: name → (predefined, apps, settings). Mirrors how NvidiaDrs treats them.</summary>
         public Dictionary<string, (bool Predefined, HashSet<string> Apps, Dictionary<uint, uint> Settings)> Profiles { get; } = [];
         public Dictionary<string, bool> Amd { get; } = [];

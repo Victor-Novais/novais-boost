@@ -22,7 +22,7 @@ internal sealed class AppServices
         Engine = new TweakEngine(new WindowsRegistry(), new WindowsServiceController(), new WindowsPowerConfig(), snapshots, log,
             new WindowsScheduledTasks(log), new WindowsPowerPlans(), compat => Compatibility.Check(compat, Pc),
             nvidia, new WindowsDnsSettings(), new WindowsBcdStore(), new WindowsPagefile(), new WindowsTcpSettings(), new WindowsConfigFiles(),
-            nvidia, Amd);
+            nvidia, Amd, new WindowsDefenderExclusions());
     }
 
     public string DataDirectory { get; }
@@ -64,7 +64,11 @@ internal sealed class AppServices
     /// <summary>Read on every call so a change in settings.json takes effect the next time the Guardian starts.</summary>
     public AppSettings Settings => AppSettings.Load(DataDirectory, Log);
 
-    public GuardianPolicy GuardianPolicy() => new(new ProcessCatalog(DataCatalog.Processes()),
-        DataCatalog.Games().Where(game => game.Id != "obs").SelectMany(game => game.Executables),
-        Settings.GuardianOrDefault.GamePriority);
+    public GuardianPolicy GuardianPolicy()
+    {
+        var games = DataCatalog.Games().Where(game => game.Id != "obs").ToArray();
+        var settings = Settings.GuardianOrDefault;
+        return new(new ProcessCatalog(DataCatalog.Processes()), games.SelectMany(game => game.Executables), settings.GamePriority, settings,
+            games.Where(game => game.ProtectedByAntiCheat).SelectMany(game => game.Executables));
+    }
 }
