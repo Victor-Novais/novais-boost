@@ -106,3 +106,51 @@ public sealed class DistributionTests
         Assert.Equal("## 1.3.0 (2026-11-27)\n\n- F18 debloat completo\n- F23 manutenção v2\n", text);
     }
 }
+
+public sealed class StringsTests
+{
+    [Fact]
+    public void BothLanguagesHaveTheSameKeysAndNoEmptyText()
+    {
+        var portuguese = Strings.Keys(Strings.Portuguese).Order().ToArray();
+        Assert.Equal(portuguese, Strings.Keys(Strings.English).Order().ToArray());
+        foreach (var language in Strings.Languages)
+        {
+            Strings.Use(language);
+            Assert.All(portuguese, key => Assert.False(string.IsNullOrWhiteSpace(Strings.T(key)), key));
+        }
+        Strings.Use(Strings.Portuguese);
+    }
+
+    [Fact]
+    public void LanguageSelectionAndFallback()
+    {
+        Assert.Equal(Strings.Portuguese, Strings.Detect(System.Globalization.CultureInfo.GetCultureInfo("pt-PT")));
+        Assert.Equal(Strings.English, Strings.Detect(System.Globalization.CultureInfo.GetCultureInfo("es-ES")));
+        Strings.Use("en-US");
+        Assert.Equal("Settings", Strings.T("menu.settings"));
+        Assert.Equal("Pick an option from 0 to 11.", Strings.T("menu.invalid", 11));
+        Strings.Use("xx");
+        Assert.Equal(Strings.Portuguese, Strings.Language);
+        Assert.Equal("chave.inexistente", Strings.T("chave.inexistente"));
+        Strings.Use(Strings.Portuguese);
+        Assert.Throws<InvalidDataException>(() => AppSettings.Parse("""{ "language": "fr-FR" }"""));
+    }
+
+    /// <summary>F22: the migrated screens must not get new fixed texts (Portuguese words outside Strings.T).</summary>
+    [Fact]
+    public void MigratedScreensHaveNoFixedTexts()
+    {
+        var root = AppContext.BaseDirectory;
+        while (!File.Exists(Path.Combine(root, "NovaisBoost.slnx")))
+            root = Path.GetDirectoryName(root) ?? throw new DirectoryNotFoundException();
+        foreach (var file in new[] { "src/NovaisBoost.Gui/MainWindow.cs" })
+        {
+            var path = Path.Combine(root, file);
+            if (!File.Exists(path))
+                continue;
+            var literals = System.Text.RegularExpressions.Regex.Matches(File.ReadAllText(path), "\"([^\"\\\\]|\\\\.)*[áéíóúãõçÁÉÍÓÚÃÕÇ]([^\"\\\\]|\\\\.)*\"");
+            Assert.True(literals.Count == 0, $"{file}: {string.Join(", ", literals.Select(match => match.Value))}");
+        }
+    }
+}

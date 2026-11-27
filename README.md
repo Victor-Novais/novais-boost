@@ -5,6 +5,17 @@ Mais FPS, menos input lag e frametime estável. Cada ajuste é simulado antes, t
 
 ## Como usar
 
+Duas portas de entrada, com o mesmo motor, backup e reversão:
+
+- **`NOVAIS boost GUI.exe`** — interface gráfica (tema escuro, marca NOVAIS roxo + boost branco) com o fluxo de 1 clique:
+  Diagnosticar → Recomendado para o seu PC (nível 2, com a evidência medida/coletiva) → Revisar → Aplicar → Provar. Sem
+  administrador ela diagnostica e simula; para aplicar, pede elevação. "Provar ajustes" abre o terminal.
+- **`NOVAIS boost.exe`** — o terminal completo (todas as telas abaixo), usado também pelas tarefas agendadas e pelo Guardian.
+
+**Idioma:** português ou inglês, automático pelo Windows ou em [11] Configurações (`language`: `auto`, `pt-BR`, `en-US`).
+Nesta versão, o menu, o termo de uso, as Configurações e a interface gráfica estão traduzidos; as outras telas ainda estão
+só em português.
+
 Execute `NOVAIS boost.exe` (pede administrador). O menu tem:
 
 | # | Tela | O que faz |

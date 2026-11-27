@@ -57,6 +57,14 @@ try {
     $exe = Join-Path $output "NOVAIS boost.exe"
     Move-Item (Join-Path $output "NovaisBoost.App.exe") $exe -Force
 
+    # F22: graphical interface, same Core and adapters, published next to the terminal exe.
+    $guiOutput = Join-Path $root "artifacts\gui"
+    Remove-Item $guiOutput -Recurse -Force -ErrorAction SilentlyContinue
+    dotnet publish src/NovaisBoost.Gui -c Release -r win-x64 -o $guiOutput -p:Version=$Version -p:EnableCompressionInSingleFile=true
+    if ($LASTEXITCODE) { throw "Falha na publicação da interface gráfica." }
+    $gui = Join-Path $output "NOVAIS boost GUI.exe"
+    Move-Item (Join-Path $guiOutput "NovaisBoost.Gui.exe") $gui -Force
+
     $tools = Join-Path $output "tools"
     New-Item -ItemType Directory -Force $tools | Out-Null
     Copy-Item (Get-PresentMon) (Join-Path $tools $presentMonFile) -Force
@@ -67,10 +75,10 @@ try {
         if (-not $signtool) { throw "signtool.exe não encontrado (instale o Windows SDK)." }
         if ($TrustedSigningMetadata) {
             if (-not $TrustedSigningDlib) { throw "Informe -TrustedSigningDlib (Azure.CodeSigning.Dlib.dll)." }
-            & $signtool.FullName sign /v /fd SHA256 /tr "http://timestamp.acs.microsoft.com" /td SHA256 /dlib $TrustedSigningDlib /dmdf $TrustedSigningMetadata $exe
+            & $signtool.FullName sign /v /fd SHA256 /tr "http://timestamp.acs.microsoft.com" /td SHA256 /dlib $TrustedSigningDlib /dmdf $TrustedSigningMetadata $exe $gui
         }
         else {
-            & $signtool.FullName sign /sha1 $CertificateThumbprint /fd SHA256 /tr $TimestampUrl /td SHA256 $exe
+            & $signtool.FullName sign /sha1 $CertificateThumbprint /fd SHA256 /tr $TimestampUrl /td SHA256 $exe $gui
         }
         if ($LASTEXITCODE) { throw "Falha na assinatura." }
     }

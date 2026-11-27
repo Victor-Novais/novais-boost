@@ -33,10 +33,11 @@ internal sealed class ConsoleUi
         new(168, 85, 247), new(182, 113, 250), new(192, 132, 252)
     ];
 
-    private static readonly string[] Menu =
+    private static string[] Menu =>
     [
-        "Diagnóstico completo", "Otimização Universal", "Perfil do meu Hardware", "Jogos & Streaming", "Process Guardian",
-        "Cronogramas", "Benchmark antes/depois", "Reverter / Backups", "Rede & Latência", "Modo Reparar", "Configurações"
+        Strings.T("menu.diagnostic"), Strings.T("menu.universal"), Strings.T("menu.hardware"), Strings.T("menu.games"), Strings.T("menu.guardian"),
+        Strings.T("menu.schedules"), Strings.T("menu.benchmark"), Strings.T("menu.backups"), Strings.T("menu.network"), Strings.T("menu.repair"),
+        Strings.T("menu.settings")
     ];
 
     private readonly AppServices _app;
@@ -85,7 +86,7 @@ internal sealed class ConsoleUi
                 return;
             if (!int.TryParse(input, out var choice) || choice < 1 || choice > Menu.Length)
             {
-                AnsiConsole.MarkupLine($"[yellow]Escolha uma opção de 0 a {Menu.Length}.[/]");
+                AnsiConsole.MarkupLine($"[yellow]{Markup.Escape(Strings.T("menu.invalid", Menu.Length))}[/]");
                 continue;
             }
 
@@ -127,7 +128,7 @@ internal sealed class ConsoleUi
             for (var index = 0; index < Menu.Length; index++)
                 AnsiConsole.MarkupLine(Item(index + 1, Menu[index]));
         }
-        AnsiConsole.MarkupLine(Item(0, "Sair"));
+        AnsiConsole.MarkupLine(Item(0, Strings.T("menu.exit")));
     }
 
     private void ShowUniversal()

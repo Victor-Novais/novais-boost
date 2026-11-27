@@ -13,16 +13,16 @@ internal static class FirstRun
             return true;
         if (Console.IsInputRedirected)
         {
-            AnsiConsole.MarkupLine("[yellow]Abra o NOVAIS boost uma vez de forma interativa para aceitar o termo de uso.[/]");
+            AnsiConsole.MarkupLine($"[yellow]{Markup.Escape(Strings.T("terms.interactive"))}[/]");
             return false;
         }
         var grid = new Grid().AddColumn();
         foreach (var line in Terms.Text)
             grid.AddRow($"• {Markup.Escape(line)}");
-        AnsiConsole.Write(new Panel(grid).Header("[bold] Termo de uso [/]").Border(BoxBorder.Rounded).BorderColor(new Color(168, 85, 247)));
-        if (!ConsoleUi.Confirm("Você leu e aceita?"))
+        AnsiConsole.Write(new Panel(grid).Header($"[bold] {Markup.Escape(Strings.T("terms.title"))} [/]").Border(BoxBorder.Rounded).BorderColor(new Color(168, 85, 247)));
+        if (!ConsoleUi.Confirm(Strings.T("terms.ask")))
         {
-            AnsiConsole.MarkupLine("[grey]Sem o aceite, só os modos somente leitura funcionam: --diagnostico, --simular e --reparar.[/]");
+            AnsiConsole.MarkupLine($"[grey]{Markup.Escape(Strings.T("terms.declined"))}[/]");
             return false;
         }
         (settings with { TermsAccepted = Terms.Version }).Save(app.DataDirectory);
@@ -133,56 +133,60 @@ internal sealed class SettingsView(AppServices app)
             var cleanup = settings.CleanupOrDefault;
             var options = new (string Label, string Value, Func<AppSettings, AppSettings> Toggle)[]
             {
-                ("Prioridade do jogo no Guardian", guardian.GamePriority == PriorityLevel.High ? "Alta" : "Acima do normal",
+                (Strings.T("settings.gamePriority"), guardian.GamePriority == PriorityLevel.High ? Strings.T("settings.high") : Strings.T("settings.aboveNormal"),
                     s => s with { Guardian = guardian with { GamePriority = guardian.GamePriority == PriorityLevel.High ? PriorityLevel.AboveNormal : PriorityLevel.High } }),
-                ("Mexer em jogos com anti-cheat de kernel", OnOff(guardian.TouchProtectedGames), s => s with { Guardian = guardian with { TouchProtectedGames = !guardian.TouchProtectedGames } }),
-                ("Modo de eficiência no segundo plano", OnOff(guardian.EfficiencyMode), s => s with { Guardian = guardian with { EfficiencyMode = !guardian.EfficiencyMode } }),
-                ("Segundo plano nos E-cores / CCD sem V-Cache", OnOff(guardian.BackgroundCpuSets), s => s with { Guardian = guardian with { BackgroundCpuSets = !guardian.BackgroundCpuSets } }),
-                ("Jogo fixo nos P-cores / V-Cache (experimental)", OnOff(guardian.GameCpuSets), s => s with { Guardian = guardian with { GameCpuSets = !guardian.GameCpuSets } }),
-                ("OBS nos núcleos de segundo plano", OnOff(guardian.ObsCpuSets), s => s with { Guardian = guardian with { ObsCpuSets = !guardian.ObsCpuSets } }),
-                ("Plano de energia só durante o jogo", OnOff(guardian.PowerPlanDuringGame), s => s with { Guardian = guardian with { PowerPlanDuringGame = !guardian.PowerPlanDuringGame } }),
-                ("Limpar a lista standby com pouca RAM", OnOff(guardian.StandbyPurge), s => s with { Guardian = guardian with { StandbyPurge = !guardian.StandbyPurge } }),
-                ("Pausar a varredura Wi-Fi durante o jogo", OnOff(guardian.WifiScanOff), s => s with { Guardian = guardian with { WifiScanOff = !guardian.WifiScanOff } }),
-                ("Limpar cache dos navegadores", OnOff(cleanup.Browsers), s => s with { Cleanup = cleanup with { Browsers = !cleanup.Browsers } }),
-                ("Limpar cache dos launchers", OnOff(cleanup.Launchers), s => s with { Cleanup = cleanup with { Launchers = !cleanup.Launchers } }),
-                ("Procurar atualizações ao abrir", OnOff(settings.UpdatesOrDefault.Check), s => s with { Updates = new UpdateSettings(!settings.UpdatesOrDefault.Check) }),
-                ("Base anônima de resultados (F21)", OnOff(settings.CommunityOrDefault.Enabled),
+                (Strings.T("settings.touchProtected"), OnOff(guardian.TouchProtectedGames), s => s with { Guardian = guardian with { TouchProtectedGames = !guardian.TouchProtectedGames } }),
+                (Strings.T("settings.efficiency"), OnOff(guardian.EfficiencyMode), s => s with { Guardian = guardian with { EfficiencyMode = !guardian.EfficiencyMode } }),
+                (Strings.T("settings.backgroundCpuSets"), OnOff(guardian.BackgroundCpuSets), s => s with { Guardian = guardian with { BackgroundCpuSets = !guardian.BackgroundCpuSets } }),
+                (Strings.T("settings.gameCpuSets"), OnOff(guardian.GameCpuSets), s => s with { Guardian = guardian with { GameCpuSets = !guardian.GameCpuSets } }),
+                (Strings.T("settings.obsCpuSets"), OnOff(guardian.ObsCpuSets), s => s with { Guardian = guardian with { ObsCpuSets = !guardian.ObsCpuSets } }),
+                (Strings.T("settings.powerPlan"), OnOff(guardian.PowerPlanDuringGame), s => s with { Guardian = guardian with { PowerPlanDuringGame = !guardian.PowerPlanDuringGame } }),
+                (Strings.T("settings.standby"), OnOff(guardian.StandbyPurge), s => s with { Guardian = guardian with { StandbyPurge = !guardian.StandbyPurge } }),
+                (Strings.T("settings.wifi"), OnOff(guardian.WifiScanOff), s => s with { Guardian = guardian with { WifiScanOff = !guardian.WifiScanOff } }),
+                (Strings.T("settings.browsers"), OnOff(cleanup.Browsers), s => s with { Cleanup = cleanup with { Browsers = !cleanup.Browsers } }),
+                (Strings.T("settings.launchers"), OnOff(cleanup.Launchers), s => s with { Cleanup = cleanup with { Launchers = !cleanup.Launchers } }),
+                (Strings.T("settings.updates"), OnOff(settings.UpdatesOrDefault.Check), s => s with { Updates = new UpdateSettings(!settings.UpdatesOrDefault.Check) }),
+                (Strings.T("settings.community"), OnOff(settings.CommunityOrDefault.Enabled),
                     s => s with { Community = settings.CommunityOrDefault with { Enabled = !settings.CommunityOrDefault.Enabled, Prompted = true } }),
-                ("Relatório de erros (só exceção e versão)", OnOff(settings.ErrorReportsOrDefault.Enabled),
+                (Strings.T("settings.errors"), OnOff(settings.ErrorReportsOrDefault.Enabled),
                     s => s with { ErrorReports = settings.ErrorReportsOrDefault with { Enabled = !settings.ErrorReportsOrDefault.Enabled } }),
-                ("Fonte (PSU)", settings.PcOrDefault.PsuWatts is { } watts ? $"{watts} W {settings.PcOrDefault.PsuRating}" : "não informada",
-                    s => s with { Pc = AskPsu() })
+                (Strings.T("settings.psu"), settings.PcOrDefault.PsuWatts is { } watts ? $"{watts} W {settings.PcOrDefault.PsuRating}" : Strings.T("settings.psuUnknown"),
+                    s => s with { Pc = AskPsu() }),
+                (Strings.T("settings.language"), settings.Language ?? "auto",
+                    s => s with { Language = settings.Language switch { null or "auto" => Strings.Portuguese, Strings.Portuguese => Strings.English, _ => "auto" } })
             };
 
-            var table = new Table().Border(TableBorder.Rounded).BorderColor(new Color(168, 85, 247)).AddColumn("#").AddColumn("Opção").AddColumn("Valor");
+            var table = new Table().Border(TableBorder.Rounded).BorderColor(new Color(168, 85, 247)).AddColumn("#").AddColumn(Strings.T("settings.option")).AddColumn(Strings.T("settings.value"));
             for (var index = 0; index < options.Length; index++)
                 table.AddRow((index + 1).ToString(System.Globalization.CultureInfo.InvariantCulture), Markup.Escape(options[index].Label), Markup.Escape(options[index].Value));
             AnsiConsole.Write(table);
-            AnsiConsole.MarkupLine($"[grey]Número para mudar · {ConsoleUi.Item(0, "Voltar")} · arquivo: {Markup.Escape(Path.Combine(app.DataDirectory, AppSettings.FileName))}[/]");
+            AnsiConsole.MarkupLine($"[grey]{Markup.Escape(Strings.T("settings.hint", Path.Combine(app.DataDirectory, AppSettings.FileName)))}[/]");
             var choice = ConsoleUi.ReadChoice();
             if (!int.TryParse(choice, out var number) || number < 1 || number > options.Length)
                 return;
             try
             {
-                options[number - 1].Toggle(settings).Save(app.DataDirectory);
+                var updated = options[number - 1].Toggle(settings);
+                updated.Save(app.DataDirectory);
+                Strings.Use(updated.Language);
                 app.Log.Info($"Configuração alterada: {options[number - 1].Label}.");
-                AnsiConsole.MarkupLine("[green]Salvo.[/] [grey]O Guardian usa os valores novos na próxima vez que iniciar.[/]");
+                AnsiConsole.MarkupLine($"[green]{Markup.Escape(Strings.T("settings.saved"))}[/] [grey]{Markup.Escape(Strings.T("settings.savedHint"))}[/]");
             }
             catch (Exception error) when (error is InvalidDataException or IOException or UnauthorizedAccessException)
             {
-                AnsiConsole.MarkupLine($"[red]Não foi possível salvar: {Markup.Escape(error.Message)}[/]");
+                AnsiConsole.MarkupLine($"[red]{Markup.Escape(Strings.T("settings.saveFailed", error.Message))}[/]");
             }
         }
     }
 
     private static PcSettings AskPsu()
     {
-        var watts = AnsiConsole.Prompt(new TextPrompt<int>("Potência da fonte em watts (0 para apagar):")
-            .Validate(value => value == 0 || value is >= 200 and <= 3000 ? ValidationResult.Success() : ValidationResult.Error("Entre 200 e 3000 W.")));
+        var watts = AnsiConsole.Prompt(new TextPrompt<int>(Markup.Escape(Strings.T("settings.psuWatts")))
+            .Validate(value => value == 0 || value is >= 200 and <= 3000 ? ValidationResult.Success() : ValidationResult.Error(Strings.T("settings.psuRange"))));
         if (watts == 0)
             return new PcSettings();
-        return new PcSettings(watts, AnsiConsole.Prompt(new SelectionPrompt<PsuRating>().Title("Certificação 80 Plus:").AddChoices(Enum.GetValues<PsuRating>())));
+        return new PcSettings(watts, AnsiConsole.Prompt(new SelectionPrompt<PsuRating>().Title(Markup.Escape(Strings.T("settings.psuRating"))).AddChoices(Enum.GetValues<PsuRating>())));
     }
 
-    private static string OnOff(bool value) => value ? "ligado" : "desligado";
+    private static string OnOff(bool value) => value ? Strings.T("settings.on") : Strings.T("settings.off");
 }

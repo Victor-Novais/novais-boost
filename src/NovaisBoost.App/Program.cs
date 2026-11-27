@@ -16,6 +16,7 @@ internal static class Program
     public static int Main(string[] args)
     {
         Console.OutputEncoding = new UTF8Encoding(false);
+        Strings.Use(LanguageSetting());
         bool Has(string flag) => args.Contains(flag, StringComparer.OrdinalIgnoreCase);
 
         if (Has("--versao") || Has("--version"))
@@ -132,6 +133,20 @@ internal static class Program
             }
             AnsiConsole.MarkupLine($"[red]{Markup.Escape(error.Message)}[/]");
             return 1;
+        }
+    }
+
+    /// <summary>F22: language from settings.json (readable without administrator); "auto" when missing or unreadable.</summary>
+    private static string? LanguageSetting()
+    {
+        try
+        {
+            var path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "NOVAIS boost", AppSettings.FileName);
+            return File.Exists(path) ? AppSettings.Parse(File.ReadAllText(path)).Language : null;
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException or InvalidDataException)
+        {
+            return null;
         }
     }
 

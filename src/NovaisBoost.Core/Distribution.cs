@@ -134,15 +134,8 @@ public static class Terms
     /// <summary>Bump when the text changes: everyone is asked again.</summary>
     public const string Version = "2026-11-27";
 
-    public static readonly string[] Text =
-    [
-        "O NOVAIS boost altera configurações do Windows, de drivers e de jogos para ganhar desempenho.",
-        "Antes de qualquer alteração ele cria um ponto de restauração e um backup, e tudo pode ser desfeito em Reverter / Backups.",
-        "Ele nunca desliga Secure Boot, TPM, a assinatura de drivers nem o Defender, não injeta nada em jogos e não faz overclock.",
-        "Os resultados variam de PC para PC. Use Provar ajustes para medir o efeito no seu.",
-        "Você usa o programa por sua conta e risco; revise a simulação antes de confirmar cada alteração.",
-        "Nada é enviado para a internet sem você ativar (relatório de erros e base anônima são opcionais)."
-    ];
+    /// <summary>The terms in the current language (<see cref="Strings"/>).</summary>
+    public static IReadOnlyList<string> Text => Enumerable.Range(1, 6).Select(index => Strings.T($"terms.{index}")).ToArray();
 
     public static bool Accepted(AppSettings settings) => settings.TermsAccepted == Version;
 }

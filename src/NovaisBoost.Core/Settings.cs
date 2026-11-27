@@ -49,7 +49,8 @@ public sealed record ErrorReportSettings(bool Enabled = false, string? Endpoint 
 
 /// <param name="TermsAccepted">Version of the terms of use the user accepted (<see cref="Terms.Version"/>).</param>
 public sealed record AppSettings(GuardianSettings? Guardian = null, CleanupSettings? Cleanup = null, PcSettings? Pc = null,
-    string? TermsAccepted = null, UpdateSettings? Updates = null, ErrorReportSettings? ErrorReports = null, CommunitySettings? Community = null)
+    string? TermsAccepted = null, UpdateSettings? Updates = null, ErrorReportSettings? ErrorReports = null, CommunitySettings? Community = null,
+    string? Language = null)
 {
     public const string FileName = "settings.json";
 
@@ -84,6 +85,8 @@ public sealed record AppSettings(GuardianSettings? Guardian = null, CleanupSetti
         if (settings.CommunityOrDefault.Endpoint is { } community &&
             (!Uri.TryCreate(community, UriKind.Absolute, out var communityUri) || communityUri.Scheme != Uri.UriSchemeHttps))
             throw new InvalidDataException("community.endpoint precisa ser um endereço https.");
+        if (settings.Language is { } language && language != "auto" && !Strings.Languages.Contains(language, StringComparer.OrdinalIgnoreCase))
+            throw new InvalidDataException("language aceita \"auto\", \"pt-BR\" ou \"en-US\".");
         return settings;
     }
 

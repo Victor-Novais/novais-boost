@@ -153,6 +153,10 @@ Faça um snapshot da VM antes. Para cada item, confira o log em `C:\ProgramData\
 - [ ] Aceitar → "Provar ajustes" → o log mostra "resultado enviado (201)"; `GET /v1/evidence` lista o ajuste depois de 3 envios.
 - [ ] Sem endereço configurado, a tela de consentimento não aparece e nada é enviado.
 
+- [ ] **F22:** `NOVAIS boost GUI.exe` abre no tema escuro com a marca; sem administrador, Diagnosticar e Recomendado funcionam e
+      Aplicar pede elevação; como administrador, Aplicar cria o ponto de restauração e o backup e Reverter tudo desfaz.
+- [ ] Windows em inglês (ou `language: en-US`): menu, termo, Configurações e a interface gráfica em inglês.
+
 ## 3. Assinatura de código (evita alerta do SmartScreen e falso positivo de antivírus)
 
 Um otimizador que mexe no registro e roda como administrador **precisa** ser assinado.

@@ -1,6 +1,7 @@
 <Solution>
   <Project Path="src/NovaisBoost.App/NovaisBoost.App.csproj" />
   <Project Path="src/NovaisBoost.Core/NovaisBoost.Core.csproj" />
+  <Project Path="src/NovaisBoost.Gui/NovaisBoost.Gui.csproj" />
   <Project Path="tests/NovaisBoost.Tests/NovaisBoost.Tests.csproj" />
   <Project Path="tests/NovaisBoost.App.Tests/NovaisBoost.App.Tests.csproj" />
 </Solution>
