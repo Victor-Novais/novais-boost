@@ -710,7 +710,7 @@ Os arquivos ficam fora do processo do jogo, então não há conflito com anti-ch
 | Fase | Status | Observações |
 |---|---|---|
 | F11 Correções de precisão | ✅ | Campo `evidence` em todos os ajustes (34: 29 `documented`, 5 `experimental`, nenhum `measured` até a F12); níveis só com ajustes comprovados. `mmcss-gaming` dividido em `mmcss-responsiveness` e `mmcss-games-task`, e backups antigos continuam revertendo. Guardian em AboveNormal (High via `settings.json`). Plano de energia com valores próprios na bateria. `vbs-off` com aviso de Vanguard/HVCI. Texto "Carga de DPC/ISR (%)". HAGS só em RTX 30+/RX 6000+/Arc |
-| F12 Benchmark v2 | ⏳ | |
+| F12 Benchmark v2 | ✅ | PresentMon 2.6.0 embutido em `tools\` (SHA256 fixo no build e conferido no app). Métricas por quadro (CPU/GPU busy, PC latency, click-to-photon), gargalo, sparkline, travada > 2× a mediana. `BenchmarkSession` com 3 a 5 rodadas, aquecimento de 10 s, IC 95% por bootstrap e veredito. "Provar ajustes" por grupo, com reinício no meio, evidência local em `evidence.json` e reversão só do grupo. DPC/ISR por driver via ETW (TraceEvent 3.2.8). Relatório HTML auto-contido. Falta validar o ETW numa VM e num PC real (checklist) |
 | F13 Diagnóstico profundo | ⏳ | |
 | F14 Modo Reparar | ⏳ | |
 | F15 Configuração dos jogos | ⏳ | |

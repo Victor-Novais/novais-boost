@@ -24,8 +24,20 @@ Faça um snapshot da VM antes. Para cada item, confira o log em `C:\ProgramData\
 - [ ] Guardian com `{ "guardian": { "gamePriority": "high" } }` em `C:\ProgramData\NOVAIS boost\settings.json` → jogo em High;
       com um valor inválido (ex.: `"realTime"`) → jogo em AboveNormal e aviso no log.
 - [ ] Limpar agora: mostra os tamanhos, apaga só arquivos antigos, não apaga nada fora das pastas listadas.
-- [ ] Benchmark de carga de DPC/ISR (%) e de FPS (com PresentMon na pasta `tools`) geram resultados e a comparação antes × depois.
-      Nenhuma tela mostra latência em microssegundos.
+- [ ] Benchmark de carga de DPC/ISR (%) e captura avulsa de FPS geram resultados e a comparação antes × depois.
+      A tela de carga mostra só porcentagem; microssegundos aparecem só na opção de latência por driver (ETW).
+- [ ] O pacote tem `tools\PresentMon-2.6.0-x64.exe` (assinado pela Intel) e o app o usa sem pedir download.
+      Trocar o arquivo por outro faz o app recusá-lo (aviso de SHA256 no log).
+- [ ] Captura avulsa num jogo mostra a linha de frametime (sparkline), o gargalo (GPU, CPU/sistema ou limite de FPS)
+      e, em jogos com Reflex, a latência do PC.
+- [ ] Provar ajustes com 3 rodadas: antes → aplicar um grupo → (reiniciar se pedir; ao abrir de novo, o teste continua) →
+      depois → veredito com intervalo de confiança, `evidence.json` atualizado e relatório HTML em `reports\`.
+- [ ] O relatório HTML abre no navegador sem internet, como usuário comum (não elevado), e mostra marca, hardware,
+      tabela antes × depois e o gráfico.
+- [ ] Com veredito "Dentro do ruído" ou "Piorou", "Reverter só este grupo" desfaz apenas os ajustes do grupo; os anteriores continuam.
+- [ ] Um ajuste experimental com "Ganho real" passa a aparecer no nível dele neste PC, com "Medido neste PC" na revisão.
+- [ ] Latência de DPC/ISR por driver (ETW), numa VM e num PC real: lista drivers (ex.: `nvlddmkm.sys`, `ndis.sys`,
+      `storport.sys`) com máximo e total. Com o LatencyMon aberto ao mesmo tempo, os dois continuam funcionando.
 - [ ] Rede: teste de ping e bufferbloat terminam; DNS mais rápido → aplicar → reverter volta ao DNS anterior (DHCP).
 - [ ] Jogos com anti-cheat (Valorant, Fortnite, CS2/FACEIT, COD) abrem e jogam normalmente com o nível 3 aplicado.
       Se o Valorant mostrar "VAN: RESTRICTION" (HVCI), Reverter tudo religa a Integridade de memória e o jogo volta a abrir.
@@ -54,7 +66,9 @@ Um otimizador que mexe no registro e roda como administrador **precisa** ser ass
 
 ## 4. Distribuição e atualização
 
-- Publique `NOVAIS boost.exe` e `SHA256.txt` em um GitHub Release (ou no seu site).
+- Publique a pasta `artifacts\publish` inteira (`NOVAIS boost.exe`, `tools\`, `SHA256.txt`, `THIRD_PARTY_NOTICES.md`)
+  em um GitHub Release (ou no seu site), como `.zip`. O `build.ps1` baixa o PresentMon da versão fixa e para se o SHA256
+  não conferir. Para atualizar o PresentMon, troque a versão e o hash no `build.ps1` e em `PresentMonTool` (Core).
 - Atualização automática ainda **não** está implementada: ela precisa de um endereço fixo de releases.
   Quando houver, o caminho recomendado é: o app consulta `releases/latest`, compara a versão, baixa o exe,
   confere a assinatura (Authenticode) e o SHA256 antes de substituir.

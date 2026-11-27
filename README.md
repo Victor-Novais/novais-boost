@@ -15,7 +15,7 @@ Execute `NOVAIS boost.exe` (pede administrador). O menu tem:
 | 4 | Jogos & Streaming | Detecta os jogos, dicas por jogo, GPU dedicada e QoS por jogo, codificador do OBS |
 | 5 | Process Guardian | Prioridades automáticas durante o jogo, processos inúteis, programas na inicialização |
 | 6 | Cronogramas | Tarefas automáticas: reaplicar ajustes, limpeza semanal, SSD, saúde mensal |
-| 7 | Benchmark | Carga de DPC/ISR (%) e FPS/1% low com PresentMon, antes × depois |
+| 7 | Benchmark | Provar ajustes (teste A/B com estatística e relatório HTML), latência de DPC/ISR por driver (µs), FPS/1% low com PresentMon |
 | 8 | Reverter / Backups | Desfaz tudo o que foi aplicado |
 | 9 | Rede & Latência | Ping, jitter, perda, bufferbloat, DNS mais rápido, ajustes da placa de rede |
 
@@ -39,6 +39,26 @@ NOVAIS boost.exe --versao
   pode exigir de algumas contas: com o Valorant instalado, a revisão mostra um aviso antes de aplicar.
 - Os níveis só têm ajustes com efeito documentado ou medido. Os experimentais ficam em "Ajustes individuais".
 - Logs diários em `C:\ProgramData\NOVAIS boost\logs`.
+
+## Benchmark e prova de resultado
+
+- **Provar ajustes** (menu 7 → 1): de 3 a 5 rodadas de 60 s **antes**, aplicar **um grupo** de ajustes (uma categoria:
+  Energia, CPU, Rede...), reiniciar se o grupo pedir e repetir as rodadas **depois**. Os primeiros 10 s de cada rodada
+  são descartados. O teste fica salvo entre um passo e outro, então dá para reiniciar no meio.
+- **Veredito**: média, desvio padrão e intervalo de confiança de 95% por bootstrap (10.000 reamostragens das rodadas)
+  para FPS médio, 1% low, 0,1% low e frametime p99. "Ganho real" ou "Piorou" só quando o intervalo inteiro fica de um
+  lado e a mudança passa de 1%; senão, "Dentro do ruído". Uma piora no FPS médio ou no 1% low vence qualquer ganho.
+- O resultado vira **evidência local** (`C:\ProgramData\NOVAIS boost\evidence.json`): um ganho real torna o ajuste
+  `measured` neste PC (ele pode entrar nos níveis aqui), e uma piora tira o ajuste dos níveis aqui. Um grupo que deu
+  "Dentro do ruído" ou "Piorou" pode ser revertido sozinho no fim do teste.
+- **Relatório** `reports\benchmark-AAAAMMDD-HHMMSS.html`, auto-contido (sem internet, sem scripts), com a marca,
+  o hardware, antes × depois com intervalos, gráfico de frametime e os ajustes aplicados.
+- **Gargalo**: com os tempos de CPU e GPU do PresentMon, cada captura diz se o jogo está limitado pela GPU,
+  pela CPU/sistema ou por um limite de FPS.
+- **Latência de DPC/ISR por driver** (menu 7 → 2): gravação ETW de 20 s, somente leitura, com o top 10 de drivers pela
+  chamada mais longa e pelo tempo total. Alerta acima de 500 µs, crítico acima de 1.000 µs, com a dica de cada driver.
+- O **PresentMon 2.6.0** (Intel, MIT) vem na pasta `tools\` do pacote. O app confere o SHA256 antes de executá-lo.
+  Licenças em [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 ## Configurações
 
@@ -83,7 +103,7 @@ Todo ajuste declara o campo obrigatório `evidence`, que diz como sabemos que el
 
 | Valor | Quando usar | Onde aparece |
 |---|---|---|
-| `measured` | Ganho provado em benchmark (antes × depois, ver F12) | Níveis e ajustes individuais |
+| `measured` | Ganho provado em benchmark (antes × depois). No PC do usuário, um "Ganho real" em Provar ajustes também conta | Níveis e ajustes individuais |
 | `documented` | A Microsoft ou o fabricante documenta a opção e o efeito (política, opção das Configurações, painel do driver, palavra-chave NDIS) | Níveis e ajustes individuais |
 | `experimental` | Nenhum dos dois, ou na dúvida | Só em "Ajustes individuais", com o aviso "Efeito não comprovado" |
 

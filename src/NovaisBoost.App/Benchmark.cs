@@ -24,25 +24,33 @@ internal static class ReportStore
     }
 }
 
-/// <summary>Frame time capture through Intel PresentMon (2.x command line) plus a parallel DPC/ISR sample.</summary>
+/// <summary>Frame time capture through Intel PresentMon (2.x command line) plus a parallel DPC/ISR load sample.</summary>
 internal static class Benchmark
 {
-    public const string PresentMonUrl = "https://github.com/GameTechDev/PresentMon/releases";
-
-    public static string? FindPresentMon(string dataDirectory)
+    /// <summary>
+    /// The PresentMon bundled next to the exe (tools\, verified against the pinned SHA256), or one the administrator put
+    /// in the data folder. The PATH and the exe folder itself are not searched: PresentMon runs elevated.
+    /// </summary>
+    public static string? FindPresentMon(string dataDirectory, IActionLog log)
     {
-        var folders = new[] { AppContext.BaseDirectory, Path.Combine(AppContext.BaseDirectory, "tools"), Path.Combine(dataDirectory, "tools") }
-            .Concat((Environment.GetEnvironmentVariable("PATH") ?? "").Split(';', StringSplitOptions.RemoveEmptyEntries));
-        foreach (var folder in folders.Where(Directory.Exists))
+        var bundled = Path.Combine(AppContext.BaseDirectory, "tools", PresentMonTool.FileName);
+        if (File.Exists(bundled))
         {
-            var match = Directory.EnumerateFiles(folder, "PresentMon*.exe").OrderByDescending(file => file).FirstOrDefault();
-            if (match is not null)
-                return match;
+            using var stream = File.OpenRead(bundled);
+            var hash = Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(stream));
+            if (hash == PresentMonTool.Sha256)
+                return bundled;
+            log.Warning($"PresentMon embutido ignorado: SHA256 {hash} diferente do esperado.");
         }
-        return null;
+        var folder = Path.Combine(dataDirectory, "tools");
+        return Directory.Exists(folder)
+            ? Directory.EnumerateFiles(folder, "PresentMon*.exe").OrderByDescending(file => file, StringComparer.OrdinalIgnoreCase).FirstOrDefault()
+            : null;
     }
 
-    public static BenchmarkRun Capture(string presentMon, string processName, string game, string label, int seconds, AppServices app)
+    /// <param name="warmupSeconds">Seconds discarded at the start (0 for a single capture, 10 in an A/B session).</param>
+    public static BenchmarkRun Capture(string presentMon, string processName, string game, string label, int seconds, AppServices app,
+        double warmupSeconds = 0)
     {
         var folder = Path.Combine(app.DataDirectory, "benchmarks");
         Directory.CreateDirectory(folder);
@@ -56,7 +64,7 @@ internal static class Benchmark
             UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true
         };
         foreach (var argument in new[] { "--process_name", processName, "--output_file", csv, "--timed", seconds.ToString(),
-                     "--terminate_after_timed", "--stop_existing_session" })
+                     "--terminate_after_timed", "--stop_existing_session", "--no_console_stats" })
             info.ArgumentList.Add(argument);
 
         using (var process = Process.Start(info) ?? throw new InvalidOperationException("Falha ao iniciar o PresentMon."))
@@ -72,8 +80,10 @@ internal static class Benchmark
                 throw new InvalidOperationException($"O PresentMon não gerou dados. O jogo ({processName}) estava aberto? {error.Result}{output.Result}".Trim());
         }
 
-        using var reader = new StreamReader(csv);
-        var stats = FrameAnalysis.Compute(FrameAnalysis.ReadPresentMonCsv(reader));
+        IReadOnlyList<FrameSample> frames;
+        using (var reader = new StreamReader(csv))
+            frames = FrameAnalysis.SkipWarmup(FrameAnalysis.ReadPresentMonFrames(reader), warmupSeconds);
+        var stats = FrameAnalysis.Compute(frames);
         LatencySample? sample = null;
         try
         {
@@ -85,7 +95,8 @@ internal static class Benchmark
         }
         cancel.Cancel();
 
-        var run = new BenchmarkRun(label, game, DateTimeOffset.Now, stats, sample);
+        var run = new BenchmarkRun(label, game, DateTimeOffset.Now, stats, sample,
+            FrameAnalysis.Downsample(frames.Select(frame => frame.FrameTimeMs).ToArray(), 600));
         File.WriteAllText(Path.Combine(folder, $"{stamp}-{label}.json"), JsonSerializer.Serialize(run, ReportStore.Json));
         app.Log.Info($"Benchmark {label} de {game}: {stats.AverageFps:0} FPS, 1% low {stats.OnePercentLowFps:0}.");
         return run;

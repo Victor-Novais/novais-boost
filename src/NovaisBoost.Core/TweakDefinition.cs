@@ -30,9 +30,16 @@ public sealed record TweakDefinition(
 
 public static class TweakLevels
 {
-    /// <summary>The tweaks a level offers: everything up to that level, except experimental ones (those stay in the custom list).</summary>
-    public static IReadOnlyList<TweakDefinition> Select(IEnumerable<TweakDefinition> tweaks, TweakLevel level) =>
-        tweaks.Where(tweak => tweak.Level <= level && tweak.IsProven).ToArray();
+    /// <summary>
+    /// The tweaks a level offers: everything up to that level, except experimental ones (those stay in the custom list).
+    /// With <paramref name="local"/>, a tweak measured as a real gain on this PC counts as proven, and one measured
+    /// as worse on this PC is left out.
+    /// </summary>
+    public static IReadOnlyList<TweakDefinition> Select(IEnumerable<TweakDefinition> tweaks, TweakLevel level, LocalEvidence? local = null) =>
+        tweaks.Where(tweak => tweak.Level <= level && IsProven(tweak, local) && local?.IsWorse(tweak.Id) != true).ToArray();
+
+    public static bool IsProven(TweakDefinition tweak, LocalEvidence? local) =>
+        (local?.Effective(tweak) ?? tweak.Evidence) != TweakEvidence.Experimental;
 }
 
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "type")]

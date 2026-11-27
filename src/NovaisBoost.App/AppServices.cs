@@ -9,6 +9,7 @@ internal sealed class AppServices
     private IReadOnlyList<InstalledGame>? _games;
     private IReadOnlyList<TweakDefinition>? _dynamic;
     private IReadOnlyList<HardwareProfile>? _profiles;
+    private LocalEvidence? _evidence;
 
     private AppServices(string dataDirectory, IActionLog log, SnapshotManager snapshots)
     {
@@ -37,6 +38,9 @@ internal sealed class AppServices
     public IReadOnlyList<TweakDefinition> AllTweaks => [.. StaticTweaks, .. DynamicTweaks];
     public IReadOnlyList<HardwareProfile> Profiles => _profiles ??= ProfileMatcher.Match(DataCatalog.Profiles(), Pc);
 
+    /// <summary>A/B test results measured on this PC (evidence.json).</summary>
+    public LocalEvidence LocalEvidence => _evidence ??= LocalEvidence.Load(DataDirectory, Log);
+
     /// <summary>Tweak ids a matched hardware profile says must not run on this PC.</summary>
     public IReadOnlySet<string> AvoidedTweaks => Profiles.SelectMany(profile => profile.Avoid).ToHashSet(StringComparer.Ordinal);
 
@@ -47,6 +51,7 @@ internal sealed class AppServices
         _games = null;
         _dynamic = null;
         _profiles = null;
+        _evidence = null;
     }
 
     /// <summary>Read on every call so a change in settings.json takes effect the next time the Guardian starts.</summary>

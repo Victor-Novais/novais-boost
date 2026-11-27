@@ -130,12 +130,20 @@ public sealed class TweakEngine(
     }
 
     public IReadOnlyList<SettingChange> Revert(string tweakId, bool dryRun = true) =>
-        RevertInternal(tweakId, dryRun, null);
+        RevertInternal([tweakId], dryRun, null);
+
+    /// <summary>
+    /// Reverts a group of tweaks (e.g. the group of an A/B test) that are the most recent entries of the active backup.
+    /// Ids not in the backup are ignored (they had nothing to change). Fails if a tweak applied later sits on top of them.
+    /// </summary>
+    public IReadOnlyList<SettingChange> RevertLatest(IReadOnlyCollection<string> tweakIds, bool dryRun = true,
+        IReadOnlyList<SettingChange>? reviewedChanges = null) =>
+        RevertInternal(tweakIds, dryRun, reviewedChanges);
 
     public IReadOnlyList<SettingChange> RevertAll(bool dryRun = true, IReadOnlyList<SettingChange>? reviewedChanges = null) =>
         RevertInternal(null, dryRun, reviewedChanges);
 
-    private IReadOnlyList<SettingChange> RevertInternal(string? tweakId, bool dryRun, IReadOnlyList<SettingChange>? reviewedChanges)
+    private IReadOnlyList<SettingChange> RevertInternal(IReadOnlyCollection<string>? tweakIds, bool dryRun, IReadOnlyList<SettingChange>? reviewedChanges)
     {
         using var lease = dryRun ? null : snapshots.Acquire();
         var file = snapshots.ReadActive();
@@ -146,12 +154,26 @@ public sealed class TweakEngine(
         }
 
         var tweaks = file.State.Tweaks;
-        if (tweakId is not null && tweaks.All(tweak => tweak.Id != tweakId))
-            return [];
-        if (tweakId is not null && tweaks[^1].Id != tweakId)
-            throw new InvalidOperationException("Reverta primeiro o ajuste mais recente ou escolha Reverter tudo.");
+        var count = tweaks.Length;
+        if (tweakIds is not null)
+        {
+            var ids = tweakIds.ToHashSet(StringComparer.Ordinal);
+            if (tweaks.All(tweak => !ids.Contains(tweak.Id)))
+            {
+                EnsureReviewed([], reviewedChanges);
+                return [];
+            }
+            // The consecutive most recent entries that belong to the group.
+            count = 0;
+            while (count < tweaks.Length && ids.Contains(tweaks[^(count + 1)].Id))
+                count++;
+            if (count == 0)
+                throw new InvalidOperationException(ids.Count == 1
+                    ? "Reverta primeiro o ajuste mais recente ou escolha Reverter tudo."
+                    : "Outros ajustes foram aplicados depois deste grupo. Reverta-os primeiro ou escolha Reverter tudo.");
+        }
 
-        var selected = tweakId is null ? tweaks : [tweaks[^1]];
+        var selected = tweaks[^count..];
         // The first capture of a target contains its state before this batch.
         var original = selected.SelectMany(tweak => tweak.Settings)
             .DistinctBy(entry => entry.Action.Identity, StringComparer.OrdinalIgnoreCase).ToArray();
@@ -171,7 +193,7 @@ public sealed class TweakEngine(
         EnsureReviewed(changes, reviewedChanges);
         if (dryRun)
         {
-            log.Info($"Simulação de reversão: {tweakId ?? "tudo"}.");
+            log.Info($"Simulação de reversão: {Label(tweakIds)}.");
             return changes;
         }
 
@@ -190,11 +212,13 @@ public sealed class TweakEngine(
 
         var state = file.State with { Closed = selected.Length == tweaks.Length, Pending = false };
         if (!state.Closed)
-            state = state with { Tweaks = tweaks[..^1] };
+            state = state with { Tweaks = tweaks[..^count] };
         snapshots.Save(file with { State = state });
-        log.Info($"Reversão concluída: {tweakId ?? "tudo"}.");
+        log.Info($"Reversão concluída: {Label(tweakIds)}.");
         return changes;
     }
+
+    private static string Label(IReadOnlyCollection<string>? tweakIds) => tweakIds is null ? "tudo" : string.Join(", ", tweakIds);
 
     private (SettingBackup[] Current, SettingChange[] Changes) PreviewRevert(SettingBackup[] original)
     {

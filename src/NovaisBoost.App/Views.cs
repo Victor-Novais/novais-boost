@@ -170,7 +170,7 @@ internal sealed class Views(AppServices app, ConsoleUi ui)
             .AddColumn("#").AddColumn("Programa").AddColumn("Tipo").AddColumn(new TableColumn("RAM").RightAligned()).AddColumn("Observação");
         for (var index = 0; index < rows.Length; index++)
             table.AddRow((index + 1).ToString(CultureInfo.InvariantCulture), Markup.Escape(rows[index].Label), Category(rows[index].Entry.Category),
-                Diagnostics.Gb(rows[index].Memory), $"[grey]{Markup.Escape(rows[index].Entry.Description)}[/]");
+                Core.Diagnostics.Gb(rows[index].Memory), $"[grey]{Markup.Escape(rows[index].Entry.Description)}[/]");
         AnsiConsole.Write(table);
         AnsiConsole.MarkupLine("[grey]Durante o jogo, o Guardian baixa a prioridade destes programas automaticamente.[/]");
 
@@ -290,35 +290,88 @@ internal sealed class Views(AppServices app, ConsoleUi ui)
         var preview = Spin("Calculando...", () => Cleaner.Run(targets, dryRun: true, app.Log));
         var table = new Table().Border(TableBorder.Simple).AddColumn("Local").AddColumn(new TableColumn("Arquivos").RightAligned()).AddColumn(new TableColumn("Tamanho").RightAligned());
         foreach (var result in preview.Where(result => result.Files > 0))
-            table.AddRow(Markup.Escape(result.Target.Name), result.Files.ToString(CultureInfo.InvariantCulture), Diagnostics.Gb(result.Bytes));
+            table.AddRow(Markup.Escape(result.Target.Name), result.Files.ToString(CultureInfo.InvariantCulture), Core.Diagnostics.Gb(result.Bytes));
         AnsiConsole.Write(table);
         var total = preview.Sum(result => result.Bytes);
-        if (total == 0 || !ConsoleUi.Confirm($"Apagar {Diagnostics.Gb(total)} de arquivos temporários?"))
+        if (total == 0 || !ConsoleUi.Confirm($"Apagar {Core.Diagnostics.Gb(total)} de arquivos temporários?"))
             return;
         var done = Spin("Limpando...", () => Cleaner.Run(targets, dryRun: false, app.Log));
-        AnsiConsole.MarkupLine($"[green]{Diagnostics.Gb(done.Sum(result => result.Bytes))} liberados.[/] [grey]{done.Sum(result => result.Skipped)} arquivo(s) em uso foram mantidos.[/]");
+        AnsiConsole.MarkupLine($"[green]{Core.Diagnostics.Gb(done.Sum(result => result.Bytes))} liberados.[/] [grey]{done.Sum(result => result.Skipped)} arquivo(s) em uso foram mantidos.[/]");
     }
 
     // ------------------------------------------------------------------ [7] Benchmark
     public void Benchmark()
     {
-        AnsiConsole.MarkupLine(ConsoleUi.Item(1, "Carga de DPC/ISR (%) e resolução do timer — 20 segundos"));
-        AnsiConsole.MarkupLine(ConsoleUi.Item(2, "Capturar FPS de um jogo (PresentMon)"));
-        AnsiConsole.MarkupLine(ConsoleUi.Item(3, "Comparar antes × depois"));
+        AnsiConsole.MarkupLine(ConsoleUi.Item(1, "Provar ajustes: teste A/B com estatística (antes × depois de um grupo)"));
+        AnsiConsole.MarkupLine(ConsoleUi.Item(2, "Latência de DPC/ISR por driver (µs, ETW) — 20 segundos"));
+        AnsiConsole.MarkupLine(ConsoleUi.Item(3, "Carga de DPC/ISR (%) e resolução do timer — 20 segundos"));
+        AnsiConsole.MarkupLine(ConsoleUi.Item(4, "Capturar FPS de um jogo (uma rodada)"));
+        AnsiConsole.MarkupLine(ConsoleUi.Item(5, "Comparar capturas avulsas antes × depois"));
+        AnsiConsole.MarkupLine(ConsoleUi.Item(6, "Abrir o último relatório"));
         AnsiConsole.MarkupLine(ConsoleUi.Item(0, "Voltar"));
         switch (ConsoleUi.ReadChoice())
         {
             case "1":
+                new ProofView(app, ui).Run();
+                break;
+            case "2":
+                KernelLatency();
+                break;
+            case "3":
                 var sample = Spin("Medindo a carga de DPC/ISR por 20 segundos (deixe o PC parado)...", () => LatencyProbe.Measure(TimeSpan.FromSeconds(20)));
                 DrawLatency(sample);
                 break;
-            case "2":
+            case "4":
                 CaptureFps();
                 break;
-            case "3":
+            case "5":
                 Compare();
                 break;
+            case "6":
+                if (ProofView.LatestReport(app.DataDirectory) is { } report)
+                    ProofView.OpenReport(report, app.Log);
+                else
+                    AnsiConsole.MarkupLine("[grey]Nenhum relatório ainda. Rode \"Provar ajustes\" para gerar um.[/]");
+                break;
         }
+    }
+
+    private void KernelLatency()
+    {
+        AnsiConsole.MarkupLine("Grava as chamadas de DPC/ISR de todos os drivers por 20 segundos (somente leitura). " +
+            "Para achar o culpado de travadas, deixe tocando um vídeo ou o jogo aberto durante a gravação.");
+        if (!ConsoleUi.Confirm("Começar agora?"))
+            return;
+        var accumulator = new KernelLatencyAccumulator();
+        var duration = TimeSpan.FromSeconds(20);
+        Spin("Gravando DPC/ISR por driver (20 s)...", () =>
+        {
+            new EtwKernelTrace(app.Log).Record(duration, accumulator.Add);
+            return 0;
+        });
+        DrawKernelLatency(accumulator.Build(duration));
+    }
+
+    private static void DrawKernelLatency(KernelLatencyReport report)
+    {
+        var table = new Table().Border(TableBorder.Rounded).BorderColor(Purple).Title("[bold]Drivers com a DPC/ISR mais longa[/]")
+            .AddColumn("Driver").AddColumn(new TableColumn("Máx. DPC (µs)").RightAligned()).AddColumn(new TableColumn("Máx. ISR (µs)").RightAligned())
+            .AddColumn(new TableColumn("Total (ms)").RightAligned()).AddColumn(new TableColumn("Chamadas").RightAligned());
+        foreach (var driver in report.ByMax)
+        {
+            var color = KernelLatencyAnalysis.Classify(driver.MaxMicroseconds) switch { Severity.Critical => "red", Severity.Warning => "yellow", _ => "green" };
+            table.AddRow($"[{color}]{Markup.Escape(driver.Module)}[/]", driver.MaxDpcMicroseconds.ToString("0", CultureInfo.CurrentCulture),
+                driver.MaxIsrMicroseconds.ToString("0", CultureInfo.CurrentCulture), (driver.TotalMicroseconds / 1000).ToString("0.0", CultureInfo.CurrentCulture),
+                (driver.DpcCount + driver.IsrCount).ToString("N0", CultureInfo.CurrentCulture));
+        }
+        AnsiConsole.Write(table);
+        var heaviest = report.ByTotal.Take(3).Select(driver => $"{driver.Module} ({driver.TotalMicroseconds / 1000:0.0} ms)");
+        AnsiConsole.MarkupLine($"[grey]{report.Events:N0} chamadas em {report.Duration.TotalSeconds:0} s. Mais tempo no total: {Markup.Escape(string.Join(", ", heaviest))}. " +
+            $"Alerta acima de {KernelLatencyAnalysis.WarningMicroseconds:0} µs, crítico acima de {KernelLatencyAnalysis.CriticalMicroseconds:0} µs.[/]");
+        if (report.Findings.Count == 0)
+            AnsiConsole.MarkupLine("[green]Nenhum driver passou de 500 µs: latência de DPC/ISR saudável.[/]");
+        foreach (var finding in report.Findings)
+            AnsiConsole.MarkupLine($"[{(finding.Severity == Severity.Critical ? "red" : "yellow")}]{Markup.Escape(finding.Title)}[/] — {Markup.Escape(finding.Recommendation)}");
     }
 
     private static void DrawLatency(LatencySample sample)
@@ -330,7 +383,7 @@ internal sealed class Views(AppServices app, ConsoleUi ui)
         grid.AddRow("Interrupções por segundo", sample.InterruptsPerSecond.ToString("N0", CultureInfo.GetCultureInfo("pt-BR")));
         grid.AddRow("Resolução do timer", $"{sample.TimerResolutionMs:0.###} ms");
         AnsiConsole.Write(new Panel(grid).Header("[bold] Carga de DPC/ISR (%) [/]").BorderColor(Purple));
-        AnsiConsole.MarkupLine("[grey]Mostra a parte da CPU gasta em DPC/ISR, não o tempo de cada driver em microssegundos.[/]");
+        AnsiConsole.MarkupLine("[grey]Mostra a parte da CPU gasta em DPC/ISR. O tempo de cada driver em µs está na opção 2.[/]");
         var findings = LatencyRules.Evaluate(sample);
         if (findings.Count == 0)
             AnsiConsole.MarkupLine("[green]Carga de DPC/ISR saudável.[/]");
@@ -338,15 +391,14 @@ internal sealed class Views(AppServices app, ConsoleUi ui)
             AnsiConsole.MarkupLine($"[yellow]{Markup.Escape(finding.Title)}[/] — {Markup.Escape(finding.Recommendation)}");
     }
 
-    private void CaptureFps()
+    internal static void PresentMonMissing(AppServices app) =>
+        AnsiConsole.MarkupLine($"[yellow]PresentMon não encontrado.[/] O pacote do NOVAIS boost traz o PresentMon {PresentMonTool.Version} na pasta " +
+            $"[bold]tools[/] ao lado do exe; reinstale o pacote completo. Também vale copiar o PresentMon (console) para " +
+            $"[bold]{Markup.Escape(Path.Combine(app.DataDirectory, "tools"))}[/].");
+
+    /// <summary>Game from the detected list, or any executable name typed by the user.</summary>
+    internal static (string Exe, string Name)? PickGame(AppServices app)
     {
-        var presentMon = NovaisBoost.App.Benchmark.FindPresentMon(app.DataDirectory);
-        if (presentMon is null)
-        {
-            AnsiConsole.MarkupLine($"[yellow]PresentMon não encontrado.[/] Baixe o PresentMon (console) em {NovaisBoost.App.Benchmark.PresentMonUrl} " +
-                $"e coloque o .exe em [bold]{Markup.Escape(Path.Combine(app.DataDirectory, "tools"))}[/].");
-            return;
-        }
         var games = app.Games.Where(game => game.Game.Id != "obs").ToArray();
         for (var index = 0; index < games.Length; index++)
             AnsiConsole.MarkupLine(ConsoleUi.Item(index + 1, games[index].Game.Name));
@@ -355,9 +407,20 @@ internal sealed class Views(AppServices app, ConsoleUi ui)
         var (exe, name) = int.TryParse(input, out var number) && number >= 1 && number <= games.Length
             ? (Path.GetFileName(games[number - 1].ExecutablePath), games[number - 1].Game.Name)
             : (input, input);
-        if (exe.Length == 0)
+        return exe.Length == 0 ? null : (exe, name);
+    }
+
+    private void CaptureFps()
+    {
+        var presentMon = NovaisBoost.App.Benchmark.FindPresentMon(app.DataDirectory, app.Log);
+        if (presentMon is null)
+        {
+            PresentMonMissing(app);
             return;
-        AnsiConsole.Write("Rótulo [antes/depois] (padrão: antes): ");
+        }
+        if (PickGame(app) is not var (exe, name))
+            return;
+        AnsiConsole.Write("Rótulo [[antes/depois]] (padrão: antes): ");
         var label = Console.ReadLine()?.Trim().ToLowerInvariant() is { Length: > 0 } text ? text : "antes";
         AnsiConsole.MarkupLine("Abra o jogo e entre numa partida/cena repetível. A captura dura 60 segundos.");
         if (!ConsoleUi.Confirm("Começar a captura agora?"))
@@ -366,11 +429,24 @@ internal sealed class Views(AppServices app, ConsoleUi ui)
         DrawRun(run);
     }
 
-    private static void DrawRun(BenchmarkRun run)
+    internal static void DrawRun(BenchmarkRun run)
     {
         var stats = run.Stats;
         AnsiConsole.MarkupLine($"[bold #C084FC]{Markup.Escape(run.Game)}[/] ({Markup.Escape(run.Label)}): [bold]{stats.AverageFps:0} FPS[/] · " +
             $"1% low {stats.OnePercentLowFps:0} · 0,1% low {stats.PointOnePercentLowFps:0} · frametime p99 {stats.P99FrameTimeMs:0.0} ms · {stats.Stutters} travada(s)");
+        if (run.Timeline is { Length: > 1 } timeline)
+            AnsiConsole.MarkupLine($"  [#C084FC]{FrameAnalysis.Sparkline(timeline, Math.Clamp(AnsiConsole.Profile.Width - 4, 20, 100))}[/]");
+        var details = new List<string>();
+        if (stats.Bottleneck != Bottleneck.Unknown)
+            details.Add($"gargalo: {BenchmarkReport.Describe(stats.Bottleneck)}");
+        if (stats.GpuBusyPercent is { } gpu)
+            details.Add($"GPU ocupada {gpu:0}% do quadro");
+        if (stats.AveragePcLatencyMs is { } pcLatency)
+            details.Add($"latência do PC {pcLatency:0.0} ms");
+        if (stats.AverageClickToPhotonMs is { } click)
+            details.Add($"clique até a tela {click:0.0} ms");
+        if (details.Count > 0)
+            AnsiConsole.MarkupLine($"  [grey]{Markup.Escape(string.Join(" · ", details))}[/]");
     }
 
     private void Compare()

@@ -273,6 +273,46 @@ public sealed class TweakEngineTests : IDisposable
     }
 
     [Fact]
+    public void RevertLatestUndoesOnlyTheTestedGroup()
+    {
+        var (first, second, third) = (RegistrySet("First"), RegistrySet("Second"), RegistrySet("Third"));
+        _windows.Seed(first, RegistryValue.From(RegistryValueType.Dword, 5));
+        _windows.Seed(third, RegistryValue.From(RegistryValueType.Dword, 7));
+        Engine.Apply(Tweak("base", first), dryRun: false);
+        Engine.Apply(Tweak("group-a", second), dryRun: false);
+        Engine.Apply(Tweak("group-b", third), dryRun: false);
+
+        var preview = Engine.RevertLatest(["group-a", "group-b", "not-applied"]);
+        Assert.Equal(2, preview.Count);
+        Engine.RevertLatest(["group-a", "group-b", "not-applied"], dryRun: false, reviewedChanges: preview);
+
+        Assert.Equal(0, _windows.Read(first).Value?.Value.GetInt32()); // still applied
+        Assert.Null(_windows.Read(second).Value);
+        Assert.Equal(7, _windows.Read(third).Value?.Value.GetInt32());
+        Assert.Equal(["base"], Snapshots.GetActive()!.TweakIds);
+        Assert.Empty(Engine.RevertLatest(["group-a"]));
+    }
+
+    [Fact]
+    public void RevertLatestRefusesWhenSomethingWasAppliedAfterTheGroup()
+    {
+        Engine.Apply(Tweak("group", RegistrySet("First")), dryRun: false);
+        Engine.Apply(Tweak("later", RegistrySet("Second")), dryRun: false);
+        var error = Assert.Throws<InvalidOperationException>(() => Engine.RevertLatest(["group", "other"]));
+        Assert.Contains("depois", error.Message);
+        Assert.Equal(["group", "later"], Snapshots.GetActive()!.TweakIds);
+    }
+
+    [Fact]
+    public void RevertLatestOfTheWholeBackupClosesIt()
+    {
+        Engine.Apply(Tweak("only", RegistrySet("First")), dryRun: false);
+        Engine.RevertLatest(["only"], dryRun: false);
+        Assert.Null(Snapshots.GetActive());
+        Assert.False(_windows.Read(RegistrySet("First")).KeyExists);
+    }
+
+    [Fact]
     public void AntiCheatListAloneDoesNotBlockApplication()
     {
         var tweak = Tweak("anti-cheat-warning", RegistrySet("Value")) with { Compat = new([], ["Vanguard"]) };

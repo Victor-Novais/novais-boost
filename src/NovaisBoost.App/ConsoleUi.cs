@@ -159,8 +159,9 @@ internal sealed class ConsoleUi
         IReadOnlyList<TweakDefinition> all = [];
         AnsiConsole.Status().Spinner(Spinner.Known.Dots).Start("Analisando hardware, dispositivos e jogos...", _ => all = _app.AllTweaks);
         // Per-machine tweaks for specific screens (DNS, startup apps) are offered there, not in the levels.
-        // Experimental tweaks are never part of a level: they stay in "Ajustes individuais".
-        return TweakLevels.Select(all, level);
+        // Experimental tweaks are never part of a level (unless measured as a real gain on this PC); tweaks measured as
+        // worse on this PC are left out too.
+        return TweakLevels.Select(all, level, _app.LocalEvidence);
     }
 
     /// <summary>Read-only preview of a level, used by the --simular command line option.</summary>
@@ -170,7 +171,7 @@ internal sealed class ConsoleUi
         DrawSkipped(skipped);
         AnsiConsole.MarkupLine($"[green]{alreadyApplied} ajuste(s) já aplicados.[/]");
         if (pending.Count > 0)
-            DrawPending(pending, AntiCheatWarnings(pending));
+            DrawPending(pending, AntiCheatWarnings(pending), _app.LocalEvidence);
         foreach (var (tweak, changes) in pending)
         {
             AnsiConsole.MarkupLine($"[bold]{Markup.Escape(tweak.Name)}[/]");
@@ -179,7 +180,8 @@ internal sealed class ConsoleUi
     }
 
     /// <summary>Simulates the tweaks, lets the user review and deselect, then applies them as one batch.</summary>
-    public void ReviewAndApply(IEnumerable<TweakDefinition> candidates)
+    /// <returns>The batch results (empty when the user cancels or nothing is pending).</returns>
+    public IReadOnlyList<BatchResult> ReviewAndApply(IEnumerable<TweakDefinition> candidates)
     {
         var (pending, skipped, alreadyApplied) = Simulate(candidates);
         DrawSkipped(skipped);
@@ -188,22 +190,22 @@ internal sealed class ConsoleUi
         if (pending.Count == 0)
         {
             AnsiConsole.MarkupLine("[green]Nada a fazer: tudo já está aplicado.[/]");
-            return;
+            return [];
         }
 
         var warnings = AntiCheatWarnings(pending);
+        var evidence = _app.LocalEvidence;
         while (true)
         {
-            DrawPending(pending, warnings);
+            DrawPending(pending, warnings, evidence);
             AnsiConsole.MarkupLine($"{Item("A", "Aplicar todos")}   {Item("P", "Personalizar (tirar itens)")}   {Item("D", "Ver detalhes")}   {Item(0, "Voltar")}");
             switch (ReadChoice()?.ToUpperInvariant())
             {
                 case "A":
                     if (Confirm($"Aplicar {pending.Count} ajuste(s) com ponto de restauração e backup?"))
-                        RunBatch(pending);
-                    else
-                        Log.Info("Aplicação em lote cancelada.");
-                    return;
+                        return RunBatch(pending);
+                    Log.Info("Aplicação em lote cancelada.");
+                    return [];
                 case "P":
                     AnsiConsole.Write("Números para NÃO aplicar (ex.: 2 5 9): ");
                     var remove = (Console.ReadLine() ?? "").Split([' ', ',', ';'], StringSplitOptions.RemoveEmptyEntries)
@@ -211,7 +213,7 @@ internal sealed class ConsoleUi
                         .Where(index => index >= 0 && index < pending.Count).ToHashSet();
                     pending = pending.Where((_, index) => !remove.Contains(index)).ToList();
                     if (pending.Count == 0)
-                        return;
+                        return [];
                     break;
                 case "D":
                     foreach (var (tweak, changes) in pending)
@@ -221,7 +223,7 @@ internal sealed class ConsoleUi
                     }
                     break;
                 default:
-                    return;
+                    return [];
             }
         }
     }
@@ -268,7 +270,7 @@ internal sealed class ConsoleUi
         return (pending, skipped, alreadyApplied);
     }
 
-    private void RunBatch(List<(TweakDefinition Tweak, IReadOnlyList<SettingChange> Changes)> pending)
+    private IReadOnlyList<BatchResult> RunBatch(List<(TweakDefinition Tweak, IReadOnlyList<SettingChange> Changes)> pending)
     {
         var reviewed = pending.ToDictionary(item => item.Tweak.Id, item => item.Changes);
         IReadOnlyList<BatchResult> results = [];
@@ -297,6 +299,7 @@ internal sealed class ConsoleUi
             AnsiConsole.MarkupLine("[yellow]Reinicie o PC para concluir os ajustes que precisam de reinício.[/]");
         AnsiConsole.MarkupLine("[grey]Para desfazer tudo: menu [[8]] Reverter / Backups.[/]");
         _app.Refresh();
+        return results;
     }
 
     /// <summary>Tweak id → warning, for tweaks whose "compat.antiCheat" matches a game installed on this PC.</summary>
@@ -313,7 +316,7 @@ internal sealed class ConsoleUi
     }
 
     private static void DrawPending(List<(TweakDefinition Tweak, IReadOnlyList<SettingChange> Changes)> pending,
-        IReadOnlyDictionary<string, string> warnings)
+        IReadOnlyDictionary<string, string> warnings, LocalEvidence evidence)
     {
         var table = new Table().Border(TableBorder.Rounded).BorderColor(new Color(124, 58, 237))
             .AddColumn(new TableColumn("#").RightAligned()).AddColumn("Nível").AddColumn("Categoria").AddColumn("Ajuste")
@@ -326,7 +329,7 @@ internal sealed class ConsoleUi
                 tweak.Level switch { TweakLevel.Safe => "[green]1[/]", TweakLevel.Competitive => "[yellow]2[/]", _ => "[red]3[/]" },
                 Markup.Escape(tweak.Category),
                 $"{Markup.Escape(tweak.Name)}\n[grey]Risco: {Markup.Escape(tweak.Risk)}[/]" +
-                    (tweak.IsProven ? "" : "\n[yellow]Efeito não comprovado (experimental)[/]") +
+                    EvidenceNote(tweak, evidence) +
                     (warnings.ContainsKey(tweak.Id) ? "\n[bold yellow]⚠ Aviso de anti-cheat abaixo[/]" : ""),
                 changes.Count.ToString(CultureInfo.InvariantCulture),
                 tweak.RequiresReboot ? "[yellow]sim[/]" : "não");
@@ -336,6 +339,16 @@ internal sealed class ConsoleUi
             if (warnings.TryGetValue(tweak.Id, out var warning))
                 AnsiConsole.MarkupLine($"[bold yellow]⚠ {Markup.Escape(tweak.Name)}:[/] [yellow]{Markup.Escape(warning)}[/]");
     }
+
+    /// <summary>Review line about how the effect is known: measured here, measured worse here, or not proven.</summary>
+    private static string EvidenceNote(TweakDefinition tweak, LocalEvidence evidence) => evidence.Latest(tweak.Id) switch
+    {
+        { Verdict: Verdict.RealGain } entry => $"\n[green]Medido neste PC: {entry.OnePercentLowChange:+0.0;-0.0}% no 1% low ({Markup.Escape(entry.Game)})[/]",
+        { Verdict: Verdict.Worse } entry => $"\n[red]Piorou neste PC: {entry.OnePercentLowChange:+0.0;-0.0}% no 1% low ({Markup.Escape(entry.Game)})[/]",
+        not null when !tweak.IsProven => "\n[yellow]Efeito não comprovado (experimental; dentro do ruído neste PC)[/]",
+        _ when !tweak.IsProven => "\n[yellow]Efeito não comprovado (experimental)[/]",
+        _ => ""
+    };
 
     private static void DrawSkipped(List<(TweakDefinition Tweak, string Reason)> skipped)
     {
@@ -348,7 +361,8 @@ internal sealed class ConsoleUi
         var tweaks = _app.AllTweaks.OrderBy(tweak => tweak.Level).ThenBy(tweak => tweak.Category, StringComparer.CurrentCulture).ToArray();
         for (var index = 0; index < tweaks.Length; index++)
             AnsiConsole.MarkupLine($"{Item(index + 1, tweaks[index].Name)} [grey]({Markup.Escape(tweaks[index].Category)}, nível {(int)tweaks[index].Level + 1})[/]" +
-                (tweaks[index].IsProven ? "" : " [yellow]experimental · efeito não comprovado[/]"));
+                (_app.LocalEvidence.Latest(tweaks[index].Id)?.Verdict == Verdict.RealGain ? " [green]medido neste PC[/]"
+                    : tweaks[index].IsProven ? "" : " [yellow]experimental · efeito não comprovado[/]"));
         if (tweaks.Any(tweak => !tweak.IsProven))
             AnsiConsole.MarkupLine("[grey]Ajustes experimentais não entram nos níveis: só são aplicados se você escolher aqui.[/]");
         AnsiConsole.MarkupLine(Item(0, "Voltar"));
@@ -426,7 +440,7 @@ internal sealed class ConsoleUi
         AnsiConsole.MarkupLine($"[red]{Markup.Escape(error.Message)}[/]");
     }
 
-    private static void DrawPreview(IReadOnlyList<SettingChange> changes)
+    internal static void DrawPreview(IReadOnlyList<SettingChange> changes)
     {
         AnsiConsole.MarkupLine("[bold #C084FC]Simulação[/]");
         if (changes.Count == 0)

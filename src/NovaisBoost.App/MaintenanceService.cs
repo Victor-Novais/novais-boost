@@ -145,7 +145,7 @@ internal static class Cleaner
                 RemoveEmptyFolders(path);
             results.Add(new CleanupResult(target, files, bytes, skipped));
             if (!dryRun && files > 0)
-                log.Info($"Limpeza: {target.Name}: {files} arquivo(s), {Diagnostics.Gb(bytes)}.");
+                log.Info($"Limpeza: {target.Name}: {files} arquivo(s), {Core.Diagnostics.Gb(bytes)}.");
         }
         return results;
     }
@@ -206,7 +206,7 @@ internal static class MaintenanceTasks
                         log.Warning($"Disco com problema de saúde: {disk.Name}. Faça backup.");
                     break;
                 case "saude":
-                    var report = Diagnostics.Evaluate(app.Pc, DateOnly.FromDateTime(DateTime.Now));
+                    var report = Core.Diagnostics.Evaluate(app.Pc, DateOnly.FromDateTime(DateTime.Now));
                     ReportStore.SaveDiagnostic(app, app.Pc, report);
                     WindowsCommand.Run(TimeSpan.FromMinutes(90), "Dism.exe", "/Online", "/Cleanup-Image", "/StartComponentCleanup");
                     new WindowsRestorePoints().Ensure();
@@ -240,7 +240,7 @@ internal static class MaintenanceTasks
                 app.Log.Info($"Ajuste {id} não existe mais no catálogo; não é reaplicado, mas continua no backup para reverter.");
                 continue;
             }
-            if (!tweak.IsProven || app.Engine.CheckCompatibility(tweak) is not null)
+            if (!TweakLevels.IsProven(tweak, app.LocalEvidence) || app.Engine.CheckCompatibility(tweak) is not null)
                 continue;
             if (app.Engine.Detect(tweak).Count == 0)
                 continue;

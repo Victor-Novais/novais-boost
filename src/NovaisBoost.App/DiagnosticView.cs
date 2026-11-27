@@ -32,7 +32,7 @@ internal static class DiagnosticView
         HardwareSnapshot pc = null!;
         AnsiConsole.Status().Spinner(Spinner.Known.Dots).SpinnerStyle(new Style(new Color(168, 85, 247)))
             .Start("Analisando o PC...", _ => pc = capture());
-        var report = Diagnostics.Evaluate(pc, DateOnly.FromDateTime(DateTime.Now));
+        var report = Core.Diagnostics.Evaluate(pc, DateOnly.FromDateTime(DateTime.Now));
         log.Info($"Diagnóstico concluído: nota {report.Score}, {report.Findings.Count} ponto(s) de atenção.");
 
         DrawHardware(pc);
@@ -58,23 +58,23 @@ internal static class DiagnosticView
             Row(gpu.IsIntegrated ? "GPU integrada" : "GPU", string.Join(" · ", new[]
             {
                 gpu.Name,
-                gpu.VramBytes is { } vram ? Diagnostics.Gb(vram) : null,
+                gpu.VramBytes is { } vram ? Core.Diagnostics.Gb(vram) : null,
                 gpu.DriverVersion is { } version ? $"driver {version}" : null,
                 gpu.ResizableBar switch { true => "ReBAR ligado", false => "ReBAR desligado", _ => null }
             }.OfType<string>()));
         if (pc.Memory is { } memory)
         {
             var modules = memory.Modules.GroupBy(module => (module.CapacityBytes, module.Kind, module.RatedMts, module.ConfiguredMts))
-                .Select(group => $"{group.Count()}× {Diagnostics.Gb(group.Key.CapacityBytes)} {group.Key.Kind.ToString().ToUpperInvariant()} " +
+                .Select(group => $"{group.Count()}× {Core.Diagnostics.Gb(group.Key.CapacityBytes)} {group.Key.Kind.ToString().ToUpperInvariant()} " +
                     $"{group.Key.ConfiguredMts} MT/s" + (group.Key.RatedMts > group.Key.ConfiguredMts ? $" (nominal {group.Key.RatedMts})" : ""));
-            Row("RAM", $"{Diagnostics.Gb(memory.TotalBytes)} · {memory.UsedPercent:0}% em uso · {string.Join(", ", modules)}");
+            Row("RAM", $"{Core.Diagnostics.Gb(memory.TotalBytes)} · {memory.UsedPercent:0}% em uso · {string.Join(", ", modules)}");
         }
         Row("Placa-mãe", pc.Board is { } board
             ? $"{board.Manufacturer} {board.Product} · BIOS {board.BiosVersion}{(board.BiosDate is { } date ? $" ({date:dd/MM/yyyy})" : "")}" : null);
         foreach (var disk in pc.Disks)
-            Row(disk.IsSystem ? "Disco (sistema)" : "Disco", $"{disk.Name} · {disk.Bus} {disk.Media} · {Diagnostics.Gb(disk.SizeBytes)}");
+            Row(disk.IsSystem ? "Disco (sistema)" : "Disco", $"{disk.Name} · {disk.Bus} {disk.Media} · {Core.Diagnostics.Gb(disk.SizeBytes)}");
         foreach (var volume in pc.Volumes)
-            Row($"Unidade {volume.Letter}", $"{Diagnostics.Gb(volume.FreeBytes)} livres de {Diagnostics.Gb(volume.TotalBytes)} ({volume.FreePercent:0}%)");
+            Row($"Unidade {volume.Letter}", $"{Core.Diagnostics.Gb(volume.FreeBytes)} livres de {Core.Diagnostics.Gb(volume.TotalBytes)} ({volume.FreePercent:0}%)");
         foreach (var display in pc.Displays)
             Row("Monitor", $"{display.Name} · {display.Width}x{display.Height} · {display.CurrentHz} Hz (máx. {display.MaxHz} Hz)");
         foreach (var network in pc.Networks.Where(network => network.Connected))
@@ -127,7 +127,7 @@ internal static class DiagnosticView
         var table = new Table().Border(TableBorder.Simple).Title("[bold]Maiores consumidores de RAM[/]")
             .AddColumn("Processo").AddColumn(new TableColumn("Instâncias").RightAligned()).AddColumn(new TableColumn("RAM").RightAligned());
         foreach (var process in pc.TopProcesses)
-            table.AddRow(Markup.Escape(process.Name), process.Instances.ToString(CultureInfo.InvariantCulture), Diagnostics.Gb(process.WorkingSetBytes));
+            table.AddRow(Markup.Escape(process.Name), process.Instances.ToString(CultureInfo.InvariantCulture), Core.Diagnostics.Gb(process.WorkingSetBytes));
         AnsiConsole.Write(table);
     }
 
