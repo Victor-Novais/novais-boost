@@ -1,0 +1,27 @@
+{
+  "id": "mpo-off",
+  "name": "Desligar o Multi-Plane Overlay (MPO)",
+  "description": "Só para quem tem tela piscando, flicker em vídeos ou travadas no navegador/Discord com o jogo aberto: desliga o MPO, causa conhecida desses problemas em alguns drivers. No Windows 11 24H2/25H2 a chave pode não ter mais efeito. Se não tem o problema, não aplique.",
+  "category": "Vídeo",
+  "level": "extreme",
+  "evidence": "experimental",
+  "risk": "Baixo. Pode aumentar um pouco o uso da GPU com vídeos em janela.",
+  "requiresReboot": true,
+  "compat": {
+    "hardware": [],
+    "antiCheat": []
+  },
+  "actions": [
+    {
+      "type": "registry",
+      "hive": "localMachine",
+      "path": "SOFTWARE\\Microsoft\\Windows\\Dwm",
+      "valueName": "OverlayTestMode",
+      "operation": "set",
+      "expected": {
+        "kind": "dword",
+        "value": 5
+      }
+    }
+  ]
+}

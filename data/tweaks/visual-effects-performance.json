@@ -1,0 +1,71 @@
+{
+  "id": "visual-effects-performance",
+  "name": "Efeitos visuais para desempenho",
+  "description": "Equivale a \"Ajustar para obter um melhor desempenho\" em Opções de desempenho, mas mantém as fontes suavizadas e as miniaturas: desliga o conteúdo da janela ao arrastar, as sombras dos ícones, o retângulo de seleção translúcido e a prévia da área de trabalho (Aero Peek).",
+  "category": "Visual",
+  "level": "safe",
+  "evidence": "documented",
+  "risk": "Nenhum. Só aparência; dá para voltar em Opções de desempenho.",
+  "requiresReboot": false,
+  "compat": {
+    "hardware": [],
+    "antiCheat": []
+  },
+  "actions": [
+    {
+      "type": "registry",
+      "hive": "currentUser",
+      "path": "Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\VisualEffects",
+      "valueName": "VisualFXSetting",
+      "operation": "set",
+      "expected": {
+        "kind": "dword",
+        "value": 3
+      }
+    },
+    {
+      "type": "registry",
+      "hive": "currentUser",
+      "path": "Control Panel\\Desktop",
+      "valueName": "DragFullWindows",
+      "operation": "set",
+      "expected": {
+        "kind": "string",
+        "value": "0"
+      }
+    },
+    {
+      "type": "registry",
+      "hive": "currentUser",
+      "path": "Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced",
+      "valueName": "ListviewShadow",
+      "operation": "set",
+      "expected": {
+        "kind": "dword",
+        "value": 0
+      }
+    },
+    {
+      "type": "registry",
+      "hive": "currentUser",
+      "path": "Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced",
+      "valueName": "ListviewAlphaSelect",
+      "operation": "set",
+      "expected": {
+        "kind": "dword",
+        "value": 0
+      }
+    },
+    {
+      "type": "registry",
+      "hive": "currentUser",
+      "path": "Software\\Microsoft\\Windows\\DWM",
+      "valueName": "EnableAeroPeek",
+      "operation": "set",
+      "expected": {
+        "kind": "dword",
+        "value": 0
+      }
+    }
+  ]
+}

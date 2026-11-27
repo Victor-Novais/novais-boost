@@ -11,9 +11,9 @@ public static class DefenderExclusions
     {
         var forbidden = forbiddenFolders.Select(Normalize).ToHashSet(StringComparer.OrdinalIgnoreCase);
         var folders = games.Where(game => game.Game.Id != "obs")
-            .Select(game => Path.GetDirectoryName(game.ExecutablePath))
+            .Select(game => WindowsPath.GetDirectoryName(game.ExecutablePath))
             .OfType<string>().Select(Normalize)
-            .Where(folder => Path.GetPathRoot(folder) is { } root && !string.Equals(Normalize(root), folder, StringComparison.OrdinalIgnoreCase))
+            .Where(folder => WindowsPath.GetRoot(folder) is { } root && !string.Equals(root, folder, StringComparison.OrdinalIgnoreCase))
             .Where(folder => !forbidden.Contains(folder))
             .Distinct(StringComparer.OrdinalIgnoreCase).Order(StringComparer.OrdinalIgnoreCase).ToArray();
         return folders.Length == 0 ? null : new TweakDefinition("defender-game-folders", "Exclusões do Defender para as pastas dos jogos",
@@ -24,5 +24,5 @@ public static class DefenderExclusions
             new TweakCompatibility([], []), folders.Select(folder => (TweakAction)new DefenderExclusionAction(folder)).ToArray());
     }
 
-    private static string Normalize(string path) => Path.GetFullPath(path).TrimEnd('\\') is { Length: 2 } drive ? drive + "\\" : Path.GetFullPath(path).TrimEnd('\\');
+    private static string Normalize(string path) => WindowsPath.Normalize(path);
 }

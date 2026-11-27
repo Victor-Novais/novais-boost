@@ -33,10 +33,11 @@ internal sealed class ConsoleUi
         new(168, 85, 247), new(182, 113, 250), new(192, 132, 252)
     ];
 
-    private static readonly string[] Menu =
+    private static string[] Menu =>
     [
-        "Diagnóstico completo", "Otimização Universal", "Perfil do meu Hardware", "Jogos & Streaming", "Process Guardian",
-        "Cronogramas", "Benchmark antes/depois", "Reverter / Backups", "Rede & Latência", "Modo Reparar"
+        Strings.T("menu.diagnostic"), Strings.T("menu.universal"), Strings.T("menu.hardware"), Strings.T("menu.games"), Strings.T("menu.guardian"),
+        Strings.T("menu.schedules"), Strings.T("menu.benchmark"), Strings.T("menu.backups"), Strings.T("menu.network"), Strings.T("menu.repair"),
+        Strings.T("menu.settings")
     ];
 
     private readonly AppServices _app;
@@ -85,7 +86,7 @@ internal sealed class ConsoleUi
                 return;
             if (!int.TryParse(input, out var choice) || choice < 1 || choice > Menu.Length)
             {
-                AnsiConsole.MarkupLine($"[yellow]Escolha uma opção de 0 a {Menu.Length}.[/]");
+                AnsiConsole.MarkupLine($"[yellow]{Markup.Escape(Strings.T("menu.invalid", Menu.Length))}[/]");
                 continue;
             }
 
@@ -105,6 +106,7 @@ internal sealed class ConsoleUi
                     case 8: ShowBackups(); break;
                     case 9: _views.Network(); break;
                     case 10: RepairView.Run(_app, this); break;
+                    case 11: new SettingsView(_app).Run(); break;
                 }
             });
             AnsiConsole.WriteLine();
@@ -116,8 +118,9 @@ internal sealed class ConsoleUi
         if (AnsiConsole.Profile.Width >= 64)
         {
             var grid = new Grid().AddColumn().AddColumn();
-            for (var index = 0; index < 5; index++)
-                grid.AddRow(Item(index + 1, Menu[index]), index + 5 < Menu.Length ? Item(index + 6, Menu[index + 5]) : "");
+            var rows = (Menu.Length + 1) / 2;
+            for (var index = 0; index < rows; index++)
+                grid.AddRow(Item(index + 1, Menu[index]), index + rows < Menu.Length ? Item(index + rows + 1, Menu[index + rows]) : "");
             AnsiConsole.Write(grid);
         }
         else
@@ -125,7 +128,7 @@ internal sealed class ConsoleUi
             for (var index = 0; index < Menu.Length; index++)
                 AnsiConsole.MarkupLine(Item(index + 1, Menu[index]));
         }
-        AnsiConsole.MarkupLine(Item(0, "Sair"));
+        AnsiConsole.MarkupLine(Item(0, Strings.T("menu.exit")));
     }
 
     private void ShowUniversal()
@@ -162,7 +165,7 @@ internal sealed class ConsoleUi
         // Per-machine tweaks for specific screens (DNS, startup apps) are offered there, not in the levels.
         // Experimental tweaks are never part of a level (unless measured as a real gain on this PC); tweaks measured as
         // worse on this PC are left out too.
-        return TweakLevels.Select(all, level, _app.LocalEvidence);
+        return TweakLevels.Select(all, level, _app.LocalEvidence, _app.CommunityEvidence);
     }
 
     /// <summary>Read-only preview of a level, used by the --simular command line option.</summary>
@@ -172,7 +175,7 @@ internal sealed class ConsoleUi
         DrawSkipped(skipped);
         AnsiConsole.MarkupLine($"[green]{alreadyApplied} ajuste(s) já aplicados.[/]");
         if (pending.Count > 0)
-            DrawPending(pending, AntiCheatWarnings(pending), _app.LocalEvidence);
+            DrawPending(pending, AntiCheatWarnings(pending), _app.LocalEvidence, _app.CommunityEvidence);
         foreach (var (tweak, changes) in pending)
         {
             AnsiConsole.MarkupLine($"[bold]{Markup.Escape(tweak.Name)}[/]");
@@ -198,7 +201,7 @@ internal sealed class ConsoleUi
         var evidence = _app.LocalEvidence;
         while (true)
         {
-            DrawPending(pending, warnings, evidence);
+            DrawPending(pending, warnings, evidence, _app.CommunityEvidence);
             AnsiConsole.MarkupLine($"{Item("A", "Aplicar todos")}   {Item("P", "Personalizar (tirar itens)")}   {Item("D", "Ver detalhes")}   {Item(0, "Voltar")}");
             switch (ReadChoice()?.ToUpperInvariant())
             {
@@ -297,7 +300,18 @@ internal sealed class ConsoleUi
         foreach (var failure in failed)
             AnsiConsole.MarkupLine($"  [red]✗[/] {Markup.Escape(failure.Tweak.Name)}: [grey]{Markup.Escape(failure.Error!)}[/]");
         if (ok.Any(result => result.Tweak.RequiresReboot))
+        {
             AnsiConsole.MarkupLine("[yellow]Reinicie o PC para concluir os ajustes que precisam de reinício.[/]");
+            try
+            {
+                BootProtection.Arm(_app, _app.Owner);
+                AnsiConsole.MarkupLine("[grey]Proteção ligada: se o Windows não chegar à área de trabalho 2 vezes seguidas, tudo é desfeito sozinho.[/]");
+            }
+            catch (Exception error) when (error is System.ComponentModel.Win32Exception or IOException or UnauthorizedAccessException)
+            {
+                Log.Warning($"Não foi possível armar a proteção depois do reinício: {error.Message}");
+            }
+        }
         AnsiConsole.MarkupLine("[grey]Para desfazer tudo: menu [[8]] Reverter / Backups.[/]");
         _app.Refresh();
         return results;
@@ -317,7 +331,7 @@ internal sealed class ConsoleUi
     }
 
     private static void DrawPending(List<(TweakDefinition Tweak, IReadOnlyList<SettingChange> Changes)> pending,
-        IReadOnlyDictionary<string, string> warnings, LocalEvidence evidence)
+        IReadOnlyDictionary<string, string> warnings, LocalEvidence evidence, IReadOnlyDictionary<string, CommunityEvidence> community)
     {
         var table = new Table().Border(TableBorder.Rounded).BorderColor(new Color(124, 58, 237))
             .AddColumn(new TableColumn("#").RightAligned()).AddColumn("Nível").AddColumn("Categoria").AddColumn("Ajuste")
@@ -330,7 +344,7 @@ internal sealed class ConsoleUi
                 tweak.Level switch { TweakLevel.Safe => "[green]1[/]", TweakLevel.Competitive => "[yellow]2[/]", _ => "[red]3[/]" },
                 Markup.Escape(tweak.Category),
                 $"{Markup.Escape(tweak.Name)}\n[grey]Risco: {Markup.Escape(tweak.Risk)}[/]" +
-                    EvidenceNote(tweak, evidence) +
+                    EvidenceNote(tweak, evidence, community) +
                     (warnings.ContainsKey(tweak.Id) ? "\n[bold yellow]⚠ Aviso de anti-cheat abaixo[/]" : ""),
                 changes.Count.ToString(CultureInfo.InvariantCulture),
                 tweak.RequiresReboot ? "[yellow]sim[/]" : "não");
@@ -342,7 +356,12 @@ internal sealed class ConsoleUi
     }
 
     /// <summary>Review line about how the effect is known: measured here, measured worse here, or not proven.</summary>
-    private static string EvidenceNote(TweakDefinition tweak, LocalEvidence evidence) => evidence.Latest(tweak.Id) switch
+    private static string EvidenceNote(TweakDefinition tweak, LocalEvidence evidence, IReadOnlyDictionary<string, CommunityEvidence> community) =>
+        LocalNote(tweak, evidence) + (community.GetValueOrDefault(tweak.Id) is { } shared
+            ? $"\n[{(Community.IsProven(shared) ? "green" : Community.IsProvenWorse(shared) ? "red" : "grey")}]{Markup.Escape(Community.Describe(shared))}[/]"
+            : "");
+
+    private static string LocalNote(TweakDefinition tweak, LocalEvidence evidence) => evidence.Latest(tweak.Id) switch
     {
         { Verdict: Verdict.RealGain } entry => $"\n[green]Medido neste PC: {entry.OnePercentLowChange:+0.0;-0.0}% no 1% low ({Markup.Escape(entry.Game)})[/]",
         { Verdict: Verdict.Worse } entry => $"\n[red]Piorou neste PC: {entry.OnePercentLowChange:+0.0;-0.0}% no 1% low ({Markup.Escape(entry.Game)})[/]",
@@ -381,6 +400,9 @@ internal sealed class ConsoleUi
         if (active is null)
         {
             AnsiConsole.MarkupLine("[grey]Nenhum backup ativo para esta conta.[/]");
+            AnsiConsole.MarkupLine($"{Item(2, "Desinstalar o NOVAIS boost")}   {Item(0, "Voltar")}");
+            if (ReadChoice() == "2")
+                Uninstaller.Run(_app, Confirm);
             return;
         }
 
@@ -389,8 +411,15 @@ internal sealed class ConsoleUi
         if (active.Pending)
             AnsiConsole.MarkupLine("[yellow]Há uma operação pendente neste backup.[/]");
         AnsiConsole.MarkupLine(Item(1, "Reverter tudo"));
+        AnsiConsole.MarkupLine(Item(2, "Desinstalar o NOVAIS boost (desfaz tudo e remove tarefas, perfis e plano de energia)"));
         AnsiConsole.MarkupLine(Item(0, "Voltar"));
-        if (ReadChoice() != "1")
+        var choice = ReadChoice();
+        if (choice == "2")
+        {
+            Uninstaller.Run(_app, Confirm);
+            return;
+        }
+        if (choice != "1")
             return;
 
         var changes = Engine.RevertAll();

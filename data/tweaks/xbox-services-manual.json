@@ -1,0 +1,54 @@
+{
+  "id": "xbox-services-manual",
+  "name": "Serviços Xbox sob demanda",
+  "description": "Coloca os serviços Xbox (login, jogos salvos, rede e controles) em Manual: eles só iniciam quando um jogo ou o app Xbox precisam. É o padrão do Windows; corrige PCs em que algum programa os deixou em Automático. A Xbox Game Bar não é removida.",
+  "category": "Debloat",
+  "level": "extreme",
+  "evidence": "documented",
+  "risk": "Baixo. Jogos do Game Pass e controles Xbox continuam funcionando, só iniciam o serviço quando precisam.",
+  "requiresReboot": false,
+  "compat": {
+    "hardware": [
+      "not-dual-ccd-x3d"
+    ],
+    "antiCheat": []
+  },
+  "actions": [
+    {
+      "type": "service",
+      "name": "XblAuthManager",
+      "expected": "manual",
+      "accept": [
+        "manual",
+        "disabled"
+      ]
+    },
+    {
+      "type": "service",
+      "name": "XblGameSave",
+      "expected": "manual",
+      "accept": [
+        "manual",
+        "disabled"
+      ]
+    },
+    {
+      "type": "service",
+      "name": "XboxNetApiSvc",
+      "expected": "manual",
+      "accept": [
+        "manual",
+        "disabled"
+      ]
+    },
+    {
+      "type": "service",
+      "name": "XboxGipSvc",
+      "expected": "manual",
+      "accept": [
+        "manual",
+        "disabled"
+      ]
+    }
+  ]
+}

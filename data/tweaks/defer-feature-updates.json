@@ -1,0 +1,40 @@
+{
+  "id": "defer-feature-updates",
+  "name": "Adiar atualizações de recurso por 90 dias",
+  "description": "As versões novas do Windows (ex.: 24H2 → 25H2) chegam 90 dias depois do lançamento, quando os drivers e os jogos já foram corrigidos. As atualizações de segurança continuam chegando normalmente. Política do Windows Update para Empresas.",
+  "category": "Windows Update",
+  "level": "competitive",
+  "evidence": "documented",
+  "risk": "Baixo. Recursos novos do Windows chegam 90 dias depois. Não funciona no Windows Home.",
+  "requiresReboot": false,
+  "compat": {
+    "hardware": [
+      "not-home"
+    ],
+    "antiCheat": []
+  },
+  "actions": [
+    {
+      "type": "registry",
+      "hive": "localMachine",
+      "path": "SOFTWARE\\Policies\\Microsoft\\Windows\\WindowsUpdate",
+      "valueName": "DeferFeatureUpdates",
+      "operation": "set",
+      "expected": {
+        "kind": "dword",
+        "value": 1
+      }
+    },
+    {
+      "type": "registry",
+      "hive": "localMachine",
+      "path": "SOFTWARE\\Policies\\Microsoft\\Windows\\WindowsUpdate",
+      "valueName": "DeferFeatureUpdatesPeriodInDays",
+      "operation": "set",
+      "expected": {
+        "kind": "dword",
+        "value": 90
+      }
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "id": "windowed-optimizations",
+  "name": "Otimizações para jogos em janela",
+  "description": "Liga a opção do Windows que troca o modo de apresentação antigo dos jogos DirectX 10/11 em janela e janela sem bordas pelo modo flip: menos latência e suporte a VRR/Auto HDR, como em tela cheia. Mantém as outras opções de gráficos do Windows.",
+  "category": "Sistema",
+  "level": "safe",
+  "evidence": "documented",
+  "risk": "Baixo. Alguns jogos antigos podem ter problema com overlays; dá para desligar por jogo em Configurações > Gráficos.",
+  "requiresReboot": false,
+  "compat": {
+    "hardware": [],
+    "antiCheat": []
+  },
+  "actions": [
+    {
+      "type": "directxSetting",
+      "key": "SwapEffectUpgradeEnable",
+      "value": "1"
+    }
+  ]
+}

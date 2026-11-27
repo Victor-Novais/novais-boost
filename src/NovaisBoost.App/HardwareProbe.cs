@@ -184,17 +184,19 @@ internal sealed partial class WindowsHardwareProbe(IActionLog log, Func<IReadOnl
         return DriveInfo.GetDrives().Where(drive => drive.DriveType == DriveType.Fixed && drive.IsReady)
             .Select(drive => new VolumeInfo(drive.Name.TrimEnd('\\'), drive.TotalSize, drive.AvailableFreeSpace,
                 string.Equals(drive.Name, system, StringComparison.OrdinalIgnoreCase),
-                media.GetValueOrDefault(char.ToUpperInvariant(drive.Name[0]), DiskMedia.Unknown)))
+                media.GetValueOrDefault(char.ToUpperInvariant(drive.Name[0])).Media,
+                media.GetValueOrDefault(char.ToUpperInvariant(drive.Name[0])).Nvme))
             .ToArray();
     }
 
-    /// <summary>Drive letter → media of the physical disk that holds it.</summary>
-    private static Dictionary<char, DiskMedia> ReadVolumeMedia()
+    /// <summary>Drive letter → media of the physical disk that holds it, and whether it is NVMe (BusType 17).</summary>
+    private static Dictionary<char, (DiskMedia Media, bool Nvme)> ReadVolumeMedia()
     {
         const string scope = @"root\Microsoft\Windows\Storage";
-        var disks = Wmi.Query("SELECT DeviceId, MediaType FROM MSFT_PhysicalDisk", item => (Id: Convert.ToString(item["DeviceId"]),
-                Media: Convert.ToInt32(item["MediaType"] ?? 0) switch { 3 => DiskMedia.Hdd, 4 => DiskMedia.Ssd, _ => DiskMedia.Unknown }), scope)
-            .Where(disk => disk.Id is not null).DistinctBy(disk => disk.Id).ToDictionary(disk => disk.Id!, disk => disk.Media);
+        var disks = Wmi.Query("SELECT DeviceId, MediaType, BusType FROM MSFT_PhysicalDisk", item => (Id: Convert.ToString(item["DeviceId"]),
+                Media: Convert.ToInt32(item["MediaType"] ?? 0) switch { 3 => DiskMedia.Hdd, 4 => DiskMedia.Ssd, _ => DiskMedia.Unknown },
+                Nvme: Convert.ToInt32(item["BusType"] ?? 0) == 17), scope)
+            .Where(disk => disk.Id is not null).DistinctBy(disk => disk.Id).ToDictionary(disk => disk.Id!, disk => (disk.Media, disk.Nvme));
         return Wmi.Query("SELECT DriveLetter, DiskNumber FROM MSFT_Partition",
                 item => (Letter: char.ToUpperInvariant(Convert.ToChar(item["DriveLetter"] ?? '\0')), Disk: Convert.ToString(item["DiskNumber"])), scope)
             .Where(partition => partition.Letter != '\0' && partition.Disk is not null && disks.ContainsKey(partition.Disk))

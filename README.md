@@ -5,6 +5,17 @@ Mais FPS, menos input lag e frametime estável. Cada ajuste é simulado antes, t
 
 ## Como usar
 
+Duas portas de entrada, com o mesmo motor, backup e reversão:
+
+- **`NOVAIS boost GUI.exe`** — interface gráfica (tema escuro, marca NOVAIS roxo + boost branco) com o fluxo de 1 clique:
+  Diagnosticar → Recomendado para o seu PC (nível 2, com a evidência medida/coletiva) → Revisar → Aplicar → Provar. Sem
+  administrador ela diagnostica e simula; para aplicar, pede elevação. "Provar ajustes" abre o terminal.
+- **`NOVAIS boost.exe`** — o terminal completo (todas as telas abaixo), usado também pelas tarefas agendadas e pelo Guardian.
+
+**Idioma:** português ou inglês, automático pelo Windows ou em [11] Configurações (`language`: `auto`, `pt-BR`, `en-US`).
+Nesta versão, o menu, o termo de uso, as Configurações e a interface gráfica estão traduzidos; as outras telas ainda estão
+só em português.
+
 Execute `NOVAIS boost.exe` (pede administrador). O menu tem:
 
 | # | Tela | O que faz |
@@ -14,11 +25,12 @@ Execute `NOVAIS boost.exe` (pede administrador). O menu tem:
 | 3 | Perfil do meu Hardware | Recomendações e checklist de BIOS para a sua CPU, GPU, RAM e placa-mãe |
 | 4 | Jogos & Streaming | Detecta os jogos, preset competitivo nos arquivos do jogo, dicas, GPU dedicada e QoS por jogo, codificador do OBS |
 | 5 | Process Guardian | Prioridades automáticas durante o jogo, processos inúteis, programas na inicialização |
-| 6 | Cronogramas | Tarefas automáticas: reaplicar ajustes, limpeza semanal, SSD, saúde mensal |
+| 6 | Cronogramas | Tarefas automáticas: reaplicar ajustes, limpeza semanal, SSD, saúde mensal, aviso de driver, teste de rede |
 | 7 | Benchmark | Provar ajustes (teste A/B com estatística e relatório HTML), latência de DPC/ISR por driver (µs), FPS/1% low com PresentMon |
 | 8 | Reverter / Backups | Desfaz tudo o que foi aplicado |
 | 9 | Rede & Latência | Ping, jitter, perda, bufferbloat, DNS mais rápido, ajustes da placa de rede |
 | 10 | Modo Reparar | Acha e desfaz o que "pacotes de FPS" e outros otimizadores deixaram alterado |
+| 11 | Configurações | As opções do `settings.json` (Guardian, limpeza, atualizações, relatório de erros, fonte) |
 
 Linha de comando:
 
@@ -27,9 +39,15 @@ NOVAIS boost.exe --diagnostico         diagnóstico somente leitura (sem adminis
 NOVAIS boost.exe --simular [--extremo] mostra o que seria alterado, sem alterar nada
 NOVAIS boost.exe --reparar             procura alterações de outros otimizadores, sem alterar nada
 NOVAIS boost.exe --guardian            Process Guardian (usado pela tarefa de logon)
-NOVAIS boost.exe --tarefa <id>         reaplicar | limpeza | ssd | saude
+NOVAIS boost.exe --tarefa <id>         reaplicar | limpeza | ssd | saude | drivers | rede
+NOVAIS boost.exe --aplicar <1|2|3> --confirmar   aplica um nível sem perguntas (testes em VM; com backup)
+NOVAIS boost.exe --reverter-tudo --confirmar     desfaz tudo sem perguntas
+NOVAIS boost.exe --desinstalar         desfaz tudo e remove tarefas, perfis NVIDIA próprios e o plano de energia
+NOVAIS boost.exe --voltar-versao       volta para a versão anterior à última atualização
 NOVAIS boost.exe --versao
 ```
+
+Na primeira vez, o menu mostra o **termo de uso**; sem aceite, só os modos somente leitura funcionam.
 
 ## Segurança
 
@@ -41,6 +59,14 @@ NOVAIS boost.exe --versao
   pode exigir de algumas contas: com o Valorant instalado, a revisão mostra um aviso antes de aplicar.
 - Os níveis só têm ajustes com efeito documentado ou medido. Os experimentais ficam em "Ajustes individuais".
 - Logs diários em `C:\ProgramData\NOVAIS boost\logs`.
+- **Proteção depois do reinício:** depois de ajustes que pedem reinício, uma tarefa de inicialização (SYSTEM) conta os boots.
+  Se você não chegar à área de trabalho 2 vezes seguidas, o terceiro boot executa "Reverter tudo" sozinho (o que depende da
+  sua conta, como apps da Store, termina no próximo logon). Ao entrar no Windows, a proteção se desliga.
+- **Atualização automática:** ao abrir, o app lê o `latest.json` do GitHub Releases e oferece a versão nova. Antes de trocar o
+  exe, confere o SHA256 e a assinatura digital (Authenticode, mesmo autor da versão atual); a anterior fica guardada para
+  `--voltar-versao`. Versões sem assinatura nunca são instaladas automaticamente.
+- **Relatório de erros** (opcional, desligado): só o tipo da exceção, a mensagem sem caminhos/nomes/IPs, a versão e o build
+  do Windows, salvo em `reports\errors` e enviado só se houver um endereço configurado.
 
 ## Diagnóstico profundo
 
@@ -71,6 +97,8 @@ Em Jogos & Streaming, o NOVAIS boost aplica um preset competitivo direto no arqu
 |---|---|---|---|
 | Counter-Strike 2 | `Steam\userdata\<conta>\730\local\cfg\cs2_video.txt` (uma vez por conta Steam que já jogou) | V-Sync desligado, MSAA 2x, shader baixo | `experimental` (chaves vistas em arquivos de jogadores; a Valve não documenta) |
 | Fortnite | `%LOCALAPPDATA%\FortniteGame\Saved\Config\WindowsClient\GameUserSettings.ini` | V-Sync desligado e limite de FPS para VRR | `documented` (UGameUserSettings do Unreal Engine) |
+| Rainbow Six Siege | `Documentos\My Games\Rainbow Six - Siege\<conta>\GameSettings.ini` (uma vez por conta Ubisoft) | `FPSLimit` para VRR | `documented` (a Ubisoft documenta o `FPSLimit` em `[DISPLAY]`) |
+| Apex Legends | `%USERPROFILE%\Saved Games\Respawn\Apex\local\videoconfig.txt` | V-Sync e sombras do sol desligados | `experimental` (chaves vistas em arquivos de jogadores) |
 
 - **Regras:** recusa aplicar ou reverter com o jogo aberto (ele regrava o arquivo ao fechar), não mexe em arquivo
   somente leitura e falha fechada se a chave não existir ou aparecer repetida. Nunca cria arquivo nem chave.
@@ -79,7 +107,8 @@ Em Jogos & Streaming, o NOVAIS boost aplica um preset competitivo direto no arqu
 - **Limite de FPS:** com G-Sync/FreeSync e Reflex, `Hz − Hz²/3600` (144 Hz → 138, 240 Hz → 224); com VRR sem Reflex,
   3 abaixo do Hz; sem VRR, o limite do jogo não é alterado (`FrameCap.For`).
 - **Fora por enquanto:** VALORANT (as configurações ficam no servidor da Riot), Call of Duty (o nome e o formato do `.cst`
-  mudam a cada título), Apex, Rainbow Six Siege e Overwatch 2 (chaves ainda não confirmadas). Esses jogos mostram só as dicas.
+  mudam a cada título), Overwatch 2 (a Blizzard restringiu a edição manual do `Settings_v0.ini`) e League of Legends (sem fonte
+  confiável para as chaves do `game.cfg`). Esses jogos mostram só as dicas.
 - Opções de inicialização do Steam aparecem prontas para copiar (o `localconfig.vdf` não é editado).
 
 ## Process Guardian v2
@@ -102,6 +131,39 @@ Em Jogos & Streaming, o NOVAIS boost aplica um preset competitivo direto no arqu
   integração com o driver ainda não está nesta versão; a tela mostra as recomendações para fazer no AMD Software.
 - **Intel Arc:** leitura via IGCL ainda não implementada.
 
+## Entrada, áudio, rede e armazenamento
+
+| Onde | O quê |
+|---|---|
+| Benchmark → 8 | **Teste de polling do mouse** (Raw Input numa janela invisível, 5 s): Hz medido, configuração provável e estabilidade. Avisa quando 4.000/8.000 Hz pesam numa CPU com menos de 8 núcleos |
+| Diagnóstico | **Mapa USB**: mouse no mesmo controlador que webcam ou placa de captura. **SMART/NVMe**: temperatura, desgaste, erros de leitura e horas ligado (`MSFT_StorageReliabilityCounter`), cache de gravação. **Placa de rede**: RSS desligado e poucos buffers. **Afinidade de interrupções** forçada por outro otimizador. **Jogo em SSD SATA** com um NVMe disponível. BypassIO no cartão de hardware |
+| Nível 1 | **Otimizações para jogos em janela** (`SwapEffectUpgradeEnable` dentro de `DirectXUserGlobalSettings`, sem apagar VRR/Auto HDR) |
+| Nível 2 | **Áudio sem melhorias** nos dispositivos de reprodução ativos |
+| Individual | **MPO desligado** (`experimental`, só para flicker; pode não ter efeito no 24H2/25H2). **Saída de áudio HDMI/DisplayPort** desativada, uma por placa (`experimental`) |
+| Rede → 4 | **Ping até os servidores dos jogos**: relays oficiais da Valve (CS2, Dota 2) pela configuração pública do Steam, e a região da AWS para Fortnite, Apex e PUBG (`data/servers.json`) |
+| Guardian | **Varredura de Wi-Fi em segundo plano pausada** durante o jogo (`guardian.wifiScanOff`, padrão ligado) e **OBS nos núcleos de segundo plano** (`guardian.obsCpuSets`, opt-in) |
+| Jogos & Streaming | **Bitrate sugerido** pelo upload medido (Twitch, Kick, YouTube) e checklist de dois PCs / placa de captura |
+
+Tipos de ação da F19: `directxSetting` (uma entrada de `DirectXUserGlobalSettings`) e `device` (ligar/desligar um dispositivo pelo `pnputil`).
+Desligar o Nagle (`TcpAckFrequency`/`TCPNoDelay`) continua fora: não ajuda jogos modernos.
+
+## Debloat
+
+| Item | O que faz | Nível | Como voltar |
+|---|---|---|---|
+| Apps da Store (`data/bloat/appx.json`) | Remove só da sua conta: Clipchamp, Notícias, Clima, Solitaire, Obter Ajuda, Hub de Comentários, To Do, Power Automate, Family Safety (um ajuste por app, só os instalados) | 2 | Reverter reinstala pela Microsoft Store (`winget --source msstore`, precisa de internet). Se falhar, o backup fica guardado para tentar de novo |
+| Edge em segundo plano | Políticas `BackgroundModeEnabled=0` e `StartupBoostEnabled=0` | 1 | Reverter |
+| OneDrive e Teams | Só saem da inicialização (igual ao Gerenciador de Tarefas), nada é desinstalado | 1 | Reverter |
+| Serviços de fabricantes (`data/bloat/oem.json`) | Atualização/diagnóstico de ASUS, MSI, Gigabyte, Corsair e Razer em **Manual** (nunca Desativado). Iluminação, ventoinhas e o serviço principal de cada app ficam fora | Individual (`experimental`) | Reverter |
+| Serviços Xbox | Manual (o padrão do Windows), **nunca** em Ryzen X3D de 2 CCDs | 3 | Reverter |
+| Efeitos visuais | "Melhor desempenho" mantendo fontes suavizadas e miniaturas | 1 | Reverter |
+| Adiar atualizações de recurso | 90 dias (Windows Update para Empresas; não funciona no Home). Segurança continua chegando | 2 | Reverter |
+| Hibernação | Desliga e libera o `hiberfil.sys` (mostra o tamanho). Só em desktop | Individual (`experimental`) | Reverter |
+| Compressão de memória | Desliga com 32 GB+ (exige SysMain ligado) | Individual (`experimental`) | Reverter |
+
+Nunca são removidos: Microsoft Store, Instalador de Aplicativo (winget), Xbox/Game Bar, Calculadora, Fotos, Terminal,
+Segurança do Windows e as extensões de vídeo/imagem (`Debloat.NeverRemove`).
+
 ## Modo Reparar
 
 Muitos jogadores já rodaram "pacotes de FPS" e otimizadores agressivos que deixam o Windows pior. O Modo Reparar
@@ -121,6 +183,9 @@ A varredura é somente leitura e roda sem administrador (o BCD precisa de admini
 pela mesma simulação, ponto de restauração e backup dos ajustes, e podem ser desfeitos em Reverter / Backups. Eles nunca
 entram nos níveis, só agem em valores estragados e não desfazem nenhum ajuste do próprio NOVAIS boost (teste
 `RepairsNeverUndoANovaisBoostTweak`). O diagnóstico avisa: "Encontramos N alterações de outros otimizadores".
+
+Tipos de ação da F18: `appxPackage` (PackageManager, revert pelo winget) e `systemFeature` (hibernação e compressão de memória).
+Requisitos novos em `compat.hardware`: `ram-32gb` e `not-home`.
 
 Novos tipos de ação: `bcd` (bcdedit), `pagefile` (WMI) e `tcpGlobal` (netsh), além de `acceptRange` e
 `acceptIfBitsClear` no registro e `accept` nos serviços, para que um reparo só aja em valores fora do padrão.
@@ -145,6 +210,28 @@ Novos tipos de ação: `bcd` (bcdedit), `pagefile` (WMI) e `tcpGlobal` (netsh), 
 - O **PresentMon 2.6.0** (Intel, MIT) vem na pasta `tools\` do pacote. O app confere o SHA256 antes de executá-lo.
   Licenças em [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
+## Manutenção
+
+| Tarefa | Quando | O que faz |
+|---|---|---|
+| Limpeza semanal | sexta | Temporários, despejos de erro, logs, cache de miniaturas, itens da **Lixeira com mais de 30 dias** (pela data em que foram apagados), cache da Otimização de Entrega. Com opt-in: cache dos navegadores (Chrome, Edge, Brave) e dos launchers (Steam, Battle.net), só com o programa fechado. A pasta Prefetch nunca é apagada |
+| Saúde mensal | dia 1 | Diagnóstico salvo, `DISM /RestoreHealth`, `sfc /scannow`, limpeza de componentes e ponto de restauração |
+| Aviso de driver | quarta | Notificação quando o driver da placa de vídeo passou de 6 meses (não instala nada) |
+| Teste de rede | quinta | Ping/jitter no log. Se você já aplicou "DNS mais rápido" e outro ficou 10 ms mais rápido, troca para ele (desfaz em Reverter tudo) |
+
+Os alertas do Guardian, o aviso de driver e a troca de DNS aparecem como **notificação do Windows**.
+Benchmark → 7 faz o **teste rápido de gargalo** (CPU, banda da memória e leitura do disco, ~30 s) e avisa quando a memória
+ou o disco rendem menos da metade do esperado para a classe deles (`data/baselines.json`). Em Perfil do meu Hardware dá
+para informar a **fonte (PSU)**: com uma fonte abaixo do recomendado para a placa de vídeo, o diagnóstico avisa.
+
+## Base anônima de resultados (opcional)
+
+Com o opt-in, cada "Provar ajustes" envia o resultado relativo (modelo de CPU/GPU, RAM, build do Windows, ajustes testados) e
+a revisão mostra "Testado em 214 PCs parecidos com o seu: +3,1% no 1% low (IC 95%: +1,8 a +4,4)". Com N ≥ 30 e o intervalo
+acima de zero, o ajuste conta como `measured` para esse hardware; com o intervalo abaixo de zero, sai dos níveis. O que foi
+medido neste PC sempre vale mais. Nada é enviado sem o aceite, e o backend (`backend/`) precisa estar publicado.
+Política: [docs/PRIVACIDADE.md](docs/PRIVACIDADE.md).
+
 ## Configurações
 
 Arquivo opcional `C:\ProgramData\NOVAIS boost\settings.json` (só administradores podem alterar a pasta):
@@ -163,6 +250,14 @@ Arquivo opcional `C:\ProgramData\NOVAIS boost\settings.json` (só administradore
 | `guardian.powerPlanDuringGame` | `true`/`false` | `false`: plano NOVAIS boost só com o jogo aberto (nunca em X3D de 2 CCDs) |
 | `guardian.standbyPurge` | `true`/`false` | `false`: limpa a lista standby só com menos de 1 GB livre e mais de 2 GB em standby, no máximo a cada 5 min |
 | `guardian.lower` / `efficiency` / `ignore` | lista de processos | vazias: baixar prioridade, modo de eficiência ou nunca mexer |
+| `guardian.wifiScanOff` | `true`/`false` | `true`: pausa a varredura de redes Wi-Fi em segundo plano enquanto o jogo roda |
+| `guardian.obsCpuSets` | `true`/`false` | `false`: OBS/Streamlabs nos E-cores / CCD sem V-Cache durante o jogo |
+| `cleanup.browsers` / `cleanup.launchers` | `true`/`false` | `false`: limpar o cache dos navegadores / launchers na limpeza semanal |
+| `updates.check` | `true`/`false` | `true`: procurar versão nova ao abrir o menu |
+| `errorReports.enabled` / `endpoint` | `true`/`false`, `https://...` | desligado: relatório de erros sem dados pessoais |
+| `termsAccepted` | data | preenchido ao aceitar o termo de uso |
+| `community.enabled` / `endpoint` | `true`/`false`, `https://...` | desligado: base anônima de resultados |
+| `pc.psuWatts` / `pc.psuRating` | 200 a 3000 / `bronze`, `gold`... | não informado: potência e certificação da fonte, usadas nos avisos |
 
 Um arquivo inválido é ignorado (com aviso no log) e o padrão é usado.
 
@@ -172,7 +267,7 @@ Requer o SDK do .NET 10 (`winget install Microsoft.DotNet.SDK.10`).
 
 ```
 dotnet build NovaisBoost.slnx -c Release -warnaserror
-dotnet test  NovaisBoost.slnx -c Release
+dotnet test  NovaisBoost.slnx -c Release      # também roda no Linux (os testes que dependem do Windows são pulados)
 pwsh .\scripts\build.ps1 -Version 1.0.0      # gera artifacts\publish\NOVAIS boost.exe
 ```
 
@@ -185,7 +280,11 @@ src/NovaisBoost.App    acesso ao Windows (registro, serviços, WMI, NVAPI, power
 data/tweaks/*.json     catálogo de ajustes (validado por tweak.schema.json)
 data/profiles.json     perfis de hardware        data/processes.json  base de processos
 data/games.json        jogos e dicas
-tests/                 testes xUnit (sem tocar no Windows real)
+tests/NovaisBoost.Tests      testes xUnit do Core (sem tocar no Windows real)
+tests/NovaisBoost.App.Tests  testes de fumaça das telas e das tarefas (os que usam APIs do Windows só rodam na CI Windows)
+.github/workflows/ci.yml     build -warnaserror + testes a cada push (windows-latest)
+scripts/vm-test.ps1          só em VM: aplica o nível 3, reverte e compara o registro antes × depois
+scripts/changelog.ps1        gera o CHANGELOG.md da versão a partir dos commits
 ```
 
 Para adicionar um ajuste: crie um JSON em `data/tweaks/` seguindo o schema. O teste

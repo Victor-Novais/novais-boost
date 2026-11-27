@@ -34,7 +34,12 @@ internal sealed partial class WindowsHardwareProbe
         new("TRIM", "fsutil behavior query DisableDeleteNotify"),
         new("VRR", @"HKCU\Software\Microsoft\DirectX\UserGpuPreferences [DirectXUserGlobalSettings]"),
         new("Jogos", "GameLibrary (pastas dos launchers) + tipo de mídia do volume"),
-        new("Overlays e otimizadores", @"Processos em execução, HKLM/HKCU\...\Uninstall [DisplayName], data/optimizers.json")
+        new("Overlays e otimizadores", @"Processos em execução, HKLM/HKCU\...\Uninstall [DisplayName], data/optimizers.json"),
+        new("Saúde dos discos", @"MSFT_StorageReliabilityCounter (temperatura, desgaste, erros), IOCTL_DISK_GET_CACHE_INFORMATION"),
+        new("Placas de rede (ajustes)", @"Registro da classe de rede: *RSS, *ReceiveBuffers"),
+        new("Afinidade de interrupções", @"HKLM\SYSTEM\CurrentControlSet\Enum\...\Interrupt Management\Affinity Policy"),
+        new("Controladores USB", "Win32_PnPEntity + CM_Get_Parent até o controlador PCI"),
+        new("BypassIO", "fsutil bypassio state")
     ];
 
     private DeepInfo ReadDeep(IReadOnlyList<VolumeInfo> volumes)
@@ -48,7 +53,12 @@ internal sealed partial class WindowsHardwareProbe
             Try("VRR", () => ReadWindowedVrr() is { } vrr ? new StrongBoxed<bool>(vrr) : null)?.Value,
             Try("Jogos", () => ReadGames(volumes)),
             KnownSoftware.MatchOverlays(processes),
-            Try("Otimizadores", () => KnownSoftware.MatchOptimizers(DataCatalog.Optimizers(), InstalledPrograms(), processes)));
+            Try("Otimizadores", () => KnownSoftware.MatchOptimizers(DataCatalog.Optimizers(), InstalledPrograms(), processes)),
+            Try("Saúde dos discos (SMART)", ReadReliability),
+            Try("Placas de rede (RSS/buffers)", ReadNics),
+            Try("Afinidade de interrupções", ReadAffinity),
+            Try("Controladores USB", ReadUsb),
+            Try("BypassIO", ReadBypassIo));
     }
 
     private sealed record StrongBoxed<T>(T Value) where T : struct;
@@ -149,7 +159,8 @@ internal sealed partial class WindowsHardwareProbe
     private IReadOnlyList<GameInstall> ReadGames(IReadOnlyList<VolumeInfo> volumes) => (_games?.Invoke() ?? GameLibrary.Detect(DataCatalog.Games(), log))
         .Where(game => game.Game.Id != "obs")
         .Select(game => new GameInstall(game.Game.Name, game.ExecutablePath,
-            volumes.FirstOrDefault(volume => game.ExecutablePath.StartsWith(volume.Letter, StringComparison.OrdinalIgnoreCase))?.Media ?? DiskMedia.Unknown))
+            volumes.FirstOrDefault(volume => game.ExecutablePath.StartsWith(volume.Letter, StringComparison.OrdinalIgnoreCase))?.Media ?? DiskMedia.Unknown,
+            volumes.FirstOrDefault(volume => game.ExecutablePath.StartsWith(volume.Letter, StringComparison.OrdinalIgnoreCase))?.Nvme ?? false))
         .DistinctBy(game => game.Name)
         .ToArray();
 

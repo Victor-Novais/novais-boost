@@ -45,7 +45,30 @@ public sealed record DeepInfo(
     bool? WindowedVrr = null,
     IReadOnlyList<GameInstall>? Games = null,
     IReadOnlyList<string>? Overlays = null,
-    IReadOnlyList<string>? Optimizers = null);
+    IReadOnlyList<string>? Optimizers = null,
+    IReadOnlyList<DiskReliability>? Reliability = null,
+    IReadOnlyList<NicTuning>? Nics = null,
+    IReadOnlyList<InterruptAffinity>? Affinity = null,
+    IReadOnlyList<UsbDevice>? Usb = null,
+    string? BypassIo = null);
+
+/// <summary>MSFT_StorageReliabilityCounter of one physical disk (F19). Null fields: not reported by the drive.</summary>
+/// <param name="Wear">Percentage of the rated endurance already used (NVMe "Percentage Used").</param>
+public sealed record DiskReliability(string Name, int? TemperatureC, int? TemperatureMaxC, int? Wear, long? ReadErrorsUncorrected,
+    long? PowerOnHours, bool? WriteCacheEnabled = null);
+
+/// <summary>Receive Side Scaling and receive buffers of a physical network adapter (advanced properties, F19).</summary>
+public sealed record NicTuning(string Name, bool? RssEnabled, int? ReceiveBuffers);
+
+/// <summary>A device with an interrupt affinity policy set in its registry ("Interrupt Management\Affinity Policy").</summary>
+/// <param name="Policy">DevicePolicy (0 = Windows default ... 4 = specified processors).</param>
+/// <param name="Mask">AssignmentSetOverride as a processor mask; null when not set.</param>
+public sealed record InterruptAffinity(string Device, int Policy, ulong? Mask);
+
+public enum UsbDeviceKind { Mouse, Keyboard, Audio, Camera, Capture, Other }
+
+/// <summary>A USB device and the host controller it hangs from (walking the device tree up to the PCI controller).</summary>
+public sealed record UsbDevice(string Name, UsbDeviceKind Kind, string Controller);
 
 /// <summary>Event log counts over the last <see cref="Days"/> days.</summary>
 /// <param name="WheaFatal">WHEA-Logger 18: fatal hardware error (machine check).</param>
@@ -65,7 +88,7 @@ public sealed record PagefileInfo(bool Automatic, IReadOnlyList<PagefileUsage> F
 public sealed record PagefileUsage(string Path, long AllocatedMb);
 
 /// <param name="Media">Media of the disk that holds the game folder.</param>
-public sealed record GameInstall(string Name, string Path, DiskMedia Media);
+public sealed record GameInstall(string Name, string Path, DiskMedia Media, bool Nvme = false);
 
 /// <summary>PCIe link of a device. Speed is the generation (1 = 2.5 GT/s ... 5 = 32 GT/s).</summary>
 public sealed record PcieLink(int CurrentWidth, int MaxWidth, int CurrentGeneration, int MaxGeneration);
@@ -105,7 +128,7 @@ public sealed record BoardInfo(string Manufacturer, string Product, string BiosV
 
 public sealed record DiskInfo(string Name, DiskMedia Media, string Bus, DiskHealth Health, long SizeBytes, bool IsSystem);
 
-public sealed record VolumeInfo(string Letter, long TotalBytes, long FreeBytes, bool IsSystem, DiskMedia Media = DiskMedia.Unknown)
+public sealed record VolumeInfo(string Letter, long TotalBytes, long FreeBytes, bool IsSystem, DiskMedia Media = DiskMedia.Unknown, bool Nvme = false)
 {
     public double FreePercent => TotalBytes <= 0 ? 100 : 100d * FreeBytes / TotalBytes;
 }

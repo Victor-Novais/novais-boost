@@ -12,12 +12,20 @@ public static class DataCatalog
     public static IReadOnlyList<MicrocodeRequirement> Microcode() => Load<MicrocodeRequirement[]>("microcode.json");
     public static IReadOnlyList<MemorySlotPattern> MemorySlots() => Load<MemorySlotPattern[]>("memory-slots.json");
     public static IReadOnlyList<OptimizerDefinition> Optimizers() => Load<OptimizerDefinition[]>("optimizers.json");
+    public static ServerCatalog Servers() => Load<ServerCatalog>("servers.json");
+    public static IReadOnlyList<Baseline> Baselines() => Load<Baseline[]>("baselines.json");
     public static IReadOnlyList<CriticalService> CriticalServices() => Load<CriticalService[]>("critical-services.json");
 
     /// <summary>Per-game presets for configuration files (data/games/*.json).</summary>
     public static IReadOnlyList<GamePreset> Presets() => typeof(DataCatalog).Assembly.GetManifestResourceNames()
         .Where(name => name.StartsWith("Presets.", StringComparison.Ordinal)).Order(StringComparer.Ordinal)
         .Select(name => LoadResource<GamePreset>(name)).ToArray();
+
+    /// <summary>Store apps that are safe to remove (data/bloat/appx.json).</summary>
+    public static IReadOnlyList<AppxBloatEntry> AppxBloat() => LoadResource<AppxBloatEntry[]>("Bloat.appx.json");
+
+    /// <summary>Heavy services of motherboard and peripheral suites (data/bloat/oem.json).</summary>
+    public static IReadOnlyList<OemServiceGroup> OemBloat() => LoadResource<OemServiceGroup[]>("Bloat.oem.json");
 
     private static T Load<T>(string name) => LoadResource<T>("Data." + name);
 

@@ -1,0 +1,9 @@
+[
+  { "component": "memory", "class": "ddr4-single", "expectedMbps": 12000, "hint": "Confira o XMP na BIOS. Com um pente só, a memória roda em canal único: um segundo pente igual quase dobra a banda." },
+  { "component": "memory", "class": "ddr4-dual", "expectedMbps": 22000, "hint": "Confira o XMP na BIOS e se os pentes estão nos slots recomendados pelo manual (normalmente A2 e B2)." },
+  { "component": "memory", "class": "ddr5-single", "expectedMbps": 20000, "hint": "Confira o EXPO/XMP na BIOS. Com um pente só, a memória perde metade da banda." },
+  { "component": "memory", "class": "ddr5-dual", "expectedMbps": 35000, "hint": "Confira o EXPO/XMP na BIOS e se os pentes estão nos slots recomendados pelo manual (normalmente A2 e B2)." },
+  { "component": "disk", "class": "nvme", "expectedMbps": 1500, "hint": "Confira a temperatura do NVMe (dissipador), se ele está no slot M.2 ligado à CPU e o espaço livre (abaixo de 15% o SSD fica lento)." },
+  { "component": "disk", "class": "sata-ssd", "expectedMbps": 450, "hint": "Confira o cabo SATA, se a porta é SATA 3 (6 Gb/s) e o modo AHCI na BIOS, e o espaço livre." },
+  { "component": "disk", "class": "hdd", "expectedMbps": 100, "hint": "HD lento pode estar falhando: faça backup e confira a saúde do disco. Instale o Windows e os jogos num SSD." }
+]

@@ -529,7 +529,7 @@ public sealed partial class TweakEngineTests : IDisposable
 
     private TweakEngine CreateEngine(string owner) =>
         new(_windows, _windows, _windows, CreateSnapshots(owner), _log, _windows, _windows, _compatibility, _windows, _windows,
-            _windows, _windows, _windows, _windows, _windows, _windows, _windows);
+            _windows, _windows, _windows, _windows, _windows, _windows, _windows, _windows, _windows, _windows, _windows);
 
     private Func<TweakCompatibility, string?>? _compatibility;
 
@@ -548,8 +548,59 @@ public sealed partial class TweakEngineTests : IDisposable
     }
 
     private sealed class FakeWindows : IRegistry, IServiceController, IPowerConfig, IScheduledTasks, IPowerPlans, INvidiaSettings, IDnsSettings,
-        IBcdStore, IPagefile, ITcpSettings, IConfigFiles, INvidiaProfiles, IAmdSettings, IDefenderExclusions
+        IBcdStore, IPagefile, ITcpSettings, IConfigFiles, INvidiaProfiles, IAmdSettings, IDefenderExclusions, IAppxPackages, ISystemFeatures, IDirectXSettings, IDevices
     {
+        public string? DirectX { get; set; }
+
+        string? IDirectXSettings.Read(string key) => DirectXSettings.Get(DirectX, key);
+
+        void IDirectXSettings.Write(string key, string? value)
+        {
+            OnWrite();
+            DirectX = DirectXSettings.Set(DirectX, key, value);
+        }
+
+        public Dictionary<string, bool> Devices { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+        bool? IDevices.IsEnabled(string instanceId) => Devices.TryGetValue(instanceId, out var enabled) ? enabled : null;
+
+        void IDevices.SetEnabled(string instanceId, bool enabled)
+        {
+            OnWrite();
+            Devices[instanceId] = enabled;
+        }
+
+        public HashSet<string> Packages { get; } = new(StringComparer.OrdinalIgnoreCase);
+        public List<string> Reinstalled { get; } = [];
+        public Exception? InstallFailure { get; set; }
+
+        bool IAppxPackages.IsInstalled(string name) => Packages.Contains(name);
+
+        void IAppxPackages.Remove(string name)
+        {
+            OnWrite();
+            Packages.Remove(name);
+        }
+
+        void IAppxPackages.Install(string name, string storeId)
+        {
+            OnWrite();
+            if (InstallFailure is not null)
+                throw InstallFailure;
+            Reinstalled.Add(storeId);
+            Packages.Add(name);
+        }
+
+        public Dictionary<SystemFeature, bool> Features { get; } = [];
+
+        bool? ISystemFeatures.IsEnabled(SystemFeature feature) => Features.TryGetValue(feature, out var enabled) ? enabled : null;
+
+        void ISystemFeatures.Set(SystemFeature feature, bool enabled)
+        {
+            OnWrite();
+            Features[feature] = enabled;
+        }
+
         public HashSet<string> Exclusions { get; } = new(StringComparer.OrdinalIgnoreCase);
 
         bool IDefenderExclusions.Contains(string path) => Exclusions.Contains(path);

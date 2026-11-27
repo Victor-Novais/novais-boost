@@ -18,6 +18,9 @@ public static partial class Compatibility
                 "not-dual-ccd-x3d" => pc.Cpu is { } cpu && IsDualCcdX3d(cpu.Name)
                     ? "Ryzen X3D com 2 CCDs depende do plano Equilibrado e da Game Bar para colocar o jogo nos núcleos com 3D V-Cache"
                     : null,
+                "ram-32gb" => pc.Memory is { TotalBytes: >= MinBytesFor32Gb } ? null : "requer 32 GB de RAM ou mais",
+                // Windows Update for Business policies (deferrals) are ignored by the Home edition.
+                "not-home" => pc.Os.Caption.Contains("Home", StringComparison.OrdinalIgnoreCase) ? "não funciona no Windows Home (só Pro, Education e Enterprise)" : null,
                 _ => $"requisito desconhecido \"{token}\""
             };
             if (reason is not null)
@@ -40,6 +43,9 @@ public static partial class Compatibility
         return $"Jogo instalado com anti-cheat que pode recusar este ajuste: {list}. " +
             "Se o jogo pedir, desfaça o ajuste em Reverter / Backups.";
     }
+
+    /// <summary>32 GB modules report a little less to Windows (reserved memory, integrated GPU), so 30 GiB counts as 32 GB.</summary>
+    private const long MinBytesFor32Gb = 30L << 30;
 
     public static bool IsDualCcdX3d(string cpuName) => DualCcdX3d().IsMatch(cpuName);
 

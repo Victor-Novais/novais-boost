@@ -1,0 +1,27 @@
+[
+  {
+    "vendor": "ASUS (Armoury Crate / MyASUS)",
+    "services": [ "ASUSOptimization", "ASUSSoftwareManager", "ASUSSystemAnalysis", "ASUSSystemDiagnosis", "AsusUpdateCheck" ],
+    "warning": "O serviço de iluminação (LightingService / Aura) e o do Armoury Crate não são alterados, para o RGB e as ventoinhas continuarem funcionando."
+  },
+  {
+    "vendor": "MSI (MSI Center / Dragon Center)",
+    "services": [ "MSI_VoiceControl_Service", "MSI_Case_Service", "MSIUpdateService" ],
+    "warning": "O Mystic Light (RGB) e o Nahimic (áudio) não são alterados."
+  },
+  {
+    "vendor": "Gigabyte (Control Center / App Center)",
+    "services": [ "GigabyteUpdateService", "gdrv_update" ],
+    "warning": "O RGB Fusion não é alterado."
+  },
+  {
+    "vendor": "Corsair (iCUE)",
+    "services": [ "CorsairGamingAudioConfig", "CorsairMsiPluginService" ],
+    "warning": "O serviço principal do iCUE (CorsairService) não é alterado, para o RGB e as ventoinhas continuarem funcionando."
+  },
+  {
+    "vendor": "Razer (Synapse)",
+    "services": [ "RzActionSvc", "Razer_Elevation_Service" ],
+    "warning": "O serviço do Synapse e o Chroma não são alterados, para os perfis do mouse e o RGB continuarem funcionando."
+  }
+]

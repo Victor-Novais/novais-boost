@@ -1,0 +1,24 @@
+{
+  "id": "apex",
+  "name": "Apex Legends",
+  "processes": [ "r5apex", "r5apex_dx12" ],
+  "reflex": true,
+  "evidence": "experimental",
+  "testedVersion": null,
+  "lastVerified": "2026-11-27",
+  "sources": [
+    "https://www.esportstales.com/apex-legends/how-to-increase-fps-videoconfig-settings-launch-options",
+    "https://forums.ea.com/discussions/apex-legends-technical-issues-en/re-mid-to-high-end-pc--micro-stuttering-lag-random-fps-drops-and-texture-issues/5486962"
+  ],
+  "notes": "Chaves vistas em videoconfig.txt publicados por jogadores; a Respawn não documenta o formato. Se o jogo mudar uma chave, nada é alterado. Guias pedem o arquivo somente leitura; o NOVAIS boost não mexe em arquivo somente leitura.",
+  "files": [
+    {
+      "path": "%USERPROFILE%\\Saved Games\\Respawn\\Apex\\local\\videoconfig.txt",
+      "format": "keyValue",
+      "settings": [
+        { "section": null, "key": "setting.mat_vsync_mode", "value": "0", "label": "V-Sync desligado" },
+        { "section": null, "key": "setting.csm_enabled", "value": "0", "label": "sombras do sol desligadas" }
+      ]
+    }
+  ]
+}

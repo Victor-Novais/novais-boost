@@ -1,10 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <Version>1.0.0</Version>
     <Product>NOVAIS boost</Product>
     <AssemblyName>NovaisBoost.App</AssemblyName>
-    <TargetFramework>net10.0-windows</TargetFramework>
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <ApplicationManifest>app.manifest</ApplicationManifest>
@@ -12,6 +11,7 @@
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
     <SelfContained Condition="'$(RuntimeIdentifier)' != ''">true</SelfContained>
     <DebugType>embedded</DebugType>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
     <!-- Real-time kernel sessions only use advapi32; the native helpers (KernelTraceControl, msdia) are for merging
@@ -19,6 +19,8 @@
     <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" Version="3.2.8" ExcludeAssets="build;buildTransitive" />
     <PackageReference Include="System.Diagnostics.EventLog" Version="10.0.9" />
     <ProjectReference Include="../NovaisBoost.Core/NovaisBoost.Core.csproj" />
+    <InternalsVisibleTo Include="NovaisBoost.App.Tests" />
+    <InternalsVisibleTo Include="NovaisBoost.Gui" />
     <PackageReference Include="Spectre.Console" Version="0.54.0" />
     <PackageReference Include="System.Management" Version="10.0.9" />
   </ItemGroup>

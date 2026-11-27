@@ -16,6 +16,7 @@ internal static class Program
     public static int Main(string[] args)
     {
         Console.OutputEncoding = new UTF8Encoding(false);
+        Strings.Use(LanguageSetting());
         bool Has(string flag) => args.Contains(flag, StringComparer.OrdinalIgnoreCase);
 
         if (Has("--versao") || Has("--version"))
@@ -38,6 +39,7 @@ internal static class Program
         }
 
         IActionLog? log = null;
+        string? dataDirectoryForReports = null;
         try
         {
             using var identity = WindowsIdentity.GetCurrent();
@@ -73,8 +75,29 @@ internal static class Program
                 return background ? 1 : RequestElevation(args);
 
             var dataDirectory = AppStorage.Open();
+            dataDirectoryForReports = dataDirectory;
             log = new DailyLog(dataDirectory);
+
+            // 20.4: runs as SYSTEM at startup; the backup belongs to the account recorded when the guard was armed.
+            var taskIndex = Array.FindIndex(args, arg => string.Equals(arg, "--tarefa", StringComparison.OrdinalIgnoreCase));
+            if (taskIndex >= 0 && taskIndex + 1 < args.Length && args[taskIndex + 1] == "protecao-boot")
+                return BootProtection.OnBoot(dataDirectory, log);
+
             var app = AppServices.Create(dataDirectory, log, owner);
+
+            if (Has("--voltar-versao"))
+            {
+                AnsiConsole.MarkupLine(Updater.Rollback(log) ? "[green]Versão anterior restaurada. Abra o NOVAIS boost de novo.[/]"
+                    : "[yellow]Não há versão anterior guardada.[/]");
+                return 0;
+            }
+            if (Has("--desinstalar"))
+            {
+                Uninstaller.Run(app, ConsoleUi.Confirm);
+                return 0;
+            }
+            if (CommandLine.TryRun(args, app) is { } code)
+                return code;
 
             if (Has("--guardian"))
             {
@@ -88,6 +111,10 @@ internal static class Program
                 return task + 1 < args.Length ? MaintenanceTasks.Run(args[task + 1], app) : 1;
 
             log.Info($"NOVAIS boost {Version} iniciado.");
+            if (!FirstRun.EnsureTermsAccepted(app))
+                return 0;
+            FirstRun.OfferUpdate(app);
+            FirstRun.OfferCommunity(app);
             HardwareCard.Draw(log);
             new ConsoleUi(app).Run();
             log.Info("NOVAIS boost encerrado.");
@@ -98,6 +125,7 @@ internal static class Program
             try
             {
                 log?.Error(error.ToString());
+                ErrorReporter.Report(error, dataDirectoryForReports);
             }
             catch (Exception logError) when (logError is IOException or UnauthorizedAccessException)
             {
@@ -105,6 +133,20 @@ internal static class Program
             }
             AnsiConsole.MarkupLine($"[red]{Markup.Escape(error.Message)}[/]");
             return 1;
+        }
+    }
+
+    /// <summary>F22: language from settings.json (readable without administrator); "auto" when missing or unreadable.</summary>
+    private static string? LanguageSetting()
+    {
+        try
+        {
+            var path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "NOVAIS boost", AppSettings.FileName);
+            return File.Exists(path) ? AppSettings.Parse(File.ReadAllText(path)).Language : null;
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException or InvalidDataException)
+        {
+            return null;
         }
     }
 
@@ -116,7 +158,11 @@ internal static class Program
         table.AddRow("--simular [[--extremo]]", "Mostra o que a otimização mudaria neste PC, sem alterar nada.");
         table.AddRow("--reparar", "Procura alterações de outros otimizadores, sem alterar nada.");
         table.AddRow("--guardian", "Roda o Process Guardian (usado pela tarefa de logon).");
-        table.AddRow("--tarefa <id>", "Executa uma tarefa agendada: reaplicar, limpeza, ssd, saude.");
+        table.AddRow("--tarefa <id>", "Executa uma tarefa agendada: reaplicar, limpeza, ssd, saude, drivers, rede, protecao-boot, protecao-logon.");
+        table.AddRow("--aplicar <<1|2|3>> --confirmar", "Aplica um nível sem perguntas (para testes em VM; sempre com backup).");
+        table.AddRow("--reverter-tudo --confirmar", "Desfaz tudo sem perguntas (para testes em VM).");
+        table.AddRow("--desinstalar", "Desfaz tudo e remove tarefas, perfis e o plano de energia do NOVAIS boost.");
+        table.AddRow("--voltar-versao", "Volta para a versão anterior à última atualização automática.");
         table.AddRow("--versao", "Mostra a versão.");
         AnsiConsole.Write(table);
     }

@@ -10,7 +10,8 @@ using NovaisBoost.Core;
 
 namespace NovaisBoost.App;
 
-internal sealed class WindowsRegistry : IRegistry
+/// <param name="userSid">When set (boot protection running as SYSTEM), "HKCU" means HKEY_USERS\&lt;sid&gt; of the backup owner.</param>
+internal sealed class WindowsRegistry(string? userSid = null) : IRegistry
 {
     public RegistryState Read(RegistryAction action)
     {
@@ -144,12 +145,21 @@ internal sealed class WindowsRegistry : IRegistry
     private static extern int RegSetValueEx(
         SafeRegistryHandle key, string name, int reserved, uint type, byte[] data, int length);
 
-    private static RegistryKey OpenHive(RegistryHiveName hive) => RegistryKey.OpenBaseKey(hive switch
+    private RegistryKey OpenHive(RegistryHiveName hive)
     {
-        RegistryHiveName.CurrentUser => RegistryHive.CurrentUser,
-        RegistryHiveName.LocalMachine => RegistryHive.LocalMachine,
-        _ => throw new InvalidDataException("Hive de registro desconhecido.")
-    }, RegistryView.Registry64);
+        if (hive == RegistryHiveName.CurrentUser && userSid is not null)
+        {
+            using var users = RegistryKey.OpenBaseKey(RegistryHive.Users, RegistryView.Registry64);
+            return users.OpenSubKey(userSid, writable: true)
+                ?? throw new InvalidOperationException("O perfil do usuário não está carregado; a reversão termina no próximo logon.");
+        }
+        return RegistryKey.OpenBaseKey(hive switch
+        {
+            RegistryHiveName.CurrentUser => RegistryHive.CurrentUser,
+            RegistryHiveName.LocalMachine => RegistryHive.LocalMachine,
+            _ => throw new InvalidDataException("Hive de registro desconhecido.")
+        }, RegistryView.Registry64);
+    }
 
     private static (object Data, RegistryValueKind Kind) ToNative(RegistryValue value) => value.Kind switch
     {

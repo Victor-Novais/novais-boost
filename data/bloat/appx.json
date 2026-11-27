@@ -1,0 +1,11 @@
+[
+  { "name": "Clipchamp.Clipchamp", "label": "Clipchamp", "storeId": "9P1J8S7CCWWT", "description": "Editor de vídeo pré-instalado." },
+  { "name": "Microsoft.BingNews", "label": "Microsoft Notícias", "storeId": "9WZDNCRFHVFW", "description": "Notícias com atualização em segundo plano." },
+  { "name": "Microsoft.BingWeather", "label": "Clima (MSN)", "storeId": "9WZDNCRFJ3Q2", "description": "Clima com atualização em segundo plano." },
+  { "name": "Microsoft.MicrosoftSolitaireCollection", "label": "Microsoft Solitaire Collection", "storeId": "9WZDNCRFHWD2", "description": "Jogos de cartas com anúncios." },
+  { "name": "Microsoft.GetHelp", "label": "Obter Ajuda", "storeId": "9PKDZBMV1H3T", "description": "Assistente de suporte da Microsoft." },
+  { "name": "Microsoft.WindowsFeedbackHub", "label": "Hub de Comentários", "storeId": "9NBLGGH4R32N", "description": "Envio de comentários para a Microsoft." },
+  { "name": "Microsoft.Todos", "label": "Microsoft To Do", "storeId": "9NBLGGH5R558", "description": "Lista de tarefas (as tarefas ficam na conta Microsoft)." },
+  { "name": "Microsoft.PowerAutomateDesktop", "label": "Power Automate", "storeId": "9NFTCH6J7FHV", "description": "Automação de tarefas para empresas." },
+  { "name": "MicrosoftCorporationII.MicrosoftFamily", "label": "Microsoft Family Safety", "storeId": "9PDJDJS743XF", "description": "Controle parental (só remova se não usa)." }
+]

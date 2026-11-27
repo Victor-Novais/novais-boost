@@ -169,7 +169,8 @@ public static class FrameCap
 /// <param name="Value">Literal value, or "{frameCap}" (see <see cref="FrameCap"/>); a setting whose token has no value is skipped.</param>
 public sealed record PresetSetting(string? Section, string Key, string Value, string Label);
 
-/// <param name="Path">With tokens: %LOCALAPPDATA%, %USERPROFILE%, %APPDATA%, {steamUserdata}, {gameDir}.</param>
+/// <param name="Path">With tokens: %LOCALAPPDATA%, %USERPROFILE%, %APPDATA%, {documents}, {steamUserdata}, {gameDir}; a "*" folder
+/// stands for one folder per game account.</param>
 public sealed record PresetFile(string Path, ConfigFormat Format, PresetSetting[] Settings);
 
 /// <param name="Processes">Game processes; files are never changed while one is running (the game rewrites them on exit).</param>

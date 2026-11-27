@@ -196,6 +196,7 @@ internal sealed class ProofView(AppServices app, ConsoleUi ui)
         var evidence = app.LocalEvidence.With(state.AppliedIds!.Select(id => new LocalEvidenceEntry(id, state.Group, state.Game,
             result.Overall, average.ChangePercent, oneLow.ChangePercent, oneLow.CiLowPercent, oneLow.CiHighPercent, DateTimeOffset.Now)));
         evidence.Save(app.DataDirectory);
+        CommunityClient.Send(app, evidence.Entries.TakeLast(state.AppliedIds!.Length).ToArray());
         app.Refresh();
 
         var report = SaveReport(state, result);

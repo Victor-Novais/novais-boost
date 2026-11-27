@@ -1,0 +1,13 @@
+name = "novais-boost-results"
+main = "src/index.js"
+compatibility_date = "2026-11-01"
+
+# Crie o banco com `wrangler d1 create novais-boost-results` e cole o database_id aqui.
+[[d1_databases]]
+binding = "DB"
+database_name = "novais-boost-results"
+database_id = "COLE-AQUI-O-ID-DO-D1"
+
+# Logs do Cloudflare guardam IP por padrão; mantenha "observability" desligado para não guardar IP nenhum.
+[observability]
+enabled = false

@@ -23,10 +23,10 @@ public sealed class TweakCatalogTests
     public void EmbeddedCatalogLoadsBothUniversalLevels()
     {
         var tweaks = TweakCatalog.LoadEmbedded();
-        Assert.Equal(34, tweaks.Count);
-        Assert.Equal(19, tweaks.Count(tweak => tweak.Level == TweakLevel.Safe));
-        Assert.Equal(12, tweaks.Count(tweak => tweak.Level == TweakLevel.Competitive));
-        Assert.Equal(3, tweaks.Count(tweak => tweak.Level == TweakLevel.Extreme));
+        Assert.Equal(41, tweaks.Count);
+        Assert.Equal(22, tweaks.Count(tweak => tweak.Level == TweakLevel.Safe));
+        Assert.Equal(13, tweaks.Count(tweak => tweak.Level == TweakLevel.Competitive));
+        Assert.Equal(6, tweaks.Count(tweak => tweak.Level == TweakLevel.Extreme));
         Assert.All(tweaks.Where(tweak => tweak.Actions.Any(action => action is NvidiaSettingAction)),
             tweak => Assert.Contains("gpu-nvidia", tweak.Compat.Hardware));
         Assert.Contains(tweaks, tweak => tweak.Actions.OfType<PowerPlanAction>().Any());
@@ -47,7 +47,7 @@ public sealed class TweakCatalogTests
 
         // Experimental tweaks exist, but only in the individual (custom) list.
         var experimental = tweaks.Where(tweak => tweak.Evidence == TweakEvidence.Experimental).Select(tweak => tweak.Id).ToArray();
-        Assert.Equal(["mmcss-games-task", "priority-separation", "sysmain-off", "timer-resolution", "windows-suggestions"], experimental);
+        Assert.Equal(["memory-compression-off", "mmcss-games-task", "mpo-off", "priority-separation", "sysmain-off", "timer-resolution", "windows-suggestions"], experimental);
         Assert.DoesNotContain(TweakLevels.Select(tweaks, TweakLevel.Extreme), tweak => experimental.Contains(tweak.Id));
 
         // Hardware profiles recommend tweaks through the same review; they must not push unproven ones either.
@@ -135,6 +135,10 @@ public sealed class TweakCatalogTests
                 ScheduledTaskAction task => "task|" + task.Path.ToLowerInvariant(),
                 PowerPlanAction plan => "plan|" + plan.Id,
                 NvidiaSettingAction nvidia => "nvidia|" + nvidia.SettingId,
+                SystemFeatureAction feature => "feature|" + feature.Feature,
+                AppxPackageAction package => "appx|" + package.Name.ToLowerInvariant(),
+                DirectXSettingAction directx => "directx|" + directx.Key.ToLowerInvariant(),
+                DeviceAction device => "device|" + device.InstanceId.ToLowerInvariant(),
                 _ => throw new InvalidOperationException()
             })))
             .GroupBy(item => item.Key).Where(group => group.Count() > 1).Select(group => group.Key);

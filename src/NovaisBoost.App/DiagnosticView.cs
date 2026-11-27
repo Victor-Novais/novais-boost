@@ -20,7 +20,7 @@ internal static class DiagnosticView
         {
             app.Refresh();
             return app.Pc;
-        }, app.Log, Path.Combine(app.DataDirectory, "reports"));
+        }, app.Log, Path.Combine(app.DataDirectory, "reports"), app.Settings.PcOrDefault);
         if (app.Profiles.Count > 0)
             AnsiConsole.MarkupLine($"[#C084FC]Perfis de hardware detectados:[/] {Markup.Escape(string.Join(", ", app.Profiles.Select(profile => profile.Name)))} " +
                 "[grey](veja o menu [[3]])[/]");
@@ -51,12 +51,12 @@ internal static class DiagnosticView
             AnsiConsole.MarkupLine($"[yellow]{Markup.Escape(finding.Title)}[/] — {Markup.Escape(finding.Recommendation)}");
     }
 
-    public static DiagnosticReport Run(Func<HardwareSnapshot> capture, IActionLog log, string? reportDirectory)
+    public static DiagnosticReport Run(Func<HardwareSnapshot> capture, IActionLog log, string? reportDirectory, PcSettings? user = null)
     {
         HardwareSnapshot pc = null!;
         AnsiConsole.Status().Spinner(Spinner.Known.Dots).SpinnerStyle(new Style(new Color(168, 85, 247)))
             .Start("Analisando o PC...", _ => pc = capture());
-        var report = Core.Diagnostics.Evaluate(pc, DateOnly.FromDateTime(DateTime.Now));
+        var report = Core.Diagnostics.Evaluate(pc, DateOnly.FromDateTime(DateTime.Now), user);
         log.Info($"Diagnóstico concluído: nota {report.Score}, {report.Findings.Count} ponto(s) de atenção.");
 
         DrawHardware(pc);
@@ -98,7 +98,18 @@ internal static class DiagnosticView
         Row("Placa-mãe", pc.Board is { } board
             ? $"{board.Manufacturer} {board.Product} · BIOS {board.BiosVersion}{(board.BiosDate is { } date ? $" ({date:dd/MM/yyyy})" : "")}" : null);
         foreach (var disk in pc.Disks)
-            Row(disk.IsSystem ? "Disco (sistema)" : "Disco", $"{disk.Name} · {disk.Bus} {disk.Media} · {Core.Diagnostics.Gb(disk.SizeBytes)}");
+        {
+            var health = pc.Deep?.Reliability?.FirstOrDefault(item => item.Name == disk.Name);
+            Row(disk.IsSystem ? "Disco (sistema)" : "Disco", string.Join(" · ", new[]
+            {
+                $"{disk.Name} · {disk.Bus} {disk.Media} · {Core.Diagnostics.Gb(disk.SizeBytes)}",
+                health?.TemperatureC is { } temperature ? $"{temperature} °C" : null,
+                health?.Wear is { } wear ? $"{wear}% da vida útil usada" : null,
+                health?.PowerOnHours is { } hours ? $"{hours:N0} h ligado" : null
+            }.OfType<string>()));
+        }
+        if (pc.Deep?.BypassIo is { } bypass)
+            Row("BypassIO", bypass);
         foreach (var volume in pc.Volumes)
             Row($"Unidade {volume.Letter}", $"{Core.Diagnostics.Gb(volume.FreeBytes)} livres de {Core.Diagnostics.Gb(volume.TotalBytes)} ({volume.FreePercent:0}%)");
         foreach (var display in pc.Displays)

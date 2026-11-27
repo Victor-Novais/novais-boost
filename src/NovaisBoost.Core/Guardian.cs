@@ -80,6 +80,16 @@ public sealed class GuardianPolicy(ProcessCatalog catalog, IEnumerable<string> g
     public IReadOnlyList<int> CpuSetTargets(IReadOnlyList<ProcessSample> processes) =>
         Settings.BackgroundCpuSets ? HeavyBackground(processes, includeEfficiencyList: false) : [];
 
+    /// <summary>
+    /// F19 (opt-in): streaming apps (OBS) to the background CPU set while a game runs, so the encoder does not compete with
+    /// the game's cores. Only when the CPU has a background set (Intel hybrid, dual-CCD X3D).
+    /// </summary>
+    public IReadOnlyList<int> StreamingCpuSetTargets(IReadOnlyList<ProcessSample> processes) =>
+        Settings.ObsCpuSets && processes.Any(process => IsGame(process.Name))
+            ? processes.Where(process => !IsGame(process.Name) && MayTouchBackground(process.Name) &&
+                catalog.Find(process.Name)?.Category == ProcessCategory.Streaming).Select(process => process.Id).ToArray()
+            : [];
+
     /// <summary>17.4 (experimental, opt-in): game processes to pin to the game CPU set. Never a protected game.</summary>
     public IReadOnlyList<int> GameCpuSetTargets(IReadOnlyList<ProcessSample> processes) => Settings.GameCpuSets
         ? processes.Where(process => IsGame(process.Name) && !_protected.Contains(process.Name)).Select(process => process.Id).ToArray()
@@ -106,7 +116,7 @@ public sealed class GuardianPolicy(ProcessCatalog catalog, IEnumerable<string> g
         : null;
 
     private static HashSet<string> Names(IEnumerable<string> names) =>
-        names.Select(name => Path.GetFileNameWithoutExtension(name)).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        names.Select(name => WindowsPath.GetFileNameWithoutExtension(name)).ToHashSet(StringComparer.OrdinalIgnoreCase);
 }
 
 // ---------------------------------------------------------------- CPU topology (17.3, 17.4)

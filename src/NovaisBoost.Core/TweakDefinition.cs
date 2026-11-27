@@ -35,11 +35,16 @@ public static class TweakLevels
     /// With <paramref name="local"/>, a tweak measured as a real gain on this PC counts as proven, and one measured
     /// as worse on this PC is left out.
     /// </summary>
-    public static IReadOnlyList<TweakDefinition> Select(IEnumerable<TweakDefinition> tweaks, TweakLevel level, LocalEvidence? local = null) =>
-        tweaks.Where(tweak => tweak.Level <= level && IsProven(tweak, local) && local?.IsWorse(tweak.Id) != true).ToArray();
+    /// <param name="community">F21: aggregates of similar PCs; a tweak proven there counts as measured, one proven worse is left out.</param>
+    public static IReadOnlyList<TweakDefinition> Select(IEnumerable<TweakDefinition> tweaks, TweakLevel level, LocalEvidence? local = null,
+        IReadOnlyDictionary<string, CommunityEvidence>? community = null) =>
+        tweaks.Where(tweak => tweak.Level <= level && IsProven(tweak, local, community) && local?.IsWorse(tweak.Id) != true &&
+            !(community?.GetValueOrDefault(tweak.Id) is { } shared && Community.IsProvenWorse(shared) && local?.Latest(tweak.Id) is null)).ToArray();
 
-    public static bool IsProven(TweakDefinition tweak, LocalEvidence? local) =>
-        (local?.Effective(tweak) ?? tweak.Evidence) != TweakEvidence.Experimental;
+    /// <summary>Local evidence wins (it is this PC); then the community aggregate; then the catalog.</summary>
+    public static bool IsProven(TweakDefinition tweak, LocalEvidence? local, IReadOnlyDictionary<string, CommunityEvidence>? community = null) =>
+        (local?.Effective(tweak) ?? tweak.Evidence) != TweakEvidence.Experimental ||
+        local?.Latest(tweak.Id) is null && community?.GetValueOrDefault(tweak.Id) is { } shared && Community.IsProven(shared);
 }
 
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "type")]
@@ -57,6 +62,10 @@ public static class TweakLevels
 [JsonDerivedType(typeof(NvidiaProfileAction), "nvidiaProfile")]
 [JsonDerivedType(typeof(AmdSettingAction), "amdSetting")]
 [JsonDerivedType(typeof(DefenderExclusionAction), "defenderExclusion")]
+[JsonDerivedType(typeof(AppxPackageAction), "appxPackage")]
+[JsonDerivedType(typeof(SystemFeatureAction), "systemFeature")]
+[JsonDerivedType(typeof(DirectXSettingAction), "directxSetting")]
+[JsonDerivedType(typeof(DeviceAction), "device")]
 public abstract record TweakAction
 {
     internal abstract string Target { get; }
@@ -157,7 +166,7 @@ public sealed record TcpGlobalAction(string Setting, string Expected) : TweakAct
 /// <param name="LockedBy">Process names (without .exe) of the game that owns the file.</param>
 public sealed record ConfigFileAction(string Path, ConfigFormat Format, string? Section, string Key, string Value, string[] LockedBy) : TweakAction
 {
-    internal override string Target => $"{System.IO.Path.GetFileName(Path)}: {(Section is null ? "" : $"[{Section}] ")}{Key}";
+    internal override string Target => $"{WindowsPath.GetFileName(Path)}: {(Section is null ? "" : $"[{Section}] ")}{Key}";
     internal override string Identity => $"config:{Path.ToLowerInvariant()}\0{Section?.ToLowerInvariant()}\0{Key.ToLowerInvariant()}";
 }
 
@@ -183,6 +192,48 @@ public sealed record DefenderExclusionAction(string Path) : TweakAction
 {
     internal override string Target => $"Exclusão do Defender: {Path}";
     internal override string Identity => $"defender:{Path.TrimEnd('\\').ToLowerInvariant()}";
+}
+
+/// <summary>
+/// A Microsoft Store app removed for the current user only (18.1); never provisioned or system packages.
+/// Revert reinstalls it from the Microsoft Store by <see cref="StoreId"/> (winget, source msstore), which needs internet.
+/// </summary>
+/// <param name="Name">Package name (Package.Id.Name), e.g. "Clipchamp.Clipchamp".</param>
+public sealed record AppxPackageAction(string Name, string StoreId) : TweakAction
+{
+    internal override string Target => $"App da Store {Name}";
+    internal override string Identity => $"appx:{Name.ToLowerInvariant()}";
+}
+
+public enum SystemFeature { Hibernation, MemoryCompression }
+
+/// <summary>A Windows feature switched on or off as a whole (18.7 hibernation, 18.9 memory compression).</summary>
+public sealed record SystemFeatureAction(SystemFeature Feature, bool Enabled) : TweakAction
+{
+    internal override string Target => Feature switch
+    {
+        SystemFeature.Hibernation => "Hibernação",
+        SystemFeature.MemoryCompression => "Compressão de memória",
+        _ => Feature.ToString()
+    };
+    internal override string Identity => $"feature:{Feature}";
+}
+
+/// <summary>
+/// One "Key=Value;" entry of HKCU\Software\Microsoft\DirectX\UserGpuPreferences [DirectXUserGlobalSettings] (F19), keeping the
+/// other entries (VRR, auto HDR...) that Windows stores in the same string. Value null removes the entry.
+/// </summary>
+public sealed record DirectXSettingAction(string Key, string? Value) : TweakAction
+{
+    internal override string Target => $"DirectX (gráficos do Windows): {Key}";
+    internal override string Identity => $"directx:{Key.ToLowerInvariant()}";
+}
+
+/// <summary>A device turned off or on in Device Manager (F19: unused HDMI/DisplayPort audio). Revert turns it back.</summary>
+public sealed record DeviceAction(string InstanceId, string Name, bool Enabled) : TweakAction
+{
+    internal override string Target => $"Dispositivo {Name}";
+    internal override string Identity => $"device:{InstanceId.ToLowerInvariant()}";
 }
 
 /// <summary>A power plan owned by NOVAIS boost: created from a template on apply, deleted on revert.</summary>

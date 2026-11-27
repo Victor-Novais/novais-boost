@@ -1,0 +1,16 @@
+{
+  "regions": [
+    { "id": "aws-sa-east-1", "name": "AWS São Paulo", "host": "dynamodb.sa-east-1.amazonaws.com", "port": 443 },
+    { "id": "aws-us-east-1", "name": "AWS Virgínia (EUA Leste)", "host": "dynamodb.us-east-1.amazonaws.com", "port": 443 },
+    { "id": "aws-us-east-2", "name": "AWS Ohio (EUA Leste)", "host": "dynamodb.us-east-2.amazonaws.com", "port": 443 },
+    { "id": "aws-us-west-2", "name": "AWS Oregon (EUA Oeste)", "host": "dynamodb.us-west-2.amazonaws.com", "port": 443 },
+    { "id": "aws-eu-central-1", "name": "AWS Frankfurt (Europa)", "host": "dynamodb.eu-central-1.amazonaws.com", "port": 443 }
+  ],
+  "games": [
+    { "game": "cs2", "valveSdrAppId": 730, "regions": [], "note": "Relays oficiais da Valve (Steam Datagram Relay), lidos da configuração pública do Steam." },
+    { "game": "dota2", "valveSdrAppId": 570, "regions": [], "note": "Relays oficiais da Valve (Steam Datagram Relay)." },
+    { "game": "fortnite", "regions": [ "aws-sa-east-1", "aws-us-east-1", "aws-us-east-2" ], "note": "Os servidores do Fortnite rodam na AWS; a latência até a região é uma boa aproximação." },
+    { "game": "apex", "regions": [ "aws-sa-east-1", "aws-us-east-1", "aws-us-west-2" ], "note": "Aproximação: o Apex usa vários provedores de nuvem por região." },
+    { "game": "pubg", "regions": [ "aws-sa-east-1", "aws-us-east-1", "aws-eu-central-1" ], "note": "Aproximação pela região da AWS." }
+  ]
+}

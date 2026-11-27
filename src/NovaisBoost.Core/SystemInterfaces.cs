@@ -85,6 +85,37 @@ public interface IDefenderExclusions
     void Set(string path, bool excluded);
 }
 
+/// <summary>Microsoft Store apps of the current user (18.1).</summary>
+public interface IAppxPackages
+{
+    bool IsInstalled(string name);
+    void Remove(string name);
+
+    /// <summary>Reinstalls from the Microsoft Store. Throws with a clear message when it fails (e.g. no internet).</summary>
+    void Install(string name, string storeId);
+}
+
+/// <summary>Whole-Windows features (hibernation, memory compression). IsEnabled is null when the feature is not available.</summary>
+public interface ISystemFeatures
+{
+    bool? IsEnabled(SystemFeature feature);
+    void Set(SystemFeature feature, bool enabled);
+}
+
+/// <summary>Entries of DirectXUserGlobalSettings (see <see cref="DirectXSettings"/>).</summary>
+public interface IDirectXSettings
+{
+    string? Read(string key);
+    void Write(string key, string? value);
+}
+
+/// <summary>Devices by PnP instance id. IsEnabled is null when the device is not present.</summary>
+public interface IDevices
+{
+    bool? IsEnabled(string instanceId);
+    void SetEnabled(string instanceId, bool enabled);
+}
+
 public interface IPowerPlans
 {
     PowerPlanState Read(PowerPlanAction plan);
@@ -129,6 +160,10 @@ public interface IActionLog
 [JsonDerivedType(typeof(NvidiaProfileState), "nvidiaProfile")]
 [JsonDerivedType(typeof(AmdSettingState), "amdSetting")]
 [JsonDerivedType(typeof(DefenderExclusionState), "defenderExclusion")]
+[JsonDerivedType(typeof(AppxPackageState), "appxPackage")]
+[JsonDerivedType(typeof(SystemFeatureState), "systemFeature")]
+[JsonDerivedType(typeof(DirectXSettingState), "directxSetting")]
+[JsonDerivedType(typeof(DeviceState), "device")]
 public abstract record SettingState
 {
     internal virtual bool Matches(SettingState other) => Equals(other);
@@ -241,6 +276,28 @@ public sealed record AmdSettingState(bool Enabled) : SettingState
 public sealed record DefenderExclusionState(bool Excluded) : SettingState
 {
     internal override string Display => Excluded ? "excluída da verificação" : "verificada normalmente";
+}
+
+public sealed record AppxPackageState(bool Installed) : SettingState
+{
+    internal override string Display => Installed ? "instalado" : "removido";
+}
+
+/// <param name="Enabled">Null when the feature is not available on this PC.</param>
+public sealed record SystemFeatureState(bool? Enabled) : SettingState
+{
+    internal override string Display => Enabled switch { true => "ligado", false => "desligado", null => "indisponível" };
+}
+
+public sealed record DirectXSettingState(string? Value) : SettingState
+{
+    internal override string Display => Value ?? "padrão do Windows";
+}
+
+/// <param name="Enabled">Null when the device is not present.</param>
+public sealed record DeviceState(bool? Enabled) : SettingState
+{
+    internal override string Display => Enabled switch { true => "ativado", false => "desativado", null => "não encontrado" };
 }
 
 public sealed record TcpState(string Value) : SettingState

@@ -23,7 +23,7 @@ public static class NvidiaProfiles
         foreach (var group in games.Where(game => game.Game.Id != "obs").GroupBy(game => game.Game.Id))
         {
             var game = group.First().Game;
-            var exes = group.Select(item => Path.GetFileName(item.ExecutablePath)).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+            var exes = group.Select(item => WindowsPath.GetFileName(item.ExecutablePath)).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
             var compat = new TweakCompatibility(["gpu-nvidia"], []);
             tweaks.Add(new TweakDefinition($"nvidia-profile-{game.Id}", $"NVIDIA: {game.Name} em desempenho máximo",
                 $"No perfil do {game.Name} no driver NVIDIA ({string.Join(", ", exes)}), o modo de energia fica em \"Preferir desempenho máximo\". " +

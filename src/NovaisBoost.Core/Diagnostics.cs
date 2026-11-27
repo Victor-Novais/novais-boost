@@ -35,9 +35,12 @@ public static class Diagnostics
         [FindingCategory.Windows] = 15, [FindingCategory.Network] = 15, [FindingCategory.Software] = 10
     };
 
-    public static DiagnosticReport Evaluate(HardwareSnapshot pc, DateOnly today)
+    /// <param name="user">What the user told about the PC (power supply); optional.</param>
+    public static DiagnosticReport Evaluate(HardwareSnapshot pc, DateOnly today, PcSettings? user = null)
     {
         var findings = new List<Finding>();
+        if (user is not null && PowerSupply.Evaluate(pc, user) is { } psu)
+            findings.Add(psu);
         Memory(pc, findings);
         Storage(pc, findings);
         Graphics(pc, today, findings);
@@ -47,6 +50,7 @@ public static class Diagnostics
         Network(pc, findings);
         Stability(pc, findings);
         Software(pc, findings);
+        DeviceRules.Evaluate(pc, findings);
 
         var ordered = findings.OrderBy(finding => finding.Severity).ThenBy(finding => finding.Id, StringComparer.Ordinal).ToArray();
         var lost = ordered.GroupBy(finding => finding.Category)
@@ -56,13 +60,13 @@ public static class Diagnostics
 
     public static FindingCategory CategoryOf(string id) => id switch
     {
-        "whea-fatal" or "whea-corrected" or "crashes" or "gpu-tdr" or "microcode-outdated" or "microcode-update" => FindingCategory.Stability,
-        "memory-pressure" or "wsl-vm" or "nonpaged-pool" or "single-channel" or "ram-same-channel" or "xmp-expo" or "xmp-expo-likely" => FindingCategory.Memory,
+        "whea-fatal" or "whea-corrected" or "crashes" or "psu-undersized" or "gpu-tdr" or "microcode-outdated" or "microcode-update" => FindingCategory.Stability,
+        "memory-pressure" or "memory-slow" or "wsl-vm" or "nonpaged-pool" or "single-channel" or "ram-same-channel" or "xmp-expo" or "xmp-expo-likely" => FindingCategory.Memory,
         "hybrid-gpu" or "resizable-bar" or "hags" or "gpu-thermal" or "gpu-power-limit" => FindingCategory.Graphics,
         _ when id.StartsWith("gpu-", StringComparison.Ordinal) => FindingCategory.Graphics,
         "refresh-rate" or "display-hdmi" or "vrr-off" => FindingCategory.Display,
         "on-battery" or "power-plan" or "custom-power-plan" or "cpu-throttling" or "cpu-below-base" => FindingCategory.Power,
-        "wifi" or "link-speed" => FindingCategory.Network,
+        "wifi" or "link-speed" or "nic-rss-off" or "nic-buffers" => FindingCategory.Network,
         "overlays" or "other-optimizers" => FindingCategory.Software,
         _ when id.StartsWith("disk-", StringComparison.Ordinal) || id is "system-disk-space" or "system-hdd" or "game-on-hdd" or "trim-off"
             or "pagefile-off" or "pagefile-hdd" => FindingCategory.Storage,

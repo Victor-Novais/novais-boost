@@ -12,7 +12,8 @@ public sealed class TweakEngine(
     Func<TweakCompatibility, string?>? compatibility = null,
     INvidiaSettings? nvidia = null, IDnsSettings? dns = null,
     IBcdStore? bcd = null, IPagefile? pagefile = null, ITcpSettings? tcp = null, IConfigFiles? configs = null,
-    INvidiaProfiles? nvidiaProfiles = null, IAmdSettings? amd = null, IDefenderExclusions? defender = null)
+    INvidiaProfiles? nvidiaProfiles = null, IAmdSettings? amd = null, IDefenderExclusions? defender = null,
+    IAppxPackages? appx = null, ISystemFeatures? features = null, IDirectXSettings? directx = null, IDevices? devices = null)
 {
     private RestorePoint? _batchPoint;
     private bool _inBatch;
@@ -265,13 +266,21 @@ public sealed class TweakEngine(
             TcpGlobalAction setting => new TcpState(setting.Expected),
             // Fail closed: never create a file or a key the game did not write itself.
             ConfigFileAction config when before is ConfigFileState { FileExists: false } =>
-                throw new InvalidDataException($"{System.IO.Path.GetFileName(config.Path)} não existe. Abra o jogo uma vez e feche para ele criar o arquivo."),
+                throw new InvalidDataException($"{WindowsPath.GetFileName(config.Path)} não existe. Abra o jogo uma vez e feche para ele criar o arquivo."),
             ConfigFileAction config when before is ConfigFileState { Value: null } =>
-                throw new InvalidDataException($"A chave {config.Key} não existe em {System.IO.Path.GetFileName(config.Path)}; o formato do jogo pode ter mudado."),
+                throw new InvalidDataException($"A chave {config.Key} não existe em {WindowsPath.GetFileName(config.Path)}; o formato do jogo pode ter mudado."),
             ConfigFileAction config => new ConfigFileState(true, config.Value),
             NvidiaProfileAction profile => new NvidiaProfileState(true, true, profile.Expected),
             AmdSettingAction feature => new AmdSettingState(feature.Enabled),
             DefenderExclusionAction => new DefenderExclusionState(true),
+            // An app that is not installed has nothing to remove.
+            AppxPackageAction when before is AppxPackageState { Installed: false } => before,
+            AppxPackageAction => new AppxPackageState(false),
+            SystemFeatureAction when before is SystemFeatureState { Enabled: null } => before,
+            SystemFeatureAction feature => new SystemFeatureState(feature.Enabled),
+            DirectXSettingAction setting => new DirectXSettingState(setting.Value),
+            DeviceAction when before is DeviceState { Enabled: null } => before,
+            DeviceAction device => new DeviceState(device.Enabled),
             _ => throw new InvalidDataException("Operação de ajuste inválida.")
         };
         return new PlannedChange(action, before, expected);
@@ -293,6 +302,10 @@ public sealed class TweakEngine(
         NvidiaProfileAction profile => Require(nvidiaProfiles).Read(profile.Exe, profile.SettingId),
         AmdSettingAction feature => Require(amd).Read(feature.Feature),
         DefenderExclusionAction exclusion => new DefenderExclusionState(Require(defender).Contains(exclusion.Path)),
+        AppxPackageAction package => new AppxPackageState(Require(appx).IsInstalled(package.Name)),
+        SystemFeatureAction feature => new SystemFeatureState(Require(features).IsEnabled(feature.Feature)),
+        DirectXSettingAction setting => new DirectXSettingState(Require(directx).Read(setting.Key)),
+        DeviceAction device => new DeviceState(Require(devices).IsEnabled(device.InstanceId)),
         _ => throw new InvalidDataException("Tipo de ajuste desconhecido.")
     };
 
@@ -345,6 +358,21 @@ public sealed class TweakEngine(
                 break;
             case (DefenderExclusionAction exclusion, DefenderExclusionState exclusionState):
                 Require(defender).Set(exclusion.Path, exclusionState.Excluded);
+                break;
+            case (AppxPackageAction package, AppxPackageState { Installed: true }):
+                Require(appx).Install(package.Name, package.StoreId);
+                break;
+            case (AppxPackageAction package, AppxPackageState { Installed: false }):
+                Require(appx).Remove(package.Name);
+                break;
+            case (SystemFeatureAction feature, SystemFeatureState { Enabled: { } enabled }):
+                Require(features).Set(feature.Feature, enabled);
+                break;
+            case (DirectXSettingAction setting, DirectXSettingState directxState):
+                Require(directx).Write(setting.Key, directxState.Value);
+                break;
+            case (DeviceAction device, DeviceState { Enabled: { } deviceEnabled }):
+                Require(devices).SetEnabled(device.InstanceId, deviceEnabled);
                 break;
             default:
                 throw new InvalidDataException("O estado do backup não corresponde à operação.");
