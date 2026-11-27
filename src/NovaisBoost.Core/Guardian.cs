@@ -10,10 +10,16 @@ public sealed record PriorityChange(int Id, string Name, PriorityLevel From, Pri
 /// Pure decision logic of the Process Guardian. Given the current processes and the games list,
 /// returns the priority changes to make. Restoring previous priorities is done by the caller.
 /// </summary>
-public sealed class GuardianPolicy(ProcessCatalog catalog, IEnumerable<string> gameExecutables)
+/// <param name="gamePriority">Priority given to the game: AboveNormal (default) or High (opt-in in settings.json).</param>
+public sealed class GuardianPolicy(ProcessCatalog catalog, IEnumerable<string> gameExecutables,
+    PriorityLevel gamePriority = PriorityLevel.AboveNormal)
 {
     /// <summary>A background process above this share of total CPU while a game runs is lowered (ProBalance).</summary>
     public const double HogCpuPercent = 15;
+
+    public PriorityLevel GamePriority { get; } = gamePriority is PriorityLevel.AboveNormal or PriorityLevel.High
+        ? gamePriority
+        : throw new ArgumentOutOfRangeException(nameof(gamePriority), "A prioridade do jogo deve ser AboveNormal ou High.");
 
     private readonly HashSet<string> _games = gameExecutables
         .Select(name => Path.GetFileNameWithoutExtension(name)).ToHashSet(StringComparer.OrdinalIgnoreCase);
@@ -30,8 +36,8 @@ public sealed class GuardianPolicy(ProcessCatalog catalog, IEnumerable<string> g
         {
             if (IsGame(process.Name))
             {
-                if (process.Priority < PriorityLevel.High)
-                    changes.Add(new(process.Id, process.Name, process.Priority, PriorityLevel.High, "jogo em execução"));
+                if (process.Priority < GamePriority)
+                    changes.Add(new(process.Id, process.Name, process.Priority, GamePriority, "jogo em execução"));
                 continue;
             }
             if (catalog.IsProtected(process.Name))

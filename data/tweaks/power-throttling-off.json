@@ -4,6 +4,7 @@
   "description": "Impede o Windows de reduzir o clock de processos que ele considera em segundo plano (como Discord e OBS durante o jogo).",
   "category": "CPU",
   "level": "competitive",
+  "evidence": "documented",
   "risk": "Baixo. Consumo um pouco maior.",
   "requiresReboot": true,
   "compat": {

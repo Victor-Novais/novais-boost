@@ -4,6 +4,7 @@
   "description": "Permite que o jogo mantenha a resolução de timer alta mesmo quando outro programa está em foco (GlobalTimerResolutionRequests). Frametime mais estável.",
   "category": "Latência",
   "level": "competitive",
+  "evidence": "experimental",
   "risk": "Baixo. Consumo um pouco maior em notebooks.",
   "requiresReboot": true,
   "compat": {

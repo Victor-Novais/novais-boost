@@ -4,6 +4,7 @@
   "description": "A busca do Iniciar passa a procurar só no PC, sem enviar o que você digita ao Bing. Fica mais rápida.",
   "category": "Privacidade",
   "level": "safe",
+  "evidence": "documented",
   "risk": "Baixo. Resultados da web somem do Iniciar.",
   "requiresReboot": false,
   "compat": {

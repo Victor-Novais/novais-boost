@@ -33,13 +33,55 @@ public sealed class CompatibilityTests
 
     [Theory]
     [InlineData("NVIDIA GeForce RTX 4070", true)]
-    [InlineData("NVIDIA GeForce GTX 1060 6GB", true)]
+    [InlineData("NVIDIA GeForce RTX 3060 Ti", true)]
+    [InlineData("NVIDIA GeForce RTX 5090", true)]
+    [InlineData("NVIDIA GeForce RTX 4060 Laptop GPU", true)]
+    [InlineData("NVIDIA GeForce RTX 2080 SUPER", false)]
+    [InlineData("NVIDIA GeForce GTX 1660 SUPER", false)]
+    [InlineData("NVIDIA GeForce GTX 1060 6GB", false)]
     [InlineData("NVIDIA GeForce GTX 960", false)]
     [InlineData("AMD Radeon RX 7800 XT", true)]
+    [InlineData("AMD Radeon RX 9070 XT", true)]
+    [InlineData("AMD Radeon RX 6600", true)]
+    [InlineData("AMD Radeon RX 5700 XT", false)]
     [InlineData("AMD Radeon RX 580", false)]
     [InlineData("AMD Radeon(TM) Graphics", false)]
     [InlineData("Intel(R) Arc(TM) B580 Graphics", true)]
     public void HagsSupport(string gpu, bool supported) => Assert.Equal(supported, Check(Pc(gpus: gpu), "gpu-hags") is null);
+
+    [Fact]
+    public void HagsTweakSkipsGtxAndReachesRtx()
+    {
+        var hags = TweakCatalog.LoadEmbedded().Single(tweak => tweak.Id == "hags-on");
+        Assert.Contains("gpu-hags", hags.Compat.Hardware);
+        Assert.Contains("HAGS", Compatibility.Check(hags.Compat, Pc(gpus: "NVIDIA GeForce GTX 1080 Ti")));
+        Assert.Null(Compatibility.Check(hags.Compat, Pc(gpus: "NVIDIA GeForce RTX 3070")));
+        // A GTX next to an integrated GPU still does not qualify.
+        Assert.NotNull(Compatibility.Check(hags.Compat, Pc(gpus: ["NVIDIA GeForce GTX 1650", "AMD Radeon(TM) Graphics"])));
+    }
+
+    [Fact]
+    public void VanguardWarningAppearsOnlyWhenValorantIsInstalled()
+    {
+        var vbs = TweakCatalog.LoadEmbedded().Single(tweak => tweak.Id == "vbs-off");
+        var games = DataCatalog.Games();
+        var valorant = games.Single(game => game.Id == "valorant");
+        var cs2 = games.Single(game => game.Id == "cs2");
+
+        var warning = Compatibility.AntiCheatWarning(vbs.Compat, [cs2, valorant]);
+        Assert.NotNull(warning);
+        Assert.Contains("VALORANT (Vanguard)", warning);
+        Assert.DoesNotContain("Counter-Strike", warning);
+        Assert.Null(Compatibility.AntiCheatWarning(vbs.Compat, [cs2]));
+        Assert.Null(Compatibility.AntiCheatWarning(new TweakCompatibility([], []), [valorant]));
+    }
+
+    [Fact]
+    public void AntiCheatNamesMatchCombinedEntries()
+    {
+        var fortnite = DataCatalog.Games().Single(game => game.Id == "fortnite"); // "Easy Anti-Cheat / BattlEye"
+        Assert.Contains("BattlEye", Compatibility.AntiCheatWarning(new TweakCompatibility([], ["BattlEye"]), [fortnite]));
+    }
 
     [Fact]
     public void UnknownTokenIsNeverSatisfied() => Assert.Contains("desconhecido", Check(Pc(), "warp-drive"));

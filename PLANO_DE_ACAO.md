@@ -709,7 +709,7 @@ Os arquivos ficam fora do processo do jogo, então não há conflito com anti-ch
 
 | Fase | Status | Observações |
 |---|---|---|
-| F11 Correções de precisão | ⏳ | |
+| F11 Correções de precisão | ✅ | Campo `evidence` em todos os ajustes (34: 29 `documented`, 5 `experimental`, nenhum `measured` até a F12); níveis só com ajustes comprovados. `mmcss-gaming` dividido em `mmcss-responsiveness` e `mmcss-games-task`, e backups antigos continuam revertendo. Guardian em AboveNormal (High via `settings.json`). Plano de energia com valores próprios na bateria. `vbs-off` com aviso de Vanguard/HVCI. Texto "Carga de DPC/ISR (%)". HAGS só em RTX 30+/RX 6000+/Arc |
 | F12 Benchmark v2 | ⏳ | |
 | F13 Diagnóstico profundo | ⏳ | |
 | F14 Modo Reparar | ⏳ | |

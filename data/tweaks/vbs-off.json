@@ -1,14 +1,17 @@
 {
   "id": "vbs-off",
   "name": "Desligar VBS / Integridade de memória",
-  "description": "Desliga a segurança baseada em virtualização (VBS) e a Integridade de memória (HVCI). Ganho típico de 5-10% de FPS em CPUs mais antigas.",
+  "description": "Desliga a segurança baseada em virtualização (VBS) e a Integridade de memória (HVCI). A Microsoft documenta perda de desempenho em jogos com esses recursos ligados, maior em CPUs mais antigas.",
   "category": "Segurança",
   "level": "extreme",
-  "risk": "ALTO. O Windows fica mais exposto a malware de kernel. Não afeta Vanguard, FACEIT ou EAC, mas desative só em PC dedicado a jogos.",
+  "evidence": "documented",
+  "risk": "ALTO. O Windows fica mais exposto a malware de kernel; use só em PC dedicado a jogos. A Riot pode exigir a Integridade de memória (HVCI) de algumas contas no Valorant (erro \"VAN: RESTRICTION\"): se o Valorant pedir, religue-a em Reverter / Backups ou em Segurança do Windows > Isolamento de núcleo.",
   "requiresReboot": true,
   "compat": {
     "hardware": [],
-    "antiCheat": []
+    "antiCheat": [
+      "Vanguard"
+    ]
   },
   "actions": [
     {

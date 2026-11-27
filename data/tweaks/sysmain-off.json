@@ -4,6 +4,7 @@
   "description": "Desativa o pré-carregamento de apps na RAM. Em SSD rápido o ganho do SysMain é pequeno e ele gera atividade de disco.",
   "category": "Serviços",
   "level": "extreme",
+  "evidence": "experimental",
   "risk": "Baixo. Apps podem abrir um pouco mais devagar na primeira vez.",
   "requiresReboot": true,
   "compat": {

@@ -10,11 +10,30 @@ public enum RegistryValueType { String, ExpandString, Dword, Qword, MultiString,
 public enum ServiceStartup { Automatic, AutomaticDelayed, Manual, Disabled }
 public enum TaskSetting { Enabled, Disabled }
 
+/// <summary>How the effect of a tweak is known.</summary>
+/// <remarks>Measured: proven in a benchmark. Documented: described in official Microsoft or vendor documentation.
+/// Experimental: neither; offered only in the individual (custom) list, never in a level.</remarks>
+public enum TweakEvidence { Measured, Documented, Experimental }
+
+/// <param name="Hardware">Requirement tokens checked by <see cref="Compatibility.Check"/>; a failed one blocks the tweak.</param>
+/// <param name="AntiCheat">Anti-cheats that may refuse this tweak. Not a block: a warning at review when a game using one is installed.</param>
 public sealed record TweakCompatibility(string[] Hardware, string[] AntiCheat);
 
 public sealed record TweakDefinition(
-    string Id, string Name, string Description, string Category, TweakLevel Level,
-    string Risk, bool RequiresReboot, TweakCompatibility Compat, TweakAction[] Actions);
+    string Id, string Name, string Description, string Category, TweakLevel Level, TweakEvidence Evidence,
+    string Risk, bool RequiresReboot, TweakCompatibility Compat, TweakAction[] Actions)
+{
+    /// <summary>Only proven tweaks (measured or documented) can be part of a level.</summary>
+    [JsonIgnore]
+    public bool IsProven => Evidence != TweakEvidence.Experimental;
+}
+
+public static class TweakLevels
+{
+    /// <summary>The tweaks a level offers: everything up to that level, except experimental ones (those stay in the custom list).</summary>
+    public static IReadOnlyList<TweakDefinition> Select(IEnumerable<TweakDefinition> tweaks, TweakLevel level) =>
+        tweaks.Where(tweak => tweak.Level <= level && tweak.IsProven).ToArray();
+}
 
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "type")]
 [JsonDerivedType(typeof(RegistryAction), "registry")]

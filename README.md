@@ -15,7 +15,7 @@ Execute `NOVAIS boost.exe` (pede administrador). O menu tem:
 | 4 | Jogos & Streaming | Detecta os jogos, dicas por jogo, GPU dedicada e QoS por jogo, codificador do OBS |
 | 5 | Process Guardian | Prioridades automáticas durante o jogo, processos inúteis, programas na inicialização |
 | 6 | Cronogramas | Tarefas automáticas: reaplicar ajustes, limpeza semanal, SSD, saúde mensal |
-| 7 | Benchmark | Latência de drivers (DPC/ISR) e FPS/1% low com PresentMon, antes × depois |
+| 7 | Benchmark | Carga de DPC/ISR (%) e FPS/1% low com PresentMon, antes × depois |
 | 8 | Reverter / Backups | Desfaz tudo o que foi aplicado |
 | 9 | Rede & Latência | Ping, jitter, perda, bufferbloat, DNS mais rápido, ajustes da placa de rede |
 
@@ -35,8 +35,24 @@ NOVAIS boost.exe --versao
   em `C:\ProgramData\NOVAIS boost\backups`.
 - Tudo é simulado e mostrado antes de aplicar. Um ajuste que falha no meio é desfeito na hora.
 - Não desliga Secure Boot, TPM, assinatura de drivers nem o Defender, e não injeta nada em jogos
-  (seguro para Vanguard, FACEIT, EAC, BattlEye e Ricochet).
+  (Vanguard, FACEIT, EAC, BattlEye e Ricochet). O nível 3 desliga a Integridade de memória (HVCI), que a Riot
+  pode exigir de algumas contas: com o Valorant instalado, a revisão mostra um aviso antes de aplicar.
+- Os níveis só têm ajustes com efeito documentado ou medido. Os experimentais ficam em "Ajustes individuais".
 - Logs diários em `C:\ProgramData\NOVAIS boost\logs`.
+
+## Configurações
+
+Arquivo opcional `C:\ProgramData\NOVAIS boost\settings.json` (só administradores podem alterar a pasta):
+
+```json
+{ "guardian": { "gamePriority": "aboveNormal" } }
+```
+
+| Opção | Valores | Padrão |
+|---|---|---|
+| `guardian.gamePriority` | `aboveNormal` ou `high` | `aboveNormal` (prioridade "Acima do normal" para o jogo) |
+
+Um arquivo inválido é ignorado (com aviso no log) e o padrão é usado.
 
 ## Desenvolvimento
 
@@ -62,5 +78,23 @@ tests/                 testes xUnit (sem tocar no Windows real)
 
 Para adicionar um ajuste: crie um JSON em `data/tweaks/` seguindo o schema. O teste
 `EachSystemTargetBelongsToASingleTweak` garante que dois ajustes não disputem o mesmo valor.
+
+Todo ajuste declara o campo obrigatório `evidence`, que diz como sabemos que ele funciona:
+
+| Valor | Quando usar | Onde aparece |
+|---|---|---|
+| `measured` | Ganho provado em benchmark (antes × depois, ver F12) | Níveis e ajustes individuais |
+| `documented` | A Microsoft ou o fabricante documenta a opção e o efeito (política, opção das Configurações, painel do driver, palavra-chave NDIS) | Níveis e ajustes individuais |
+| `experimental` | Nenhum dos dois, ou na dúvida | Só em "Ajustes individuais", com o aviso "Efeito não comprovado" |
+
+O teste `LevelsOnlyContainProvenTweaks` falha se um nível (ou um perfil de hardware) incluir um ajuste `experimental`.
+Ajustes gerados no código (`DeviceTweaks.cs`, `StartupApps`, DNS) também informam a evidência.
+
+`compat.hardware` bloqueia o ajuste quando o PC não atende ao requisito. `compat.antiCheat` (`Vanguard`, `FACEIT`,
+`Easy Anti-Cheat`, `BattlEye`, `Ricochet`, `VAC`) não bloqueia: mostra um aviso na revisão quando um jogo com esse
+anti-cheat está instalado.
+
+Para renomear ou dividir um ajuste, crie ids novos e não reutilize o antigo. Os backups guardam o estado anterior de
+cada valor, então "Reverter tudo" continua funcionando com o id antigo (teste `LegacyMmcssGamingBackupStillReverts`).
 
 Guia de lançamento e checklist de testes: [docs/LANCAMENTO.md](docs/LANCAMENTO.md).

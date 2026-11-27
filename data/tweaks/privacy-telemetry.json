@@ -4,6 +4,7 @@
   "description": "Reduz a telemetria ao nível obrigatório (o mínimo permitido no Windows Pro/Home). Se já estiver em 0, é mantido.",
   "category": "Privacidade",
   "level": "safe",
+  "evidence": "documented",
   "risk": "Nenhum.",
   "requiresReboot": false,
   "compat": {

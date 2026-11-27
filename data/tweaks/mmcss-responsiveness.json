@@ -1,0 +1,38 @@
+{
+  "id": "mmcss-responsiveness",
+  "name": "Agendador multimídia: menos CPU reservada para o fundo",
+  "description": "Ajusta o agendador multimídia (MMCSS): reserva 10% da CPU para tarefas de baixa prioridade em vez de 20% (SystemResponsiveness) e tira o limite de pacotes de rede durante a reprodução de mídia (NetworkThrottlingIndex).",
+  "category": "CPU",
+  "level": "competitive",
+  "evidence": "documented",
+  "risk": "Baixo.",
+  "requiresReboot": true,
+  "compat": {
+    "hardware": [],
+    "antiCheat": []
+  },
+  "actions": [
+    {
+      "type": "registry",
+      "hive": "localMachine",
+      "path": "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile",
+      "valueName": "SystemResponsiveness",
+      "operation": "set",
+      "expected": {
+        "kind": "dword",
+        "value": 10
+      }
+    },
+    {
+      "type": "registry",
+      "hive": "localMachine",
+      "path": "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile",
+      "valueName": "NetworkThrottlingIndex",
+      "operation": "set",
+      "expected": {
+        "kind": "dword",
+        "value": -1
+      }
+    }
+  ]
+}

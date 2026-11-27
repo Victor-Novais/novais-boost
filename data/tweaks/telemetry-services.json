@@ -4,6 +4,7 @@
   "description": "Desativa o serviço de telemetria (DiagTrack) e o roteador de mensagens push (dmwappushservice).",
   "category": "Serviços",
   "level": "competitive",
+  "evidence": "documented",
   "risk": "Baixo. Diagnósticos enviados à Microsoft param.",
   "requiresReboot": true,
   "compat": {

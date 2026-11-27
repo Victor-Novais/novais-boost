@@ -234,7 +234,13 @@ internal static class MaintenanceTasks
         var reapplied = 0;
         foreach (var id in active.TweakIds)
         {
-            if (!catalog.TryGetValue(id, out var tweak) || app.Engine.CheckCompatibility(tweak) is not null)
+            if (!catalog.TryGetValue(id, out var tweak))
+            {
+                // Removed or renamed id (e.g. "mmcss-gaming" before F11): never reapplied, still undone by Reverter tudo.
+                app.Log.Info($"Ajuste {id} não existe mais no catálogo; não é reaplicado, mas continua no backup para reverter.");
+                continue;
+            }
+            if (!tweak.IsProven || app.Engine.CheckCompatibility(tweak) is not null)
                 continue;
             if (app.Engine.Detect(tweak).Count == 0)
                 continue;

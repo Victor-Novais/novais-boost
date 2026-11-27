@@ -4,6 +4,7 @@
   "description": "Para de usar seus dados de diagnóstico para anúncios e dicas personalizadas.",
   "category": "Privacidade",
   "level": "safe",
+  "evidence": "documented",
   "risk": "Nenhum.",
   "requiresReboot": false,
   "compat": {

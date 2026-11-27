@@ -159,7 +159,8 @@ internal sealed class ConsoleUi
         IReadOnlyList<TweakDefinition> all = [];
         AnsiConsole.Status().Spinner(Spinner.Known.Dots).Start("Analisando hardware, dispositivos e jogos...", _ => all = _app.AllTweaks);
         // Per-machine tweaks for specific screens (DNS, startup apps) are offered there, not in the levels.
-        return all.Where(tweak => tweak.Level <= level).ToArray();
+        // Experimental tweaks are never part of a level: they stay in "Ajustes individuais".
+        return TweakLevels.Select(all, level);
     }
 
     /// <summary>Read-only preview of a level, used by the --simular command line option.</summary>
@@ -169,7 +170,7 @@ internal sealed class ConsoleUi
         DrawSkipped(skipped);
         AnsiConsole.MarkupLine($"[green]{alreadyApplied} ajuste(s) já aplicados.[/]");
         if (pending.Count > 0)
-            DrawPending(pending);
+            DrawPending(pending, AntiCheatWarnings(pending));
         foreach (var (tweak, changes) in pending)
         {
             AnsiConsole.MarkupLine($"[bold]{Markup.Escape(tweak.Name)}[/]");
@@ -190,9 +191,10 @@ internal sealed class ConsoleUi
             return;
         }
 
+        var warnings = AntiCheatWarnings(pending);
         while (true)
         {
-            DrawPending(pending);
+            DrawPending(pending, warnings);
             AnsiConsole.MarkupLine($"{Item("A", "Aplicar todos")}   {Item("P", "Personalizar (tirar itens)")}   {Item("D", "Ver detalhes")}   {Item(0, "Voltar")}");
             switch (ReadChoice()?.ToUpperInvariant())
             {
@@ -297,7 +299,21 @@ internal sealed class ConsoleUi
         _app.Refresh();
     }
 
-    private static void DrawPending(List<(TweakDefinition Tweak, IReadOnlyList<SettingChange> Changes)> pending)
+    /// <summary>Tweak id → warning, for tweaks whose "compat.antiCheat" matches a game installed on this PC.</summary>
+    private Dictionary<string, string> AntiCheatWarnings(List<(TweakDefinition Tweak, IReadOnlyList<SettingChange> Changes)> pending)
+    {
+        var warnings = new Dictionary<string, string>(StringComparer.Ordinal);
+        if (!pending.Any(item => item.Tweak.Compat.AntiCheat.Length > 0))
+            return warnings;
+        var installed = _app.Games.Select(game => game.Game).ToArray();
+        foreach (var (tweak, _) in pending)
+            if (Compatibility.AntiCheatWarning(tweak.Compat, installed) is { } warning)
+                warnings[tweak.Id] = warning;
+        return warnings;
+    }
+
+    private static void DrawPending(List<(TweakDefinition Tweak, IReadOnlyList<SettingChange> Changes)> pending,
+        IReadOnlyDictionary<string, string> warnings)
     {
         var table = new Table().Border(TableBorder.Rounded).BorderColor(new Color(124, 58, 237))
             .AddColumn(new TableColumn("#").RightAligned()).AddColumn("Nível").AddColumn("Categoria").AddColumn("Ajuste")
@@ -309,11 +325,16 @@ internal sealed class ConsoleUi
                 (index + 1).ToString(CultureInfo.InvariantCulture),
                 tweak.Level switch { TweakLevel.Safe => "[green]1[/]", TweakLevel.Competitive => "[yellow]2[/]", _ => "[red]3[/]" },
                 Markup.Escape(tweak.Category),
-                $"{Markup.Escape(tweak.Name)}\n[grey]Risco: {Markup.Escape(tweak.Risk)}[/]",
+                $"{Markup.Escape(tweak.Name)}\n[grey]Risco: {Markup.Escape(tweak.Risk)}[/]" +
+                    (tweak.IsProven ? "" : "\n[yellow]Efeito não comprovado (experimental)[/]") +
+                    (warnings.ContainsKey(tweak.Id) ? "\n[bold yellow]⚠ Aviso de anti-cheat abaixo[/]" : ""),
                 changes.Count.ToString(CultureInfo.InvariantCulture),
                 tweak.RequiresReboot ? "[yellow]sim[/]" : "não");
         }
         AnsiConsole.Write(table);
+        foreach (var (tweak, _) in pending)
+            if (warnings.TryGetValue(tweak.Id, out var warning))
+                AnsiConsole.MarkupLine($"[bold yellow]⚠ {Markup.Escape(tweak.Name)}:[/] [yellow]{Markup.Escape(warning)}[/]");
     }
 
     private static void DrawSkipped(List<(TweakDefinition Tweak, string Reason)> skipped)
@@ -326,7 +347,10 @@ internal sealed class ConsoleUi
     {
         var tweaks = _app.AllTweaks.OrderBy(tweak => tweak.Level).ThenBy(tweak => tweak.Category, StringComparer.CurrentCulture).ToArray();
         for (var index = 0; index < tweaks.Length; index++)
-            AnsiConsole.MarkupLine($"{Item(index + 1, tweaks[index].Name)} [grey]({Markup.Escape(tweaks[index].Category)}, nível {(int)tweaks[index].Level + 1})[/]");
+            AnsiConsole.MarkupLine($"{Item(index + 1, tweaks[index].Name)} [grey]({Markup.Escape(tweaks[index].Category)}, nível {(int)tweaks[index].Level + 1})[/]" +
+                (tweaks[index].IsProven ? "" : " [yellow]experimental · efeito não comprovado[/]"));
+        if (tweaks.Any(tweak => !tweak.IsProven))
+            AnsiConsole.MarkupLine("[grey]Ajustes experimentais não entram nos níveis: só são aplicados se você escolher aqui.[/]");
         AnsiConsole.MarkupLine(Item(0, "Voltar"));
         AnsiConsole.Write("Números dos ajustes (ex.: 1 4 7): ");
         var chosen = (Console.ReadLine() ?? "").Split([' ', ',', ';'], StringSplitOptions.RemoveEmptyEntries)

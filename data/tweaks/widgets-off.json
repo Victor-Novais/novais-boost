@@ -4,6 +4,7 @@
   "description": "Remove o painel de Widgets (notícias e clima), que roda em segundo plano consumindo RAM e rede.",
   "category": "Sistema",
   "level": "safe",
+  "evidence": "documented",
   "risk": "Baixo. O painel de Widgets deixa de existir.",
   "requiresReboot": false,
   "compat": {

@@ -97,6 +97,9 @@ internal sealed class Views(AppServices app, ConsoleUi ui)
         var guardian = Core.Schedules.Find("guardian");
         var active = TaskSchedulerService.IsRegistered(guardian);
         AnsiConsole.MarkupLine($"Início automático com o Windows: {(active ? "[green]ligado[/]" : "[grey]desligado[/]")}");
+        var priority = app.Settings.GuardianOrDefault.GamePriority;
+        AnsiConsole.MarkupLine($"Prioridade do jogo: [bold]{(priority == PriorityLevel.High ? "Alta" : "Acima do normal")}[/] " +
+            $"[grey](para mudar: \"guardian\": {{ \"gamePriority\": \"high\" }} em {Markup.Escape(Path.Combine(app.DataDirectory, AppSettings.FileName))})[/]");
         AnsiConsole.MarkupLine(ConsoleUi.Item(1, "Ver processos que gastam recursos à toa"));
         AnsiConsole.MarkupLine(ConsoleUi.Item(2, "Programas que abrem com o Windows"));
         AnsiConsole.MarkupLine(ConsoleUi.Item(3, "Rodar o Guardian agora nesta janela (Ctrl+C para parar)"));
@@ -299,14 +302,14 @@ internal sealed class Views(AppServices app, ConsoleUi ui)
     // ------------------------------------------------------------------ [7] Benchmark
     public void Benchmark()
     {
-        AnsiConsole.MarkupLine(ConsoleUi.Item(1, "Latência do sistema (DPC/ISR e timer) — 20 segundos"));
+        AnsiConsole.MarkupLine(ConsoleUi.Item(1, "Carga de DPC/ISR (%) e resolução do timer — 20 segundos"));
         AnsiConsole.MarkupLine(ConsoleUi.Item(2, "Capturar FPS de um jogo (PresentMon)"));
         AnsiConsole.MarkupLine(ConsoleUi.Item(3, "Comparar antes × depois"));
         AnsiConsole.MarkupLine(ConsoleUi.Item(0, "Voltar"));
         switch (ConsoleUi.ReadChoice())
         {
             case "1":
-                var sample = Spin("Medindo latência por 20 segundos (deixe o PC parado)...", () => LatencyProbe.Measure(TimeSpan.FromSeconds(20)));
+                var sample = Spin("Medindo a carga de DPC/ISR por 20 segundos (deixe o PC parado)...", () => LatencyProbe.Measure(TimeSpan.FromSeconds(20)));
                 DrawLatency(sample);
                 break;
             case "2":
@@ -321,15 +324,16 @@ internal sealed class Views(AppServices app, ConsoleUi ui)
     private static void DrawLatency(LatencySample sample)
     {
         var grid = new Grid().AddColumn().AddColumn();
-        grid.AddRow("DPC (média / pico)", $"{sample.DpcPercent:0.00}% / {sample.DpcPeakPercent:0.00}%");
-        grid.AddRow("Interrupções (média / pico)", $"{sample.InterruptPercent:0.00}% / {sample.InterruptPeakPercent:0.00}%");
+        grid.AddRow("DPC, % da CPU (média / pico)", $"{sample.DpcPercent:0.00}% / {sample.DpcPeakPercent:0.00}%");
+        grid.AddRow("Interrupções (ISR), % da CPU (média / pico)", $"{sample.InterruptPercent:0.00}% / {sample.InterruptPeakPercent:0.00}%");
         grid.AddRow("DPCs por segundo", sample.DpcPerSecond.ToString("N0", CultureInfo.GetCultureInfo("pt-BR")));
         grid.AddRow("Interrupções por segundo", sample.InterruptsPerSecond.ToString("N0", CultureInfo.GetCultureInfo("pt-BR")));
         grid.AddRow("Resolução do timer", $"{sample.TimerResolutionMs:0.###} ms");
-        AnsiConsole.Write(new Panel(grid).Header("[bold] Latência do sistema [/]").BorderColor(Purple));
+        AnsiConsole.Write(new Panel(grid).Header("[bold] Carga de DPC/ISR (%) [/]").BorderColor(Purple));
+        AnsiConsole.MarkupLine("[grey]Mostra a parte da CPU gasta em DPC/ISR, não o tempo de cada driver em microssegundos.[/]");
         var findings = LatencyRules.Evaluate(sample);
         if (findings.Count == 0)
-            AnsiConsole.MarkupLine("[green]Latência de drivers saudável.[/]");
+            AnsiConsole.MarkupLine("[green]Carga de DPC/ISR saudável.[/]");
         foreach (var finding in findings)
             AnsiConsole.MarkupLine($"[yellow]{Markup.Escape(finding.Title)}[/] — {Markup.Escape(finding.Recommendation)}");
     }
@@ -470,7 +474,7 @@ internal sealed class Views(AppServices app, ConsoleUi ui)
             return;
         ui.ReviewAndApply([new TweakDefinition("dns-fastest", $"Usar o DNS {resolver.Name}",
             $"Troca o DNS de {adapter.Name} para {resolver.Primary} e {resolver.Secondary}, o mais rápido no teste.",
-            "Rede", TweakLevel.Safe, "Nenhum. Reverter volta ao DNS anterior (automático ou manual).", false, new TweakCompatibility([], []),
+            "Rede", TweakLevel.Safe, TweakEvidence.Documented, "Nenhum. Reverter volta ao DNS anterior (automático ou manual).", false, new TweakCompatibility([], []),
             [new DnsAction(id, adapter.Name, [resolver.Primary, resolver.Secondary])])]);
     }
 

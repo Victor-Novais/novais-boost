@@ -49,6 +49,10 @@ internal sealed class AppServices
         _profiles = null;
     }
 
+    /// <summary>Read on every call so a change in settings.json takes effect the next time the Guardian starts.</summary>
+    public AppSettings Settings => AppSettings.Load(DataDirectory, Log);
+
     public GuardianPolicy GuardianPolicy() => new(new ProcessCatalog(DataCatalog.Processes()),
-        DataCatalog.Games().Where(game => game.Id != "obs").SelectMany(game => game.Executables));
+        DataCatalog.Games().Where(game => game.Id != "obs").SelectMany(game => game.Executables),
+        Settings.GuardianOrDefault.GamePriority);
 }

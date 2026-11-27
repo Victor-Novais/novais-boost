@@ -4,6 +4,7 @@
   "description": "Desativa os efeitos de transparência para a conta atual. A sessão pode precisar ser reaberta.",
   "category": "Visual",
   "level": "safe",
+  "evidence": "documented",
   "risk": "Baixo. Muda a aparência do Windows.",
   "requiresReboot": false,
   "compat": { "hardware": [], "antiCheat": [] },

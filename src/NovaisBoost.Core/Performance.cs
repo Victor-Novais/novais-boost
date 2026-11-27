@@ -50,8 +50,12 @@ public static class FrameAnalysis
     public static double ChangePercent(double before, double after) => before == 0 ? 0 : (after - before) / before * 100;
 }
 
-// ---------------------------------------------------------------- System latency (F3)
+// ---------------------------------------------------------------- DPC/ISR load (F3)
 
+/// <summary>
+/// DPC/ISR load from performance counters: share of CPU time (%), not the latency of each call in microseconds.
+/// Per-driver latency in µs comes with the ETW trace (F12); until then the UI must say "Carga de DPC/ISR (%)".
+/// </summary>
 /// <param name="DpcPercent">Average share of CPU time spent in deferred procedure calls.</param>
 /// <param name="TimerResolutionMs">Current global timer resolution.</param>
 public sealed record LatencySample(double DpcPercent, double DpcPeakPercent, double InterruptPercent,
@@ -64,12 +68,12 @@ public static class LatencyRules
         var findings = new List<Finding>();
         if (sample.DpcPeakPercent >= 5 || sample.DpcPercent >= 2)
             findings.Add(new Finding("dpc-high", sample.DpcPeakPercent >= 10 ? Severity.Critical : Severity.Warning,
-                $"Carga de DPC alta: média {sample.DpcPercent:0.0}% (pico {sample.DpcPeakPercent:0.0}%)",
+                $"Carga de DPC alta (% da CPU): média {sample.DpcPercent:0.0}% (pico {sample.DpcPeakPercent:0.0}%)",
                 "Algum driver está segurando a CPU em chamadas adiadas. Isso causa travadas curtas e input lag.",
                 "Atualize drivers de rede, áudio, chipset e GPU. Desconecte dispositivos USB um a um para achar o culpado."));
         if (sample.InterruptPeakPercent >= 5 || sample.InterruptPercent >= 2)
             findings.Add(new Finding("isr-high", Severity.Warning,
-                $"Carga de interrupções alta: média {sample.InterruptPercent:0.0}% (pico {sample.InterruptPeakPercent:0.0}%)",
+                $"Carga de interrupções (ISR) alta (% da CPU): média {sample.InterruptPercent:0.0}% (pico {sample.InterruptPeakPercent:0.0}%)",
                 "Dispositivos estão gerando interrupções demais.", "Ative o modo MSI (nível Competitivo) e atualize os drivers."));
         return findings;
     }

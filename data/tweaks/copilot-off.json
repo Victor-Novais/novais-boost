@@ -4,6 +4,7 @@
   "description": "Desativa o Copilot integrado ao Windows por política.",
   "category": "Sistema",
   "level": "safe",
+  "evidence": "documented",
   "risk": "Baixo. O Copilot do sistema deixa de abrir.",
   "requiresReboot": false,
   "compat": {

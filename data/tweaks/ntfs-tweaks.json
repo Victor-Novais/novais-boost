@@ -4,6 +4,7 @@
   "description": "Para de gravar a data de último acesso de cada arquivo e de criar nomes curtos 8.3. Menos escrita em disco ao carregar jogos.",
   "category": "Armazenamento",
   "level": "competitive",
+  "evidence": "documented",
   "risk": "Baixo. Programas muito antigos que dependem de nomes 8.3 podem falhar em pastas novas.",
   "requiresReboot": true,
   "compat": {

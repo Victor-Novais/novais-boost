@@ -4,6 +4,7 @@
   "description": "Para de registrar e enviar o histórico de apps e arquivos usados.",
   "category": "Privacidade",
   "level": "safe",
+  "evidence": "documented",
   "risk": "Nenhum.",
   "requiresReboot": false,
   "compat": {

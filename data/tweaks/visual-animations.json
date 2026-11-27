@@ -4,6 +4,7 @@
   "description": "Desliga animações de minimizar e da barra de tarefas e remove o atraso dos menus. Reabra a sessão para ver o efeito.",
   "category": "Visual",
   "level": "safe",
+  "evidence": "documented",
   "risk": "Nenhum. Muda só a aparência.",
   "requiresReboot": false,
   "compat": {

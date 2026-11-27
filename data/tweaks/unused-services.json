@@ -4,6 +4,7 @@
   "description": "Desativa Fax, Mapas offline, Modo de demonstração de loja e Registro remoto. Serviços que não existem neste PC são ignorados.",
   "category": "Serviços",
   "level": "competitive",
+  "evidence": "documented",
   "risk": "Baixo. Fax e mapas offline deixam de funcionar.",
   "requiresReboot": true,
   "compat": {

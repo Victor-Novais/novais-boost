@@ -4,6 +4,7 @@
   "description": "Faz o Windows desligar de verdade. Evita drivers e memória acumulados entre sessões.",
   "category": "Energia",
   "level": "safe",
+  "evidence": "documented",
   "risk": "Baixo. O boot pode demorar alguns segundos a mais.",
   "requiresReboot": true,
   "compat": {

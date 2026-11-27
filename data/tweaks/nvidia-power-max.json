@@ -4,6 +4,7 @@
   "description": "Impede a GPU de baixar o clock entre quadros (perfil global do driver). Evita quedas de FPS em cenas leves que viram picos de frametime.",
   "category": "GPU",
   "level": "competitive",
+  "evidence": "documented",
   "risk": "Baixo. A GPU consome mais energia parada.",
   "requiresReboot": false,
   "compat": {

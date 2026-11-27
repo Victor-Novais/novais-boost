@@ -4,6 +4,7 @@
   "description": "Desativa a gravação retroativa do Game DVR para a conta atual. A Xbox Game Bar continua instalada. A sessão pode precisar ser reaberta.",
   "category": "Jogos",
   "level": "safe",
+  "evidence": "documented",
   "risk": "Baixo. A captura retroativa deixa de estar disponível enquanto o ajuste estiver ativo.",
   "requiresReboot": false,
   "compat": {

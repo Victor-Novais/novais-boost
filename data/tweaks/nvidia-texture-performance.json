@@ -4,6 +4,7 @@
   "description": "Usa a filtragem de textura mais leve do driver (perfil global). Ganho pequeno de FPS com perda visual mínima.",
   "category": "GPU",
   "level": "competitive",
+  "evidence": "documented",
   "risk": "Baixo. Texturas um pouco menos nítidas em ângulos oblíquos.",
   "requiresReboot": false,
   "compat": {

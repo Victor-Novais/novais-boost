@@ -131,7 +131,7 @@ public static class Diagnostics
                     $"{gpu.Name} sem Resizable BAR/SAM ativo.", "Ative Above 4G Decoding e Resizable BAR na BIOS (CSM desligado)."));
         }
 
-        if (discrete.Length > 0 && pc.Flags.HardwareGpuScheduling == false)
+        if (discrete.Any(Compatibility.SupportsHags) && pc.Flags.HardwareGpuScheduling == false)
             findings.Add(new Finding("hags", Severity.Info, "Agendamento de GPU acelerado por hardware desligado",
                 "O HAGS é necessário para Frame Generation (DLSS 3/4, FSR 3) e reduz a carga da CPU.",
                 "Será ligado na otimização universal para GPUs compatíveis."));

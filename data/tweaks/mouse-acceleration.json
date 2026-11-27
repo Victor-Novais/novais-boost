@@ -4,6 +4,7 @@
   "description": "Desativa Aprimorar precisão do ponteiro para a conta atual. Encerre e reabra a sessão do Windows para atualizar o ponteiro.",
   "category": "Entrada",
   "level": "safe",
+  "evidence": "documented",
   "risk": "Baixo. Altera a sensação do ponteiro no Windows.",
   "requiresReboot": false,
   "compat": { "hardware": [], "antiCheat": [] },

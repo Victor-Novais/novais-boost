@@ -4,6 +4,7 @@
   "description": "Dá prioridade de CPU/GPU ao jogo em primeiro plano e segura o Windows Update durante a partida.",
   "category": "Jogos",
   "level": "safe",
+  "evidence": "documented",
   "risk": "Nenhum. É um recurso padrão do Windows.",
   "requiresReboot": false,
   "compat": {

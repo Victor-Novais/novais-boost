@@ -4,6 +4,7 @@
   "description": "Impede o Windows de usar sua internet para enviar atualizações a outros PCs, o que pode causar lag no jogo.",
   "category": "Rede",
   "level": "safe",
+  "evidence": "documented",
   "risk": "Nenhum. As atualizações continuam vindo da Microsoft.",
   "requiresReboot": false,
   "compat": {

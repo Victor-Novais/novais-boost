@@ -4,6 +4,7 @@
   "description": "Impede o Recall de tirar capturas de tela contínuas, que custam disco, CPU e privacidade.",
   "category": "Privacidade",
   "level": "safe",
+  "evidence": "documented",
   "risk": "Nenhum.",
   "requiresReboot": false,
   "compat": {

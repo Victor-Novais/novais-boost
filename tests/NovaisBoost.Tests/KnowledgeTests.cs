@@ -91,7 +91,7 @@ public sealed class KnowledgeTests
             new ProcessSample(8, "vgc", PriorityLevel.Normal, 2)
         ]).ToDictionary(change => change.Name, change => change.To);
 
-        Assert.Equal(PriorityLevel.High, changes["cs2"]);
+        Assert.Equal(PriorityLevel.AboveNormal, changes["cs2"]);
         Assert.Equal(PriorityLevel.BelowNormal, changes["msedge"]);
         Assert.Equal(PriorityLevel.AboveNormal, changes["obs64"]);
         Assert.Equal(PriorityLevel.BelowNormal, changes["UnknownTool"]);
@@ -99,6 +99,87 @@ public sealed class KnowledgeTests
         Assert.DoesNotContain("svchost", changes.Keys);
         Assert.DoesNotContain("UnknownIdle", changes.Keys);
         Assert.DoesNotContain("vgc", changes.Keys);
+    }
+
+    [Fact]
+    public void GuardianGamePriorityDefaultsToAboveNormal()
+    {
+        var policy = new GuardianPolicy(new ProcessCatalog(DataCatalog.Processes()), ["cs2.exe"]);
+        Assert.Equal(PriorityLevel.AboveNormal, policy.GamePriority);
+        var change = Assert.Single(policy.Plan([new ProcessSample(1, "cs2", PriorityLevel.Normal, 40)]));
+        Assert.Equal(PriorityLevel.AboveNormal, change.To);
+        // Already at (or above) the target: left alone, never lowered.
+        Assert.Empty(policy.Plan([new ProcessSample(1, "cs2", PriorityLevel.AboveNormal, 40)]));
+        Assert.Empty(policy.Plan([new ProcessSample(1, "cs2", PriorityLevel.High, 40)]));
+    }
+
+    [Fact]
+    public void GuardianHighModeRaisesTheGameToHigh()
+    {
+        var policy = new GuardianPolicy(new ProcessCatalog(DataCatalog.Processes()), ["cs2.exe"], PriorityLevel.High);
+        var changes = policy.Plan(
+        [
+            new ProcessSample(1, "cs2", PriorityLevel.AboveNormal, 40),
+            new ProcessSample(2, "obs64", PriorityLevel.Normal, 5),
+            new ProcessSample(3, "msedge", PriorityLevel.Normal, 1)
+        ]).ToDictionary(change => change.Name, change => change.To);
+        Assert.Equal(PriorityLevel.High, changes["cs2"]);
+        Assert.Equal(PriorityLevel.AboveNormal, changes["obs64"]);
+        Assert.Equal(PriorityLevel.BelowNormal, changes["msedge"]);
+    }
+
+    [Theory]
+    [InlineData(PriorityLevel.Normal)]
+    [InlineData(PriorityLevel.Idle)]
+    public void GuardianRejectsOtherGamePriorities(PriorityLevel priority) =>
+        Assert.Throws<ArgumentOutOfRangeException>(() => new GuardianPolicy(new ProcessCatalog([]), ["cs2.exe"], priority));
+
+    [Theory]
+    [InlineData("{}", PriorityLevel.AboveNormal)]
+    [InlineData("""{ "guardian": {} }""", PriorityLevel.AboveNormal)]
+    [InlineData("""{ "guardian": { "gamePriority": "aboveNormal" } }""", PriorityLevel.AboveNormal)]
+    [InlineData("""{ "guardian": { "gamePriority": "high" } }""", PriorityLevel.High)]
+    public void SettingsReadTheGuardianGamePriority(string json, PriorityLevel expected) =>
+        Assert.Equal(expected, AppSettings.Parse(json).GuardianOrDefault.GamePriority);
+
+    [Theory]
+    [InlineData("""{ "guardian": { "gamePriority": "realTime" } }""")]
+    [InlineData("""{ "guardian": { "gamePriority": "normal" } }""")]
+    [InlineData("""{ "guardian": { "gamePriority": 4 } }""")]
+    [InlineData("""{ "guardian": { "priority": "high" } }""")]
+    [InlineData("{ invalid")]
+    public void InvalidSettingsAreRejected(string json) => Assert.Throws<InvalidDataException>(() => AppSettings.Parse(json));
+
+    [Fact]
+    public void MissingOrInvalidSettingsFileFallsBackToAboveNormal()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), "NovaisBoost.Tests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        try
+        {
+            var log = new ListLog();
+            Assert.Equal(PriorityLevel.AboveNormal, AppSettings.Load(directory, log).GuardianOrDefault.GamePriority);
+            Assert.Empty(log.Messages);
+
+            File.WriteAllText(Path.Combine(directory, AppSettings.FileName), """{ "guardian": { "gamePriority": "realTime" } }""");
+            Assert.Equal(PriorityLevel.AboveNormal, AppSettings.Load(directory, log).GuardianOrDefault.GamePriority);
+            Assert.Single(log.Messages);
+
+            File.WriteAllText(Path.Combine(directory, AppSettings.FileName), """{ "guardian": { "gamePriority": "high" } }""");
+            Assert.Equal(PriorityLevel.High, AppSettings.Load(directory, log).GuardianOrDefault.GamePriority);
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
+    }
+
+    private sealed class ListLog : IActionLog
+    {
+        public List<string> Messages { get; } = [];
+        public void Info(string message) => Messages.Add(message);
+        public void Warning(string message) => Messages.Add(message);
+        public void Error(string message) => Messages.Add(message);
     }
 
     [Fact]
@@ -169,6 +250,19 @@ public sealed class KnowledgeTests
     {
         Assert.Empty(LatencyRules.Evaluate(new LatencySample(0.2, 0.8, 0.1, 0.4, 1000, 5000, 1)));
         Assert.Contains(LatencyRules.Evaluate(new LatencySample(3, 12, 0.1, 0.4, 1000, 5000, 1)), finding => finding.Severity == Severity.Critical);
+    }
+
+    [Fact]
+    public void DpcFindingsReportCpuLoadNotMicroseconds()
+    {
+        var findings = LatencyRules.Evaluate(new LatencySample(3, 12, 3, 12, 1000, 5000, 1));
+        Assert.Equal(2, findings.Count);
+        Assert.All(findings, finding =>
+        {
+            Assert.Contains("% da CPU", finding.Title);
+            Assert.DoesNotContain("µs", finding.Title + finding.Detail + finding.Recommendation);
+            Assert.DoesNotContain("Latência", finding.Title);
+        });
     }
 
     [Fact]

@@ -4,6 +4,7 @@
   "description": "Desativa o serviço de indexação (WSearch), que lê o disco em segundo plano.",
   "category": "Serviços",
   "level": "extreme",
+  "evidence": "documented",
   "risk": "Médio. A busca do Iniciar e do Explorer fica mais lenta.",
   "requiresReboot": true,
   "compat": {

@@ -1,9 +1,10 @@
 {
   "id": "priority-separation",
   "name": "Prioridade para o programa em primeiro plano",
-  "description": "Dá fatias de tempo de CPU mais curtas e com mais prioridade para o jogo em foco (Win32PrioritySeparation 0x26).",
+  "description": "Dá fatias de tempo de CPU mais curtas e com mais prioridade para o jogo em foco (Win32PrioritySeparation 0x26). No Windows cliente, o padrão (2) já dá prioridade ao primeiro plano de forma equivalente; o ganho não foi comprovado.",
   "category": "CPU",
   "level": "competitive",
+  "evidence": "experimental",
   "risk": "Baixo. Tarefas em segundo plano ficam um pouco mais lentas.",
   "requiresReboot": false,
   "compat": {

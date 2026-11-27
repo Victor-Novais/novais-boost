@@ -20,11 +20,26 @@ Faça um snapshot da VM antes. Para cada item, confira o log em `C:\ProgramData\
 - [ ] Interromper o PC (desligar a VM) no meio de um lote → ao abrir, "Reverter tudo" conclui a reversão.
 - [ ] Cronogramas → Ativar todas → as 5 tarefas aparecem em `\NOVAIS boost` no Agendador; "Executar" em cada uma
       termina com código 0 e sem janela aparecendo.
-- [ ] Guardian: abrir um jogo → log mostra jogo em High e navegador em BelowNormal; fechar o jogo → prioridades voltam.
+- [ ] Guardian: abrir um jogo → log mostra o jogo em **AboveNormal** e o navegador em BelowNormal; fechar o jogo → prioridades voltam.
+- [ ] Guardian com `{ "guardian": { "gamePriority": "high" } }` em `C:\ProgramData\NOVAIS boost\settings.json` → jogo em High;
+      com um valor inválido (ex.: `"realTime"`) → jogo em AboveNormal e aviso no log.
 - [ ] Limpar agora: mostra os tamanhos, apaga só arquivos antigos, não apaga nada fora das pastas listadas.
-- [ ] Benchmark de latência e de FPS (com PresentMon na pasta `tools`) geram resultados e a comparação antes × depois.
+- [ ] Benchmark de carga de DPC/ISR (%) e de FPS (com PresentMon na pasta `tools`) geram resultados e a comparação antes × depois.
+      Nenhuma tela mostra latência em microssegundos.
 - [ ] Rede: teste de ping e bufferbloat terminam; DNS mais rápido → aplicar → reverter volta ao DNS anterior (DHCP).
 - [ ] Jogos com anti-cheat (Valorant, Fortnite, CS2/FACEIT, COD) abrem e jogam normalmente com o nível 3 aplicado.
+      Se o Valorant mostrar "VAN: RESTRICTION" (HVCI), Reverter tudo religa a Integridade de memória e o jogo volta a abrir.
+- [ ] Com o Valorant instalado, a revisão do nível 3 mostra o aviso de Vanguard no ajuste "Desligar VBS / Integridade de memória".
+      Sem o Valorant, o aviso não aparece.
+- [ ] `--simular` e `--simular --extremo` não listam ajustes experimentais. Em Ajustes individuais, eles aparecem marcados
+      "experimental · efeito não comprovado" e a revisão mostra "Efeito não comprovado".
+- [ ] GPU GTX (ou RX 5000): o nível 1 mostra "Ligar o agendamento de GPU por hardware" como "não se aplica". RTX 30+ recebe o ajuste.
+- [ ] Plano na bateria (desktop com no-break que informa bateria ao Windows): com o plano NOVAIS boost ativo,
+      `powercfg /q 4e6f7661-6973-426f-6f73-740000000001 54533251-82be-4824-96c1-47b60b740d00` mostra estado mínimo
+      100% na tomada e 5% na bateria, e boost 2 (agressivo) na tomada e 4 (eficiente agressivo) na bateria.
+      A suspensão seletiva USB fica desligada na tomada e ligada na bateria.
+- [ ] Com um backup antigo que contém `mmcss-gaming`, Reverter tudo devolve os valores do MMCSS e a tarefa "reaplicar"
+      não o reaplica (registra no log).
 
 ## 3. Assinatura de código (evita alerta do SmartScreen e falso positivo de antivírus)
 

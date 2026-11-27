@@ -4,6 +4,7 @@
   "description": "Impede apps da Microsoft Store de rodar em segundo plano.",
   "category": "Sistema",
   "level": "competitive",
+  "evidence": "documented",
   "risk": "Médio. Apps da Store (como Phone Link) param de notificar com a janela fechada.",
   "requiresReboot": false,
   "compat": {

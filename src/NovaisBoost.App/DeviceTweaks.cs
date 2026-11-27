@@ -71,7 +71,7 @@ internal sealed class DeviceTweaks(IActionLog log)
         return actions.Count == 0 ? null : new TweakDefinition("msi-mode", "Interrupções em modo MSI",
             $"Coloca em modo MSI (Message Signaled Interrupts) os dispositivos que suportam e ainda não usam: {string.Join(", ", names)}. " +
             "Interrupções MSI têm menos latência e não compartilham linha com outros dispositivos.",
-            "Latência", TweakLevel.Competitive, "Baixo. Se algum dispositivo falhar após reiniciar, use Reverter tudo.", true, None, actions.ToArray());
+            "Latência", TweakLevel.Competitive, TweakEvidence.Documented, "Baixo. Se algum dispositivo falhar após reiniciar, use Reverter tudo.", true, None, actions.ToArray());
     }
 
     private TweakDefinition? NicKeywords(string id, string name, string description, TweakLevel level,
@@ -111,7 +111,7 @@ internal sealed class DeviceTweaks(IActionLog log)
             }
         }
         return actions.Count == 0 ? null : new TweakDefinition(id, name, $"{description} Adaptadores: {string.Join(", ", adapters)}.",
-            "Rede", level, "Baixo. O adaptador é reiniciado no próximo boot.", true,
+            "Rede", level, TweakEvidence.Documented, "Baixo. O adaptador é reiniciado no próximo boot.", true,
             level == TweakLevel.Competitive ? new TweakCompatibility(["desktop"], []) : None, actions.ToArray());
     }
 
@@ -126,7 +126,7 @@ internal sealed class DeviceTweaks(IActionLog log)
         return new TweakDefinition("games-gpu-preference", "Jogos e OBS sempre na GPU dedicada",
             $"Fixa {string.Join(", ", games.Select(game => game.Game.Name).Distinct())} na GPU de alto desempenho " +
             "(Configurações > Sistema > Tela > Gráficos). Evita o jogo rodar na GPU integrada.",
-            "Jogos", TweakLevel.Safe, "Nenhum.", false, new TweakCompatibility(["gpu-discrete"], []), actions);
+            "Jogos", TweakLevel.Safe, TweakEvidence.Documented, "Nenhum.", false, new TweakCompatibility(["gpu-discrete"], []), actions);
     }
 
     private static TweakDefinition? Qos(IReadOnlyList<InstalledGame> games)
@@ -151,7 +151,7 @@ internal sealed class DeviceTweaks(IActionLog log)
         }
         return new TweakDefinition("games-qos", "Prioridade de rede (QoS) para os jogos",
             "Marca os pacotes dos jogos com DSCP 46 (tráfego em tempo real). Roteadores com QoS/WMM priorizam esses pacotes.",
-            "Rede", TweakLevel.Competitive, "Nenhum. Roteadores sem QoS ignoram a marcação.", true, None, actions.ToArray());
+            "Rede", TweakLevel.Competitive, TweakEvidence.Documented, "Nenhum. Roteadores sem QoS ignoram a marcação.", true, None, actions.ToArray());
     }
 
     private static RegistryAction Dword(RegistryHiveName hive, string path, string name, int value) =>

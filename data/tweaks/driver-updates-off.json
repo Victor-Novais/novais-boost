@@ -4,6 +4,7 @@
   "description": "Impede o Windows Update de substituir o driver da GPU e outros drivers que você instalou.",
   "category": "Atualizações",
   "level": "competitive",
+  "evidence": "documented",
   "risk": "Médio. Você passa a atualizar drivers manualmente (o NOVAIS boost avisa quando houver driver novo).",
   "requiresReboot": false,
   "compat": {

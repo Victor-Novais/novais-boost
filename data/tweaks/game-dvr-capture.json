@@ -4,6 +4,7 @@
   "description": "Desliga a gravação de clipes do Windows (Win+Alt+R). A Xbox Game Bar continua instalada e funcionando.",
   "category": "Jogos",
   "level": "safe",
+  "evidence": "documented",
   "risk": "Baixo. Clipes pelo Windows deixam de funcionar; use OBS ou o app da GPU.",
   "requiresReboot": false,
   "compat": {

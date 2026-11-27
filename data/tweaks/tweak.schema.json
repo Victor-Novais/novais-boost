@@ -9,6 +9,7 @@
     "description",
     "category",
     "level",
+    "evidence",
     "risk",
     "requiresReboot",
     "compat",
@@ -33,6 +34,14 @@
         "safe",
         "competitive",
         "extreme"
+      ]
+    },
+    "evidence": {
+      "description": "measured: proven in a benchmark; documented: official Microsoft/vendor documentation; experimental: neither (custom list only, never in a level).",
+      "enum": [
+        "measured",
+        "documented",
+        "experimental"
       ]
     },
     "risk": {
@@ -63,9 +72,17 @@
           }
         },
         "antiCheat": {
+          "description": "Anti-cheats that may refuse the tweak. Shown as a warning at review when a game using one is installed.",
           "type": "array",
           "items": {
-            "$ref": "#/$defs/nonblank"
+            "enum": [
+              "Vanguard",
+              "FACEIT",
+              "Easy Anti-Cheat",
+              "BattlEye",
+              "Ricochet",
+              "VAC"
+            ]
           },
           "uniqueItems": true
         }

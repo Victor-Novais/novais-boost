@@ -188,7 +188,7 @@ internal static class StartupApps
     public static TweakDefinition DisableTweak(IReadOnlyList<StartupEntry> entries) => new(
         "startup-disable", "Desativar programas na inicialização",
         $"Impede que {string.Join(", ", entries.Select(entry => entry.Name))} abram junto com o Windows (igual ao Gerenciador de Tarefas).",
-        "Inicialização", TweakLevel.Safe, "Nenhum. Os programas continuam instalados.", false, new TweakCompatibility([], []),
+        "Inicialização", TweakLevel.Safe, TweakEvidence.Documented, "Nenhum. Os programas continuam instalados.", false, new TweakCompatibility([], []),
         entries.Select(entry => (TweakAction)new RegistryAction(entry.Hive, entry.ApprovedKey, entry.Name, RegistryOperation.Set,
             RegistryValue.From(RegistryValueType.Binary, new[] { 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }))).ToArray());
 

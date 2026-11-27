@@ -273,6 +273,65 @@ public sealed class TweakEngineTests : IDisposable
     }
 
     [Fact]
+    public void AntiCheatListAloneDoesNotBlockApplication()
+    {
+        var tweak = Tweak("anti-cheat-warning", RegistrySet("Value")) with { Compat = new([], ["Vanguard"]) };
+        Assert.Null(Engine.CheckCompatibility(tweak));
+        Engine.Apply(tweak, dryRun: false);
+        Assert.Equal(1, _windows.Writes);
+    }
+
+    [Fact]
+    public void LegacyMmcssGamingBackupStillReverts()
+    {
+        // A backup written before F11, when "mmcss-gaming" was a single tweak (state.json as saved by v1).
+        const string profile = @"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile";
+        string Entry(string path, string name, string expected, string before) => $$"""
+            { "action": { "type": "registry", "hive": "localMachine", "path": {{System.Text.Json.JsonSerializer.Serialize(path)}}, "valueName": "{{name}}",
+                          "operation": "set", "expected": {{expected}}, "accept": null },
+              "before": { "type": "registry", "keyExists": true, "value": {{before}}, "native": null, "missingSegments": 0 } }
+            """;
+        static string Dword(int value) => $$"""{ "kind": "dword", "value": {{value}} }""";
+        static string Text(string value) => $$"""{ "kind": "string", "value": "{{value}}" }""";
+        var games = profile + @"\Tasks\Games";
+        var settings = string.Join(",", Entry(profile, "SystemResponsiveness", Dword(10), Dword(20)),
+            Entry(profile, "NetworkThrottlingIndex", Dword(-1), Dword(10)),
+            Entry(games, "Priority", Dword(6), Dword(2)),
+            Entry(games, "Scheduling Category", Text("High"), Text("Medium")),
+            Entry(games, "SFIO Priority", Text("High"), Text("Normal")));
+        var folder = Path.Combine(_directory, "backups", $"20261101-120000000-{Owner}-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(folder);
+        File.WriteAllText(Path.Combine(folder, "state.json"), $$"""
+            { "version": 1, "owner": "{{Owner}}", "restorePointNumber": 7, "pending": false, "closed": false,
+              "tweaks": [ { "id": "mmcss-gaming", "settings": [ {{settings}} ] } ] }
+            """);
+
+        var catalog = TweakCatalog.LoadEmbedded();
+        var split = catalog.Where(tweak => tweak.Id is "mmcss-responsiveness" or "mmcss-games-task").ToArray();
+        Assert.Equal(2, split.Length);
+        Assert.DoesNotContain(catalog, tweak => tweak.Id == "mmcss-gaming");
+        foreach (var action in split.SelectMany(tweak => tweak.Actions).Cast<RegistryAction>())
+            _windows.Seed(action, action.Expected!);
+        Assert.All(split, tweak => Assert.Empty(Engine.Detect(tweak)));
+        Assert.Equal(["mmcss-gaming"], Snapshots.GetActive()!.TweakIds);
+
+        Assert.Equal(5, Engine.RevertAll(dryRun: false).Count);
+
+        int? Read(string name) => split.SelectMany(tweak => tweak.Actions).Cast<RegistryAction>()
+            .Where(action => action.ValueName == name).Select(action => _windows.Read(action).Value)
+            .Select(value => value?.Kind == RegistryValueType.Dword ? value.Value.GetInt32() : (int?)null).Single();
+        string? ReadText(string name) => split.SelectMany(tweak => tweak.Actions).Cast<RegistryAction>()
+            .Where(action => action.ValueName == name).Select(action => _windows.Read(action).Value?.Value.GetString()).Single();
+        Assert.Equal(20, Read("SystemResponsiveness"));
+        Assert.Equal(10, Read("NetworkThrottlingIndex"));
+        Assert.Equal(2, Read("Priority"));
+        Assert.Equal(8, Read("GPU Priority")); // was already 8 before: never captured, left as is
+        Assert.Equal("Medium", ReadText("Scheduling Category"));
+        Assert.Equal("Normal", ReadText("SFIO Priority"));
+        Assert.Null(Snapshots.GetActive());
+    }
+
+    [Fact]
     public void ScheduledTaskRoundTripsAndMissingTasksAreSkipped()
     {
         _windows.Tasks[@"\Telemetry"] = true;
@@ -437,7 +496,7 @@ public sealed class TweakEngineTests : IDisposable
         new(RegistryHiveName.CurrentUser, RegistryPath, name, RegistryOperation.Set, RegistryValue.From(RegistryValueType.Dword, 0));
 
     private static TweakDefinition Tweak(string id, params TweakAction[] actions) =>
-        new(id, "Ajuste", "Descrição", "Teste", TweakLevel.Safe, "Baixo", false, new([], []), actions);
+        new(id, "Ajuste", "Descrição", "Teste", TweakLevel.Safe, TweakEvidence.Documented, "Baixo", false, new([], []), actions);
 
     private static string Render(RegistryState state) => $"{state.KeyExists}/{state.Value?.Kind}/{state.Value?.Value.GetRawText()}";
 

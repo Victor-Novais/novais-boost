@@ -51,10 +51,9 @@ public sealed class TweakEngine(
     }
 
     /// <summary>Null when the tweak can run on this PC; otherwise the reason it cannot.</summary>
+    /// <remarks>"compat.antiCheat" does not block: it becomes a warning at review (<see cref="Compatibility.AntiCheatWarning"/>).</remarks>
     public string? CheckCompatibility(TweakDefinition tweak)
     {
-        if (tweak.Compat.AntiCheat.Length > 0)
-            return "a verificação de anti-cheat ainda não está disponível";
         if (tweak.Compat.Hardware.Length == 0)
             return null;
         return compatibility is null ? "a verificação de hardware não está disponível" : compatibility(tweak.Compat);

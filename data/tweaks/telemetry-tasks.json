@@ -4,6 +4,7 @@
   "description": "Desativa tarefas que coletam dados de uso em segundo plano (podem gerar picos de disco e CPU durante o jogo). Tarefas que não existem nesta versão do Windows são ignoradas.",
   "category": "Privacidade",
   "level": "safe",
+  "evidence": "documented",
   "risk": "Baixo.",
   "requiresReboot": false,
   "compat": {
