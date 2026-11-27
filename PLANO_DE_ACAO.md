@@ -378,7 +378,7 @@ F0 a F14 estão concluídas; F10, F15, F16 e F17 estão parciais (ver P2.2). Ord
 
 1. **Portão de validação V** (P2.4): rodar o checklist de `docs/LANCAMENTO.md` numa VM e num PC real. F12, F14 e F16
    estão marcadas como prontas sem validação no Windows real. Manual, pode correr em paralelo com o item 2.
-2. ~~F18 — Debloat completo~~ ✅. Seguem F23, F19 e F20 (as partes que não dependem de certificado ou backend), depois o backlog P2.4.
+2. ~~F18~~ ✅ e ~~F23~~ ✅. Seguem F19 e F20 (as partes que não dependem de certificado ou backend), depois o backlog P2.4.
 3. Itens do **backlog das fases parciais** (P2.4) encaixados entre as fases, sem bloquear o roadmap.
 
 ---
@@ -769,7 +769,7 @@ Cronogramas e terminam com código 0 na VM; nenhuma tarefa troca nada sem o usu�
 | F20 Confiança e distribuição | ⏳ | |
 | F21 Base de dados opt-in | ⏳ | |
 | F22 Interface gráfica e inglês | ⏳ | |
-| F23 Manutenção v2 e lacunas | ⏳ | |
+| F23 Manutenção v2 e lacunas | ✅ | Lixeira > 30 dias pela data de exclusão dos arquivos `$I` (parser puro com teste), cache de miniaturas, Otimização de Entrega (`Delete-DeliveryOptimizationCache`), caches de navegadores e launchers com opt-in (`cleanup.*`) e só com o programa fechado. Saúde mensal com `DISM /RestoreHealth` + `sfc /scannow`. Tarefas novas `drivers` (aviso de driver de vídeo > 6 meses) e `rede` (troca de DNS só para quem já aplicou "DNS mais rápido" e com ganho ≥ 10 ms, pelo motor com backup). Fonte opcional (`pc.psuWatts`) com aviso `psu-undersized`. Teste rápido de gargalo (CPU, memória, disco) contra `data/baselines.json`. `AppSettings.Save` atômico. Pendente: valores de `baselines.json` e da tabela de fontes conferidos em PCs reais (portão V) |
 
 ## P2.3 Itens a verificar antes de implementar
 
@@ -803,7 +803,7 @@ correspondente (P2.1).
 | B5 | F15 | Trocar os fixtures de CS2 e Fortnite pelos arquivos reais e preencher `testedVersion` | Jogos instalados |
 | B6 | F16 | ADLX real: bindings SWIG, carregar `amdadlx64.dll`, validar numa Radeon | Radeon física |
 | B7 | F16 | Intel Arc via IGCL (`ControlLib.dll`), só leitura | Arc física |
-| B8 | F17 | Notificação toast do Windows para os alertas do Guardian (hoje só janela e log) | — |
+| B8 | F17 | ✅ Notificação toast do Windows (`Notifier`, AUMID registrado em HKCU) para Guardian, driver antigo e troca de DNS | Validar num PC real |
 | B9 | F17 | Medir o CPU do Guardian parado (meta < 0,1%) e registrar o número no README | PC real |
 | B10 | F10 | Certificado de assinatura e auto-update (passam para a F20) | Decisão de produto (P2.3) |
 

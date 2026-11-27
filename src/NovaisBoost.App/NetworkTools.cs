@@ -51,6 +51,12 @@ internal static class NetworkTools
     private static readonly string[] Domains =
         ["steampowered.com", "riotgames.com", "epicgames.com", "battle.net", "discord.com", "twitch.tv", "youtube.com", "google.com"];
 
+    public static TweakDefinition DnsTweak(Guid adapterId, string adapterName, (string Name, string Primary, string Secondary) resolver) =>
+        new("dns-fastest", $"Usar o DNS {resolver.Name}",
+            $"Troca o DNS de {adapterName} para {resolver.Primary} e {resolver.Secondary}, o mais rápido no teste.",
+            "Rede", TweakLevel.Safe, TweakEvidence.Documented, "Nenhum. Reverter volta ao DNS anterior (automático ou manual).", false, new TweakCompatibility([], []),
+            [new DnsAction(adapterId, adapterName, [resolver.Primary, resolver.Secondary])]);
+
     public static NetworkInterface? ActiveAdapter() => NetworkInterface.GetAllNetworkInterfaces()
         .Where(adapter => adapter.OperationalStatus == OperationalStatus.Up &&
             adapter.NetworkInterfaceType is NetworkInterfaceType.Ethernet or NetworkInterfaceType.Wireless80211 or NetworkInterfaceType.GigabitEthernet &&

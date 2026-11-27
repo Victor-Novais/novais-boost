@@ -23,18 +23,28 @@ public sealed record GuardianSettings(
     string[]? Efficiency = null,
     string[]? Ignore = null);
 
+/// <summary>Opt-in caches for the weekly cleanup (23.1). Browsers and launchers are only cleaned while closed.</summary>
+public sealed record CleanupSettings(bool Browsers = false, bool Launchers = false);
+
+public enum PsuRating { Unknown, White, Bronze, Silver, Gold, Platinum, Titanium }
+
+/// <summary>What the PC cannot report about itself (23.5): the power supply, answered optionally by the user.</summary>
+public sealed record PcSettings(int? PsuWatts = null, PsuRating PsuRating = PsuRating.Unknown);
+
 /// <summary>
 /// User options in %ProgramData%\NOVAIS boost\settings.json (folder writable only by administrators). Example:
 /// <code>{ "guardian": { "gamePriority": "high" } }</code>
 /// A missing file or field means the default; an invalid file is ignored with a warning in the log.
 /// </summary>
-public sealed record AppSettings(GuardianSettings? Guardian = null)
+public sealed record AppSettings(GuardianSettings? Guardian = null, CleanupSettings? Cleanup = null, PcSettings? Pc = null)
 {
     public const string FileName = "settings.json";
 
     public static AppSettings Default { get; } = new();
 
     public GuardianSettings GuardianOrDefault => Guardian ?? new GuardianSettings();
+    public CleanupSettings CleanupOrDefault => Cleanup ?? new CleanupSettings();
+    public PcSettings PcOrDefault => Pc ?? new PcSettings();
 
     public static AppSettings Parse(string json)
     {
@@ -50,7 +60,22 @@ public sealed record AppSettings(GuardianSettings? Guardian = null)
         }
         if (settings.GuardianOrDefault.GamePriority is not (PriorityLevel.AboveNormal or PriorityLevel.High))
             throw new InvalidDataException("guardian.gamePriority aceita só \"aboveNormal\" ou \"high\".");
+        if (settings.PcOrDefault.PsuWatts is { } watts && watts is < 200 or > 3000)
+            throw new InvalidDataException("pc.psuWatts precisa estar entre 200 e 3000.");
         return settings;
+    }
+
+    public string Serialize() => JsonSerializer.Serialize(this, TweakCatalog.JsonOptions);
+
+    /// <summary>Writes settings.json atomically (temporary file + replace), after validating it parses back.</summary>
+    public void Save(string dataDirectory)
+    {
+        var json = Serialize();
+        Parse(json);
+        var path = Path.Combine(dataDirectory, FileName);
+        var temporary = path + ".tmp";
+        File.WriteAllText(temporary, json);
+        File.Move(temporary, path, overwrite: true);
     }
 
     public static AppSettings Load(string dataDirectory, IActionLog log)

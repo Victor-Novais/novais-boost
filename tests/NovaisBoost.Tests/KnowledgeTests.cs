@@ -240,8 +240,9 @@ public sealed class KnowledgeTests
         var now = DateTime.UtcNow;
         Assert.False(CleanupTargets.IsExpired(temp, now.AddHours(-12), now));
         Assert.True(CleanupTargets.IsExpired(temp, now.AddDays(-3), now));
-        Assert.All(CleanupTargets.All.Where(target => target.Path.Contains("Cache", StringComparison.OrdinalIgnoreCase)),
+        Assert.All(CleanupTargets.All.Where(target => target.Name.Contains("shader", StringComparison.OrdinalIgnoreCase)),
             target => Assert.Equal(CleanupKind.ShaderCache, target.Kind));
+        Assert.DoesNotContain(CleanupTargets.Weekly(new CleanupSettings(true, true)), target => target.Kind == CleanupKind.ShaderCache);
         Assert.DoesNotContain(CleanupTargets.All, target => target.Path.Contains("Prefetch", StringComparison.OrdinalIgnoreCase));
     }
 

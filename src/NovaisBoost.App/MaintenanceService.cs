@@ -120,10 +120,16 @@ internal static class Cleaner
             var path = Environment.ExpandEnvironmentVariables(target.Path);
             if (path.Contains('%') || !Directory.Exists(path) || !IsSafe(path))
                 continue;
+            if (target.LockedBy?.FirstOrDefault(IsRunning) is { } running)
+            {
+                log.Info($"Limpeza: {target.Name} ignorado porque {running} está aberto.");
+                continue;
+            }
 
             int files = 0, skipped = 0;
             long bytes = 0;
-            foreach (var file in Directory.EnumerateFiles(path, "*", Walk))
+            var walk = target.Recursive ? Walk : new EnumerationOptions { IgnoreInaccessible = true, AttributesToSkip = Walk.AttributesToSkip };
+            foreach (var file in Directory.EnumerateFiles(path, target.Pattern, walk))
             {
                 try
                 {
@@ -141,13 +147,88 @@ internal static class Cleaner
                     skipped++; // in use or protected
                 }
             }
-            if (!dryRun)
+            if (!dryRun && target.Recursive)
                 RemoveEmptyFolders(path);
             results.Add(new CleanupResult(target, files, bytes, skipped));
             if (!dryRun && files > 0)
                 log.Info($"Limpeza: {target.Name}: {files} arquivo(s), {Core.Diagnostics.Gb(bytes)}.");
         }
         return results;
+    }
+
+    private static bool IsRunning(string name) => System.Diagnostics.Process.GetProcessesByName(name) is { Length: > 0 } found && Dispose(found);
+
+    private static bool Dispose(System.Diagnostics.Process[] processes)
+    {
+        foreach (var process in processes)
+            process.Dispose();
+        return true;
+    }
+
+    /// <summary>
+    /// 23.1: items deleted more than 30 days ago, read from the "$I" file of each item in this user's
+    /// \$Recycle.Bin\&lt;SID&gt; folder on every fixed drive. Recent items are never touched.
+    /// </summary>
+    public static CleanupResult CleanRecycleBin(bool dryRun, IActionLog log)
+    {
+        using var identity = WindowsIdentity.GetCurrent();
+        var sid = identity.User?.Value;
+        var target = new CleanupTarget($"Lixeira (itens com mais de {CleanupTargets.RecycleBinDays} dias)", "$Recycle.Bin", CleanupTargets.RecycleBinDays);
+        int files = 0, skipped = 0;
+        long bytes = 0;
+        if (sid is null)
+            return new CleanupResult(target, 0, 0, 0);
+        var now = DateTime.UtcNow;
+        foreach (var drive in DriveInfo.GetDrives().Where(drive => drive.DriveType == DriveType.Fixed && drive.IsReady))
+        {
+            var folder = Path.Combine(drive.RootDirectory.FullName, "$Recycle.Bin", sid);
+            if (!Directory.Exists(folder))
+                continue;
+            foreach (var info in Directory.EnumerateFiles(folder, "$I*"))
+            {
+                try
+                {
+                    if (RecycleBin.DeletedAtUtc(File.ReadAllBytes(info)) is not { } deleted || !RecycleBin.IsExpired(deleted, now) ||
+                        RecycleBin.ContentName(Path.GetFileName(info)) is not { } contentName)
+                        continue;
+                    var content = Path.Combine(folder, contentName);
+                    var size = File.Exists(content) ? new FileInfo(content).Length
+                        : Directory.Exists(content) ? Directory.EnumerateFiles(content, "*", Walk).Sum(file => new FileInfo(file).Length) : 0;
+                    if (!dryRun)
+                    {
+                        if (File.Exists(content))
+                            File.Delete(content);
+                        else if (Directory.Exists(content))
+                            Directory.Delete(content, recursive: true);
+                        File.Delete(info);
+                    }
+                    files++;
+                    bytes += size;
+                }
+                catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+                {
+                    skipped++;
+                }
+            }
+        }
+        if (!dryRun && files > 0)
+            log.Info($"Limpeza: Lixeira: {files} item(ns) com mais de {CleanupTargets.RecycleBinDays} dias, {Core.Diagnostics.Gb(bytes)}.");
+        return new CleanupResult(target, files, bytes, skipped);
+    }
+
+    /// <summary>23.1: Delivery Optimization cache, through its own supported cmdlet.</summary>
+    public static void CleanDeliveryOptimization(IActionLog log)
+    {
+        try
+        {
+            WindowsCommand.Run(TimeSpan.FromMinutes(5), Path.Combine(Environment.SystemDirectory, @"WindowsPowerShell\v1.0\powershell.exe"),
+                "-NoProfile", "-NonInteractive", "-Command", "Delete-DeliveryOptimizationCache -Force -ErrorAction Stop");
+            log.Info("Limpeza: cache da Otimização de Entrega removido.");
+        }
+        catch (Exception error) when (error is Win32Exception or TimeoutException)
+        {
+            log.Warning($"Limpeza: cache da Otimização de Entrega não removido: {error.Message}");
+        }
     }
 
     /// <summary>Refuses drive roots and top-level system folders, whatever the configuration says.</summary>
@@ -198,7 +279,9 @@ internal static class MaintenanceTasks
                     CheckDriverChange(app);
                     break;
                 case "limpeza":
-                    Cleaner.Run(CleanupTargets.All.Where(target => target.Kind == CleanupKind.Regular), dryRun: false, log);
+                    Cleaner.Run(CleanupTargets.Weekly(app.Settings.CleanupOrDefault), dryRun: false, log);
+                    Cleaner.CleanRecycleBin(dryRun: false, log);
+                    Cleaner.CleanDeliveryOptimization(log);
                     break;
                 case "ssd":
                     WindowsCommand.Run(TimeSpan.FromMinutes(60), "defrag.exe", "/C", "/O", "/H");
@@ -206,10 +289,21 @@ internal static class MaintenanceTasks
                         log.Warning($"Disco com problema de saúde: {disk.Name}. Faça backup.");
                     break;
                 case "saude":
-                    var report = Core.Diagnostics.Evaluate(app.Pc, DateOnly.FromDateTime(DateTime.Now));
+                    var report = Core.Diagnostics.Evaluate(app.Pc, DateOnly.FromDateTime(DateTime.Now), app.Settings.PcOrDefault);
                     ReportStore.SaveDiagnostic(app, app.Pc, report);
+                    Integrity(log);
                     WindowsCommand.Run(TimeSpan.FromMinutes(90), "Dism.exe", "/Online", "/Cleanup-Image", "/StartComponentCleanup");
                     new WindowsRestorePoints().Ensure();
+                    break;
+                case "drivers":
+                    foreach (var warning in DriverCheck.Outdated(app.Pc, DateOnly.FromDateTime(DateTime.Now)))
+                    {
+                        log.Warning($"Driver antigo: {warning}");
+                        Notifier.Show("NOVAIS boost · Driver de vídeo antigo", warning, log);
+                    }
+                    break;
+                case "rede":
+                    WeeklyNetwork(app);
                     break;
                 default:
                     throw new ArgumentException($"Tarefa desconhecida: {id}.");
@@ -222,6 +316,59 @@ internal static class MaintenanceTasks
             log.Error($"Tarefa agendada {id} falhou: {error}");
             return 1;
         }
+    }
+
+    /// <summary>23.2: DISM repairs the component store first, then sfc checks the system files against it.</summary>
+    private static void Integrity(IActionLog log)
+    {
+        foreach (var (name, executable, arguments) in new[]
+        {
+            ("DISM /RestoreHealth", "Dism.exe", new[] { "/Online", "/Cleanup-Image", "/RestoreHealth" }),
+            ("sfc /scannow", "sfc.exe", new[] { "/scannow" })
+        })
+        {
+            try
+            {
+                WindowsCommand.Run(TimeSpan.FromMinutes(60), executable, arguments);
+                log.Info($"Saúde: {name} concluído sem erros.");
+            }
+            catch (Exception error) when (error is Win32Exception or TimeoutException)
+            {
+                // sfc returns non-zero when it found (and possibly repaired) files; the details are in CBS.log.
+                log.Warning($"Saúde: {name} terminou com aviso ({error.Message}). Detalhes em %SystemRoot%\\Logs\\CBS\\CBS.log.");
+            }
+        }
+    }
+
+    /// <summary>
+    /// 23.4: ping/jitter to the log, and a DNS switch only for someone who already applied "DNS mais rápido"
+    /// and when another public resolver is at least 10 ms faster. The switch goes through the engine (backup, revert).
+    /// </summary>
+    private static void WeeklyNetwork(AppServices app)
+    {
+        var log = app.Log;
+        var ping = NetworkTools.Ping("1.1.1.1", 30, 200);
+        log.Info($"Rede semanal: ping {ping.AverageMs:0.0} ms, jitter {ping.JitterMs:0.0} ms, perda {ping.LossPercent:0.#}%.");
+        if (app.Snapshots.GetActive() is not { Pending: false } active || !active.TweakIds.Any(id => id.StartsWith("dns-", StringComparison.Ordinal)))
+            return;
+        var adapter = NetworkTools.ActiveAdapter();
+        if (adapter is null || !Guid.TryParse(adapter.Id, out var id))
+            return;
+        var current = adapter.GetIPProperties().DnsAddresses
+            .Where(address => address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork).Select(address => address.ToString()).ToArray();
+        var results = NetworkTools.BenchmarkDns(adapter);
+        if (Core.DnsAutoSwitch.Choose(results, current) is not { } best)
+        {
+            log.Info("Rede semanal: o DNS atual continua entre os mais rápidos.");
+            return;
+        }
+        var resolver = NetworkTools.PublicResolvers.FirstOrDefault(item => item.Primary == best.Server);
+        if (resolver.Primary is null)
+            return;
+        var tweak = NetworkTools.DnsTweak(id, adapter.Name, resolver);
+        app.Engine.Apply(tweak, dryRun: false);
+        log.Warning($"Rede semanal: DNS trocado para {resolver.Name} ({best.MedianMs:0.0} ms). Reverter tudo volta ao DNS original.");
+        Notifier.Show("NOVAIS boost · DNS", $"Trocamos o DNS para {resolver.Name}, que ficou mais rápido no teste desta semana.", log);
     }
 
     /// <summary>Re-applies active tweaks that drifted (usually reverted by a Windows feature update).</summary>

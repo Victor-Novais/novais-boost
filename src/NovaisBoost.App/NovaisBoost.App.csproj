@@ -12,6 +12,7 @@
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
     <SelfContained Condition="'$(RuntimeIdentifier)' != ''">true</SelfContained>
     <DebugType>embedded</DebugType>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
     <!-- Real-time kernel sessions only use advapi32; the native helpers (KernelTraceControl, msdia) are for merging

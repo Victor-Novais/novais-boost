@@ -130,6 +130,7 @@ internal sealed class GuardianService(GuardianPolicy policy, IActionLog log, boo
         {
             _lastAlert = now;
             log.Warning($"Guardian: alerta: {alert}");
+            Notifier.Show("NOVAIS boost · Guardian", alert, log);
             if (echo)
                 AnsiConsole.MarkupLine($"[bold yellow]⚠ {Markup.Escape(alert)}[/]");
         }

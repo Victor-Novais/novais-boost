@@ -20,7 +20,7 @@ internal static class DiagnosticView
         {
             app.Refresh();
             return app.Pc;
-        }, app.Log, Path.Combine(app.DataDirectory, "reports"));
+        }, app.Log, Path.Combine(app.DataDirectory, "reports"), app.Settings.PcOrDefault);
         if (app.Profiles.Count > 0)
             AnsiConsole.MarkupLine($"[#C084FC]Perfis de hardware detectados:[/] {Markup.Escape(string.Join(", ", app.Profiles.Select(profile => profile.Name)))} " +
                 "[grey](veja o menu [[3]])[/]");
@@ -51,12 +51,12 @@ internal static class DiagnosticView
             AnsiConsole.MarkupLine($"[yellow]{Markup.Escape(finding.Title)}[/] — {Markup.Escape(finding.Recommendation)}");
     }
 
-    public static DiagnosticReport Run(Func<HardwareSnapshot> capture, IActionLog log, string? reportDirectory)
+    public static DiagnosticReport Run(Func<HardwareSnapshot> capture, IActionLog log, string? reportDirectory, PcSettings? user = null)
     {
         HardwareSnapshot pc = null!;
         AnsiConsole.Status().Spinner(Spinner.Known.Dots).SpinnerStyle(new Style(new Color(168, 85, 247)))
             .Start("Analisando o PC...", _ => pc = capture());
-        var report = Core.Diagnostics.Evaluate(pc, DateOnly.FromDateTime(DateTime.Now));
+        var report = Core.Diagnostics.Evaluate(pc, DateOnly.FromDateTime(DateTime.Now), user);
         log.Info($"Diagnóstico concluído: nota {report.Score}, {report.Findings.Count} ponto(s) de atenção.");
 
         DrawHardware(pc);

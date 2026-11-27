@@ -14,6 +14,7 @@ internal sealed class Views(AppServices app, ConsoleUi ui)
     public void HardwareProfile()
     {
         var profiles = Spin("Identificando o hardware...", () => app.Profiles);
+        AskPowerSupply();
         if (profiles.Count == 0)
         {
             AnsiConsole.MarkupLine("[grey]Nenhum perfil específico para este hardware. A otimização universal já cobre este PC.[/]");
@@ -46,6 +47,28 @@ internal sealed class Views(AppServices app, ConsoleUi ui)
         var tweaks = app.AllTweaks.Where(tweak => recommended.Contains(tweak.Id)).ToArray();
         if (tweaks.Length > 0 && ConsoleUi.Confirm("Revisar os ajustes recomendados para este hardware?"))
             ui.ReviewAndApply(tweaks);
+    }
+
+    /// <summary>23.5: the PSU cannot be detected; an optional answer improves the stability and overclock advice.</summary>
+    private void AskPowerSupply()
+    {
+        var settings = app.Settings;
+        if (settings.PcOrDefault.PsuWatts is { } known)
+        {
+            AnsiConsole.MarkupLine($"[grey]Fonte informada: {known} W ({settings.PcOrDefault.PsuRating}). Para mudar, use Configurações.[/]");
+        }
+        else if (!Console.IsInputRedirected && ConsoleUi.Confirm("Quer informar a potência da fonte (PSU)? Ajuda a avisar sobre desligamentos e overclock."))
+        {
+            var watts = AnsiConsole.Prompt(new TextPrompt<int>("Potência em watts (ex.: 650):")
+                .Validate(value => value is >= 200 and <= 3000 ? ValidationResult.Success() : ValidationResult.Error("Entre 200 e 3000 W.")));
+            var rating = AnsiConsole.Prompt(new SelectionPrompt<PsuRating>().Title("Certificação 80 Plus:")
+                .AddChoices(Enum.GetValues<PsuRating>()));
+            settings = settings with { Pc = new PcSettings(watts, rating) };
+            settings.Save(app.DataDirectory);
+            app.Log.Info($"Fonte informada pelo usuário: {watts} W, {rating}.");
+        }
+        if (PowerSupply.Evaluate(app.Pc, settings.PcOrDefault) is { } finding)
+            AnsiConsole.MarkupLine($"[yellow]{Markup.Escape(finding.Title)}[/] — {Markup.Escape(finding.Recommendation)}");
     }
 
     // ------------------------------------------------------------------ [4] Jogos & Streaming
@@ -355,8 +378,8 @@ internal sealed class Views(AppServices app, ConsoleUi ui)
 
     private void CleanNow()
     {
-        var targets = CleanupTargets.All.Where(target => target.Kind == CleanupKind.Regular).ToArray();
-        var preview = Spin("Calculando...", () => Cleaner.Run(targets, dryRun: true, app.Log));
+        var targets = CleanupTargets.Weekly(app.Settings.CleanupOrDefault);
+        var preview = Spin<CleanupResult[]>("Calculando...", () => [.. Cleaner.Run(targets, dryRun: true, app.Log), Cleaner.CleanRecycleBin(dryRun: true, app.Log)]);
         var table = new Table().Border(TableBorder.Simple).AddColumn("Local").AddColumn(new TableColumn("Arquivos").RightAligned()).AddColumn(new TableColumn("Tamanho").RightAligned());
         foreach (var result in preview.Where(result => result.Files > 0))
             table.AddRow(Markup.Escape(result.Target.Name), result.Files.ToString(CultureInfo.InvariantCulture), Core.Diagnostics.Gb(result.Bytes));
@@ -364,7 +387,7 @@ internal sealed class Views(AppServices app, ConsoleUi ui)
         var total = preview.Sum(result => result.Bytes);
         if (total == 0 || !ConsoleUi.Confirm($"Apagar {Core.Diagnostics.Gb(total)} de arquivos temporários?"))
             return;
-        var done = Spin("Limpando...", () => Cleaner.Run(targets, dryRun: false, app.Log));
+        var done = Spin<CleanupResult[]>("Limpando...", () => [.. Cleaner.Run(targets, dryRun: false, app.Log), Cleaner.CleanRecycleBin(dryRun: false, app.Log)]);
         AnsiConsole.MarkupLine($"[green]{Core.Diagnostics.Gb(done.Sum(result => result.Bytes))} liberados.[/] [grey]{done.Sum(result => result.Skipped)} arquivo(s) em uso foram mantidos.[/]");
     }
 
@@ -377,6 +400,7 @@ internal sealed class Views(AppServices app, ConsoleUi ui)
         AnsiConsole.MarkupLine(ConsoleUi.Item(4, "Capturar FPS de um jogo (uma rodada)"));
         AnsiConsole.MarkupLine(ConsoleUi.Item(5, "Comparar capturas avulsas antes × depois"));
         AnsiConsole.MarkupLine(ConsoleUi.Item(6, "Abrir o último relatório"));
+        AnsiConsole.MarkupLine(ConsoleUi.Item(7, "Teste rápido de gargalo: CPU, memória e disco — 30 segundos"));
         AnsiConsole.MarkupLine(ConsoleUi.Item(0, "Voltar"));
         switch (ConsoleUi.ReadChoice())
         {
@@ -402,7 +426,31 @@ internal sealed class Views(AppServices app, ConsoleUi ui)
                 else
                     AnsiConsole.MarkupLine("[grey]Nenhum relatório ainda. Rode \"Provar ajustes\" para gerar um.[/]");
                 break;
+            case "7":
+                QuickBenchmark();
+                break;
         }
+    }
+
+    private void QuickBenchmark()
+    {
+        AnsiConsole.MarkupLine("Mede a CPU (1 núcleo e todos), a banda da memória e a leitura do disco do Windows (grava e apaga um arquivo de 1 GB). " +
+            "Feche jogos e programas pesados antes.");
+        if (!ConsoleUi.Confirm("Começar agora?"))
+            return;
+        var result = Spin("Medindo CPU, memória e disco (~30 s)...", () => QuickBenchRunner.Run(Path.Combine(app.DataDirectory, "temp")));
+        app.Log.Info($"Teste rápido: CPU 1 núcleo {result.CpuSingleScore:0} MB/s, todos {result.CpuMultiScore:0} MB/s, memória {result.MemoryMbps:0} MB/s, disco {result.DiskMbps:0} MB/s.");
+        var table = new Table().Border(TableBorder.Rounded).BorderColor(Purple).AddColumn("Componente").AddColumn(new TableColumn("Resultado").RightAligned());
+        table.AddRow("CPU · 1 núcleo (SHA-256)", $"{result.CpuSingleScore:0} MB/s");
+        table.AddRow("CPU · todos os núcleos", $"{result.CpuMultiScore:0} MB/s");
+        table.AddRow($"Memória ({QuickBench.MemoryClass(app.Pc)})", $"{result.MemoryMbps / 1000:0.0} GB/s");
+        table.AddRow($"Disco do Windows ({QuickBench.DiskClass(app.Pc) ?? "?"})", $"{result.DiskMbps:0} MB/s");
+        AnsiConsole.Write(table);
+        var findings = QuickBench.Evaluate(result, app.Pc, DataCatalog.Baselines());
+        if (findings.Count == 0)
+            AnsiConsole.MarkupLine("[green]Nenhum componente rendeu muito abaixo do esperado para a classe dele.[/]");
+        foreach (var finding in findings)
+            AnsiConsole.MarkupLine($"[yellow]{Markup.Escape(finding.Title)}[/] — {Markup.Escape(finding.Recommendation)}");
     }
 
     private void KernelLatency()
@@ -617,10 +665,7 @@ internal sealed class Views(AppServices app, ConsoleUi ui)
         }
         if (!Guid.TryParse(adapter.Id, out var id))
             return;
-        ui.ReviewAndApply([new TweakDefinition("dns-fastest", $"Usar o DNS {resolver.Name}",
-            $"Troca o DNS de {adapter.Name} para {resolver.Primary} e {resolver.Secondary}, o mais rápido no teste.",
-            "Rede", TweakLevel.Safe, TweakEvidence.Documented, "Nenhum. Reverter volta ao DNS anterior (automático ou manual).", false, new TweakCompatibility([], []),
-            [new DnsAction(id, adapter.Name, [resolver.Primary, resolver.Secondary])])]);
+        ui.ReviewAndApply([NetworkTools.DnsTweak(id, adapter.Name, resolver)]);
     }
 
     // ------------------------------------------------------------------ helpers

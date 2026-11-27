@@ -18,7 +18,7 @@ Faça um snapshot da VM antes. Para cada item, confira o log em `C:\ProgramData\
 - [ ] Reverter tudo → reiniciar → `--simular` volta a mostrar a mesma lista de antes (nada sobrou).
 - [ ] Plano NOVAIS boost removido e plano anterior ativo após reverter.
 - [ ] Interromper o PC (desligar a VM) no meio de um lote → ao abrir, "Reverter tudo" conclui a reversão.
-- [ ] Cronogramas → Ativar todas → as 5 tarefas aparecem em `\NOVAIS boost` no Agendador; "Executar" em cada uma
+- [ ] Cronogramas → Ativar todas → as 7 tarefas aparecem em `\NOVAIS boost` no Agendador; "Executar" em cada uma
       termina com código 0 e sem janela aparecendo.
 - [ ] Guardian: abrir um jogo → log mostra o jogo em **AboveNormal** e o navegador em BelowNormal; fechar o jogo → prioridades voltam.
 - [ ] Guardian com `{ "guardian": { "gamePriority": "high" } }` em `C:\ProgramData\NOVAIS boost\settings.json` → jogo em High;
@@ -103,6 +103,17 @@ Faça um snapshot da VM antes. Para cada item, confira o log em `C:\ProgramData\
 - [ ] Compressão de memória (32 GB+): aplicar → reiniciar → `Get-MMAgent` mostra `MemoryCompression False`; com SysMain desligado,
       a mensagem explica que ele precisa estar ligado.
 - [ ] Windows Pro: "Adiar atualizações de recurso" → `gpedit`/Configurações mostram o adiamento de 90 dias. No Home, "não se aplica".
+
+- [ ] **Manutenção v2 (F23):** Lixeira com itens de ontem e de 2 meses atrás → Limpar agora → só os antigos somem.
+- [ ] `cleanup.browsers: true` com o Chrome aberto → o cache dele é ignorado (log); fechado → é limpo e o Chrome abre normalmente, logado.
+- [ ] A pasta `C:\Windows\Prefetch` continua intacta depois da limpeza.
+- [ ] `--tarefa saude` termina; o log mostra DISM /RestoreHealth e sfc /scannow (ok ou aviso com CBS.log).
+- [ ] `--tarefa drivers` com driver de vídeo antigo → notificação "Driver de vídeo antigo"; com driver novo → nada.
+- [ ] `--tarefa rede` sem "DNS mais rápido" aplicado → só registra ping no log; com ele aplicado → só troca se outro for 10 ms mais rápido.
+- [ ] Notificações do Windows: o alerta de RAM do Guardian aparece como toast com o nome "NOVAIS boost".
+- [ ] Teste rápido de gargalo: termina em ~30 s, o arquivo temporário some de `ProgramData\NOVAIS boost\temp`, e um PC com um pente
+      só ou XMP desligado mostra "Memória lenta".
+- [ ] Perfil do meu Hardware → informar fonte de 550 W numa RTX 4080 → aviso de fonte no diagnóstico; `settings.json` ganha `pc`.
 
 ## 3. Assinatura de código (evita alerta do SmartScreen e falso positivo de antivírus)
 

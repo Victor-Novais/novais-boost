@@ -14,7 +14,7 @@ Execute `NOVAIS boost.exe` (pede administrador). O menu tem:
 | 3 | Perfil do meu Hardware | Recomendações e checklist de BIOS para a sua CPU, GPU, RAM e placa-mãe |
 | 4 | Jogos & Streaming | Detecta os jogos, preset competitivo nos arquivos do jogo, dicas, GPU dedicada e QoS por jogo, codificador do OBS |
 | 5 | Process Guardian | Prioridades automáticas durante o jogo, processos inúteis, programas na inicialização |
-| 6 | Cronogramas | Tarefas automáticas: reaplicar ajustes, limpeza semanal, SSD, saúde mensal |
+| 6 | Cronogramas | Tarefas automáticas: reaplicar ajustes, limpeza semanal, SSD, saúde mensal, aviso de driver, teste de rede |
 | 7 | Benchmark | Provar ajustes (teste A/B com estatística e relatório HTML), latência de DPC/ISR por driver (µs), FPS/1% low com PresentMon |
 | 8 | Reverter / Backups | Desfaz tudo o que foi aplicado |
 | 9 | Rede & Latência | Ping, jitter, perda, bufferbloat, DNS mais rápido, ajustes da placa de rede |
@@ -27,7 +27,7 @@ NOVAIS boost.exe --diagnostico         diagnóstico somente leitura (sem adminis
 NOVAIS boost.exe --simular [--extremo] mostra o que seria alterado, sem alterar nada
 NOVAIS boost.exe --reparar             procura alterações de outros otimizadores, sem alterar nada
 NOVAIS boost.exe --guardian            Process Guardian (usado pela tarefa de logon)
-NOVAIS boost.exe --tarefa <id>         reaplicar | limpeza | ssd | saude
+NOVAIS boost.exe --tarefa <id>         reaplicar | limpeza | ssd | saude | drivers | rede
 NOVAIS boost.exe --versao
 ```
 
@@ -165,6 +165,20 @@ Novos tipos de ação: `bcd` (bcdedit), `pagefile` (WMI) e `tcpGlobal` (netsh), 
 - O **PresentMon 2.6.0** (Intel, MIT) vem na pasta `tools\` do pacote. O app confere o SHA256 antes de executá-lo.
   Licenças em [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
+## Manutenção
+
+| Tarefa | Quando | O que faz |
+|---|---|---|
+| Limpeza semanal | sexta | Temporários, despejos de erro, logs, cache de miniaturas, itens da **Lixeira com mais de 30 dias** (pela data em que foram apagados), cache da Otimização de Entrega. Com opt-in: cache dos navegadores (Chrome, Edge, Brave) e dos launchers (Steam, Battle.net), só com o programa fechado. A pasta Prefetch nunca é apagada |
+| Saúde mensal | dia 1 | Diagnóstico salvo, `DISM /RestoreHealth`, `sfc /scannow`, limpeza de componentes e ponto de restauração |
+| Aviso de driver | quarta | Notificação quando o driver da placa de vídeo passou de 6 meses (não instala nada) |
+| Teste de rede | quinta | Ping/jitter no log. Se você já aplicou "DNS mais rápido" e outro ficou 10 ms mais rápido, troca para ele (desfaz em Reverter tudo) |
+
+Os alertas do Guardian, o aviso de driver e a troca de DNS aparecem como **notificação do Windows**.
+Benchmark → 7 faz o **teste rápido de gargalo** (CPU, banda da memória e leitura do disco, ~30 s) e avisa quando a memória
+ou o disco rendem menos da metade do esperado para a classe deles (`data/baselines.json`). Em Perfil do meu Hardware dá
+para informar a **fonte (PSU)**: com uma fonte abaixo do recomendado para a placa de vídeo, o diagnóstico avisa.
+
 ## Configurações
 
 Arquivo opcional `C:\ProgramData\NOVAIS boost\settings.json` (só administradores podem alterar a pasta):
@@ -183,6 +197,8 @@ Arquivo opcional `C:\ProgramData\NOVAIS boost\settings.json` (só administradore
 | `guardian.powerPlanDuringGame` | `true`/`false` | `false`: plano NOVAIS boost só com o jogo aberto (nunca em X3D de 2 CCDs) |
 | `guardian.standbyPurge` | `true`/`false` | `false`: limpa a lista standby só com menos de 1 GB livre e mais de 2 GB em standby, no máximo a cada 5 min |
 | `guardian.lower` / `efficiency` / `ignore` | lista de processos | vazias: baixar prioridade, modo de eficiência ou nunca mexer |
+| `cleanup.browsers` / `cleanup.launchers` | `true`/`false` | `false`: limpar o cache dos navegadores / launchers na limpeza semanal |
+| `pc.psuWatts` / `pc.psuRating` | 200 a 3000 / `bronze`, `gold`... | não informado: potência e certificação da fonte, usadas nos avisos |
 
 Um arquivo inválido é ignorado (com aviso no log) e o padrão é usado.
 

@@ -35,9 +35,12 @@ public static class Diagnostics
         [FindingCategory.Windows] = 15, [FindingCategory.Network] = 15, [FindingCategory.Software] = 10
     };
 
-    public static DiagnosticReport Evaluate(HardwareSnapshot pc, DateOnly today)
+    /// <param name="user">What the user told about the PC (power supply); optional.</param>
+    public static DiagnosticReport Evaluate(HardwareSnapshot pc, DateOnly today, PcSettings? user = null)
     {
         var findings = new List<Finding>();
+        if (user is not null && PowerSupply.Evaluate(pc, user) is { } psu)
+            findings.Add(psu);
         Memory(pc, findings);
         Storage(pc, findings);
         Graphics(pc, today, findings);
@@ -56,8 +59,8 @@ public static class Diagnostics
 
     public static FindingCategory CategoryOf(string id) => id switch
     {
-        "whea-fatal" or "whea-corrected" or "crashes" or "gpu-tdr" or "microcode-outdated" or "microcode-update" => FindingCategory.Stability,
-        "memory-pressure" or "wsl-vm" or "nonpaged-pool" or "single-channel" or "ram-same-channel" or "xmp-expo" or "xmp-expo-likely" => FindingCategory.Memory,
+        "whea-fatal" or "whea-corrected" or "crashes" or "psu-undersized" or "gpu-tdr" or "microcode-outdated" or "microcode-update" => FindingCategory.Stability,
+        "memory-pressure" or "memory-slow" or "wsl-vm" or "nonpaged-pool" or "single-channel" or "ram-same-channel" or "xmp-expo" or "xmp-expo-likely" => FindingCategory.Memory,
         "hybrid-gpu" or "resizable-bar" or "hags" or "gpu-thermal" or "gpu-power-limit" => FindingCategory.Graphics,
         _ when id.StartsWith("gpu-", StringComparison.Ordinal) => FindingCategory.Graphics,
         "refresh-rate" or "display-hdmi" or "vrr-off" => FindingCategory.Display,

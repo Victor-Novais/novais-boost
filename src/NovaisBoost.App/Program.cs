@@ -116,7 +116,7 @@ internal static class Program
         table.AddRow("--simular [[--extremo]]", "Mostra o que a otimização mudaria neste PC, sem alterar nada.");
         table.AddRow("--reparar", "Procura alterações de outros otimizadores, sem alterar nada.");
         table.AddRow("--guardian", "Roda o Process Guardian (usado pela tarefa de logon).");
-        table.AddRow("--tarefa <id>", "Executa uma tarefa agendada: reaplicar, limpeza, ssd, saude.");
+        table.AddRow("--tarefa <id>", "Executa uma tarefa agendada: reaplicar, limpeza, ssd, saude, drivers, rede.");
         table.AddRow("--versao", "Mostra a versão.");
         AnsiConsole.Write(table);
     }
