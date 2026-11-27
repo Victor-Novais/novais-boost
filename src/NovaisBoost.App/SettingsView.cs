@@ -30,6 +30,26 @@ internal static class FirstRun
         return true;
     }
 
+    /// <summary>F21: asked once, off by default, with the exact payload shown before any decision.</summary>
+    public static void OfferCommunity(AppServices app)
+    {
+        var settings = app.Settings;
+        if (settings.CommunityOrDefault.Prompted || Console.IsInputRedirected || CommunityClient.Configured(settings) is null)
+            return;
+        AnsiConsole.MarkupLine("[bold #C084FC]Base anônima de resultados (opcional)[/]");
+        AnsiConsole.MarkupLine("Quando você usa \"Provar ajustes\", o resultado pode ser enviado de forma anônima. Em troca, cada ajuste mostra " +
+            "quanto ganhou em PCs parecidos com o seu. Vai: modelo de CPU/GPU, RAM (GB e MT/s), build do Windows, ajustes testados e o resultado " +
+            "relativo. [bold]Nunca[/]: nome, e-mail, número de série, IP, nome do PC ou lista de programas. Detalhes em docs/PRIVACIDADE.md.");
+        if (ConsoleUi.Confirm("Ver exatamente o que seria enviado deste PC?"))
+        {
+            var sample = Community.Build(app.Pc, [new LocalEvidenceEntry("power-plan", "Energia", "Counter-Strike 2", Verdict.RealGain, 3.2, 4.1, 1.5, 6.8, DateTimeOffset.Now)], Program.Version);
+            AnsiConsole.Write(new Panel(Markup.Escape(Community.ToJson(sample))).Header("[bold] exemplo do envio [/]").Border(BoxBorder.Rounded));
+        }
+        var enabled = ConsoleUi.Confirm("Participar da base anônima? (dá para mudar depois em Configurações)");
+        (settings with { Community = settings.CommunityOrDefault with { Enabled = enabled, Prompted = true } }).Save(app.DataDirectory);
+        app.Log.Info($"Base anônima: {(enabled ? "ativada" : "recusada")} pelo usuário.");
+    }
+
     public static void OfferUpdate(AppServices app)
     {
         if (!app.Settings.UpdatesOrDefault.Check || Console.IsInputRedirected || Updater.Check(app.Log) is not { } manifest)
@@ -126,6 +146,8 @@ internal sealed class SettingsView(AppServices app)
                 ("Limpar cache dos navegadores", OnOff(cleanup.Browsers), s => s with { Cleanup = cleanup with { Browsers = !cleanup.Browsers } }),
                 ("Limpar cache dos launchers", OnOff(cleanup.Launchers), s => s with { Cleanup = cleanup with { Launchers = !cleanup.Launchers } }),
                 ("Procurar atualizações ao abrir", OnOff(settings.UpdatesOrDefault.Check), s => s with { Updates = new UpdateSettings(!settings.UpdatesOrDefault.Check) }),
+                ("Base anônima de resultados (F21)", OnOff(settings.CommunityOrDefault.Enabled),
+                    s => s with { Community = settings.CommunityOrDefault with { Enabled = !settings.CommunityOrDefault.Enabled, Prompted = true } }),
                 ("Relatório de erros (só exceção e versão)", OnOff(settings.ErrorReportsOrDefault.Enabled),
                     s => s with { ErrorReports = settings.ErrorReportsOrDefault with { Enabled = !settings.ErrorReportsOrDefault.Enabled } }),
                 ("Fonte (PSU)", settings.PcOrDefault.PsuWatts is { } watts ? $"{watts} W {settings.PcOrDefault.PsuRating}" : "não informada",

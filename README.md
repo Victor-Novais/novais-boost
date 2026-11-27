@@ -213,6 +213,14 @@ Benchmark → 7 faz o **teste rápido de gargalo** (CPU, banda da memória e lei
 ou o disco rendem menos da metade do esperado para a classe deles (`data/baselines.json`). Em Perfil do meu Hardware dá
 para informar a **fonte (PSU)**: com uma fonte abaixo do recomendado para a placa de vídeo, o diagnóstico avisa.
 
+## Base anônima de resultados (opcional)
+
+Com o opt-in, cada "Provar ajustes" envia o resultado relativo (modelo de CPU/GPU, RAM, build do Windows, ajustes testados) e
+a revisão mostra "Testado em 214 PCs parecidos com o seu: +3,1% no 1% low (IC 95%: +1,8 a +4,4)". Com N ≥ 30 e o intervalo
+acima de zero, o ajuste conta como `measured` para esse hardware; com o intervalo abaixo de zero, sai dos níveis. O que foi
+medido neste PC sempre vale mais. Nada é enviado sem o aceite, e o backend (`backend/`) precisa estar publicado.
+Política: [docs/PRIVACIDADE.md](docs/PRIVACIDADE.md).
+
 ## Configurações
 
 Arquivo opcional `C:\ProgramData\NOVAIS boost\settings.json` (só administradores podem alterar a pasta):
@@ -237,6 +245,7 @@ Arquivo opcional `C:\ProgramData\NOVAIS boost\settings.json` (só administradore
 | `updates.check` | `true`/`false` | `true`: procurar versão nova ao abrir o menu |
 | `errorReports.enabled` / `endpoint` | `true`/`false`, `https://...` | desligado: relatório de erros sem dados pessoais |
 | `termsAccepted` | data | preenchido ao aceitar o termo de uso |
+| `community.enabled` / `endpoint` | `true`/`false`, `https://...` | desligado: base anônima de resultados |
 | `pc.psuWatts` / `pc.psuRating` | 200 a 3000 / `bronze`, `gold`... | não informado: potência e certificação da fonte, usadas nos avisos |
 
 Um arquivo inválido é ignorado (com aviso no log) e o padrão é usado.

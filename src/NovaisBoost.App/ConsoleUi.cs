@@ -164,7 +164,7 @@ internal sealed class ConsoleUi
         // Per-machine tweaks for specific screens (DNS, startup apps) are offered there, not in the levels.
         // Experimental tweaks are never part of a level (unless measured as a real gain on this PC); tweaks measured as
         // worse on this PC are left out too.
-        return TweakLevels.Select(all, level, _app.LocalEvidence);
+        return TweakLevels.Select(all, level, _app.LocalEvidence, _app.CommunityEvidence);
     }
 
     /// <summary>Read-only preview of a level, used by the --simular command line option.</summary>
@@ -174,7 +174,7 @@ internal sealed class ConsoleUi
         DrawSkipped(skipped);
         AnsiConsole.MarkupLine($"[green]{alreadyApplied} ajuste(s) já aplicados.[/]");
         if (pending.Count > 0)
-            DrawPending(pending, AntiCheatWarnings(pending), _app.LocalEvidence);
+            DrawPending(pending, AntiCheatWarnings(pending), _app.LocalEvidence, _app.CommunityEvidence);
         foreach (var (tweak, changes) in pending)
         {
             AnsiConsole.MarkupLine($"[bold]{Markup.Escape(tweak.Name)}[/]");
@@ -200,7 +200,7 @@ internal sealed class ConsoleUi
         var evidence = _app.LocalEvidence;
         while (true)
         {
-            DrawPending(pending, warnings, evidence);
+            DrawPending(pending, warnings, evidence, _app.CommunityEvidence);
             AnsiConsole.MarkupLine($"{Item("A", "Aplicar todos")}   {Item("P", "Personalizar (tirar itens)")}   {Item("D", "Ver detalhes")}   {Item(0, "Voltar")}");
             switch (ReadChoice()?.ToUpperInvariant())
             {
@@ -330,7 +330,7 @@ internal sealed class ConsoleUi
     }
 
     private static void DrawPending(List<(TweakDefinition Tweak, IReadOnlyList<SettingChange> Changes)> pending,
-        IReadOnlyDictionary<string, string> warnings, LocalEvidence evidence)
+        IReadOnlyDictionary<string, string> warnings, LocalEvidence evidence, IReadOnlyDictionary<string, CommunityEvidence> community)
     {
         var table = new Table().Border(TableBorder.Rounded).BorderColor(new Color(124, 58, 237))
             .AddColumn(new TableColumn("#").RightAligned()).AddColumn("Nível").AddColumn("Categoria").AddColumn("Ajuste")
@@ -343,7 +343,7 @@ internal sealed class ConsoleUi
                 tweak.Level switch { TweakLevel.Safe => "[green]1[/]", TweakLevel.Competitive => "[yellow]2[/]", _ => "[red]3[/]" },
                 Markup.Escape(tweak.Category),
                 $"{Markup.Escape(tweak.Name)}\n[grey]Risco: {Markup.Escape(tweak.Risk)}[/]" +
-                    EvidenceNote(tweak, evidence) +
+                    EvidenceNote(tweak, evidence, community) +
                     (warnings.ContainsKey(tweak.Id) ? "\n[bold yellow]⚠ Aviso de anti-cheat abaixo[/]" : ""),
                 changes.Count.ToString(CultureInfo.InvariantCulture),
                 tweak.RequiresReboot ? "[yellow]sim[/]" : "não");
@@ -355,7 +355,12 @@ internal sealed class ConsoleUi
     }
 
     /// <summary>Review line about how the effect is known: measured here, measured worse here, or not proven.</summary>
-    private static string EvidenceNote(TweakDefinition tweak, LocalEvidence evidence) => evidence.Latest(tweak.Id) switch
+    private static string EvidenceNote(TweakDefinition tweak, LocalEvidence evidence, IReadOnlyDictionary<string, CommunityEvidence> community) =>
+        LocalNote(tweak, evidence) + (community.GetValueOrDefault(tweak.Id) is { } shared
+            ? $"\n[{(Community.IsProven(shared) ? "green" : Community.IsProvenWorse(shared) ? "red" : "grey")}]{Markup.Escape(Community.Describe(shared))}[/]"
+            : "");
+
+    private static string LocalNote(TweakDefinition tweak, LocalEvidence evidence) => evidence.Latest(tweak.Id) switch
     {
         { Verdict: Verdict.RealGain } entry => $"\n[green]Medido neste PC: {entry.OnePercentLowChange:+0.0;-0.0}% no 1% low ({Markup.Escape(entry.Game)})[/]",
         { Verdict: Verdict.Worse } entry => $"\n[red]Piorou neste PC: {entry.OnePercentLowChange:+0.0;-0.0}% no 1% low ({Markup.Escape(entry.Game)})[/]",

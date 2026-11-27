@@ -49,7 +49,7 @@ public sealed record ErrorReportSettings(bool Enabled = false, string? Endpoint 
 
 /// <param name="TermsAccepted">Version of the terms of use the user accepted (<see cref="Terms.Version"/>).</param>
 public sealed record AppSettings(GuardianSettings? Guardian = null, CleanupSettings? Cleanup = null, PcSettings? Pc = null,
-    string? TermsAccepted = null, UpdateSettings? Updates = null, ErrorReportSettings? ErrorReports = null)
+    string? TermsAccepted = null, UpdateSettings? Updates = null, ErrorReportSettings? ErrorReports = null, CommunitySettings? Community = null)
 {
     public const string FileName = "settings.json";
 
@@ -60,6 +60,7 @@ public sealed record AppSettings(GuardianSettings? Guardian = null, CleanupSetti
     public PcSettings PcOrDefault => Pc ?? new PcSettings();
     public UpdateSettings UpdatesOrDefault => Updates ?? new UpdateSettings();
     public ErrorReportSettings ErrorReportsOrDefault => ErrorReports ?? new ErrorReportSettings();
+    public CommunitySettings CommunityOrDefault => Community ?? new CommunitySettings();
 
     public static AppSettings Parse(string json)
     {
@@ -80,6 +81,9 @@ public sealed record AppSettings(GuardianSettings? Guardian = null, CleanupSetti
         if (settings.ErrorReportsOrDefault.Endpoint is { } endpoint &&
             (!Uri.TryCreate(endpoint, UriKind.Absolute, out var uri) || uri.Scheme != Uri.UriSchemeHttps))
             throw new InvalidDataException("errorReports.endpoint precisa ser um endereço https.");
+        if (settings.CommunityOrDefault.Endpoint is { } community &&
+            (!Uri.TryCreate(community, UriKind.Absolute, out var communityUri) || communityUri.Scheme != Uri.UriSchemeHttps))
+            throw new InvalidDataException("community.endpoint precisa ser um endereço https.");
         return settings;
     }
 

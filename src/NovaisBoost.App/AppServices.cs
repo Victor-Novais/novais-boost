@@ -55,6 +55,11 @@ internal sealed class AppServices
     public IReadOnlyList<TweakDefinition> Repairs => _repairs ??= Core.Repairs.All(Environment.OSVersion.Version.Build.ToString(System.Globalization.CultureInfo.InvariantCulture));
     public IReadOnlyList<HardwareProfile> Profiles => _profiles ??= ProfileMatcher.Match(DataCatalog.Profiles(), Pc);
 
+    private IReadOnlyDictionary<string, CommunityEvidence>? _community;
+
+    /// <summary>F21: what similar PCs measured (only with the opt-in and an endpoint; read once per run, empty on any failure).</summary>
+    public IReadOnlyDictionary<string, CommunityEvidence> CommunityEvidence => _community ??= CommunityClient.Query(this);
+
     /// <summary>A/B test results measured on this PC (evidence.json).</summary>
     public LocalEvidence LocalEvidence => _evidence ??= LocalEvidence.Load(DataDirectory, Log);
 

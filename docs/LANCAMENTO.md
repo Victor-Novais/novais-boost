@@ -148,6 +148,11 @@ Faça um snapshot da VM antes. Para cada item, confira o log em `C:\ProgramData\
       a pasta `ProgramData\NOVAIS boost` apagada.
 - [ ] A CI no GitHub (Actions) passa no push.
 
+- [ ] **F21:** `cd backend && npm test` passa. Com o Worker publicado e `community.endpoint` no settings.json: a tela de consentimento
+      aparece uma vez e "Ver exatamente o que seria enviado" mostra o JSON sem nada pessoal; recusar → nada é enviado (log).
+- [ ] Aceitar → "Provar ajustes" → o log mostra "resultado enviado (201)"; `GET /v1/evidence` lista o ajuste depois de 3 envios.
+- [ ] Sem endereço configurado, a tela de consentimento não aparece e nada é enviado.
+
 ## 3. Assinatura de código (evita alerta do SmartScreen e falso positivo de antivírus)
 
 Um otimizador que mexe no registro e roda como administrador **precisa** ser assinado.

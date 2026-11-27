@@ -113,6 +113,7 @@ internal static class Program
             if (!FirstRun.EnsureTermsAccepted(app))
                 return 0;
             FirstRun.OfferUpdate(app);
+            FirstRun.OfferCommunity(app);
             HardwareCard.Draw(log);
             new ConsoleUi(app).Run();
             log.Info("NOVAIS boost encerrado.");

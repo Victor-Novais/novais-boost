@@ -35,11 +35,16 @@ public static class TweakLevels
     /// With <paramref name="local"/>, a tweak measured as a real gain on this PC counts as proven, and one measured
     /// as worse on this PC is left out.
     /// </summary>
-    public static IReadOnlyList<TweakDefinition> Select(IEnumerable<TweakDefinition> tweaks, TweakLevel level, LocalEvidence? local = null) =>
-        tweaks.Where(tweak => tweak.Level <= level && IsProven(tweak, local) && local?.IsWorse(tweak.Id) != true).ToArray();
+    /// <param name="community">F21: aggregates of similar PCs; a tweak proven there counts as measured, one proven worse is left out.</param>
+    public static IReadOnlyList<TweakDefinition> Select(IEnumerable<TweakDefinition> tweaks, TweakLevel level, LocalEvidence? local = null,
+        IReadOnlyDictionary<string, CommunityEvidence>? community = null) =>
+        tweaks.Where(tweak => tweak.Level <= level && IsProven(tweak, local, community) && local?.IsWorse(tweak.Id) != true &&
+            !(community?.GetValueOrDefault(tweak.Id) is { } shared && Community.IsProvenWorse(shared) && local?.Latest(tweak.Id) is null)).ToArray();
 
-    public static bool IsProven(TweakDefinition tweak, LocalEvidence? local) =>
-        (local?.Effective(tweak) ?? tweak.Evidence) != TweakEvidence.Experimental;
+    /// <summary>Local evidence wins (it is this PC); then the community aggregate; then the catalog.</summary>
+    public static bool IsProven(TweakDefinition tweak, LocalEvidence? local, IReadOnlyDictionary<string, CommunityEvidence>? community = null) =>
+        (local?.Effective(tweak) ?? tweak.Evidence) != TweakEvidence.Experimental ||
+        local?.Latest(tweak.Id) is null && community?.GetValueOrDefault(tweak.Id) is { } shared && Community.IsProven(shared);
 }
 
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "type")]
