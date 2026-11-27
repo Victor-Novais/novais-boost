@@ -370,7 +370,7 @@ Ryzen 5 7600X · RTX 4070 · 32 GB · Windows 11 25H2
 
 ## Próximo passo
 
-Começar a **F0**: criar o projeto .NET 10 com o banner, a verificação de admin, o sistema de backup/restore e o formato de tweak em JSON — a base de onde todo o resto cresce.
+F0 a F10 estão concluídas (ver status abaixo). O trabalho continua na **Parte 2 do roadmap (F11 a F22)**, no fim deste arquivo, começando pela **F11 — Correções de precisão**.
 
 ---
 
@@ -392,3 +392,342 @@ Começar a **F0**: criar o projeto .NET 10 com o banner, a verificação de admi
 
 Fora do escopo por segurança: overclock, BIOS, mitigações de CPU, Low Latency Mode/cache de shader NVIDIA,
 instalação limpa automática de driver. Detalhes em `docs/LANCAMENTO.md`.
+
+---
+---
+
+# Parte 2 do roadmap — de "seguro" para "o melhor" (F11 a F22)
+
+> Origem: raio-X do projeto de 27/11/2026. Conclusão: a arquitetura de segurança já lidera o mercado,
+> mas a cobertura é rasa. O caminho para ser o melhor é **diagnóstico profundo + reparo + configuração
+> dos jogos + prova estatística**, e não mais ajustes de registro.
+
+## P2.0 Regras que valem para todas as fases novas
+
+1. Tudo o que está em `AGENTS.md` continua valendo: backup antes, dry-run por padrão, `detect/apply/revert`
+   testado, nada que acione anti-cheat, fakes nos testes, build sem warnings, log de toda ação.
+2. **Todo tipo novo de ação** (BCD, arquivo de configuração, pacote Appx, perfil NVIDIA por app etc.) entra assim:
+   1. `record` em `src/NovaisBoost.Core/TweakDefinition.cs` + `SettingState` em `SystemInterfaces.cs`;
+   2. interface no Core (`IBcdStore`, `IConfigFiles`...) + implementação real no App + fake nos testes;
+   3. definição no `tweak.schema.json`;
+   4. testes de detect/apply/revert, de falha no meio do lote e de reversão após reinício interrompido.
+3. **Evidência obrigatória.** Novo campo `evidence` em cada ajuste:
+   `measured` (provado em benchmark), `documented` (documentação oficial da Microsoft/fabricante) ou
+   `experimental`. Os níveis 1 e 2 só aceitam `measured` ou `documented`. `experimental` aparece só em
+   Custom, com o aviso "efeito não comprovado". Teste novo: `LevelsOnlyContainProvenTweaks`.
+4. Nenhum driver de kernel de terceiros. Em especial, **nunca WinRing0** (está na lista de drivers vulneráveis
+   bloqueados pelo Defender). Leitura de sensores só por APIs de fabricante (NVML/NVAPI, ADLX) e contadores do Windows.
+5. Cada fase termina com: README e `docs/LANCAMENTO.md` atualizados, itens novos no checklist manual e a linha
+   da fase na tabela de status abaixo.
+
+## P2.1 Visão geral e ordem
+
+| Fase | Nome | Depende de | Duração | Impacto |
+|---|---|---|---|---|
+| F11 | Correções de precisão | — | 1 semana | Credibilidade |
+| F12 | Benchmark v2 (prova estatística) | F11 | 3 semanas | **S** |
+| F13 | Diagnóstico profundo | F11 | 3 semanas | **S** |
+| F14 | Modo Reparar | F13 | 2 semanas | **S** (exclusivo) |
+| F15 | Configuração dentro dos jogos | F12 | 3 semanas | **S** |
+| F16 | GPU dos três fabricantes | F13 | 3 semanas | A |
+| F17 | Guardian v2 | F12, F13 | 3 semanas | A |
+| F18 | Debloat completo | F11 | 2 semanas | A |
+| F19 | Entrada, áudio, rede e armazenamento | F13 | 3 semanas | A |
+| F20 | Confiança e distribuição | — (pode ir em paralelo) | 2–3 semanas | B (bloqueia adoção) |
+| F21 | Base de dados anônima (opt-in) | F12, F20 | 3 semanas + backend | B (vantagem única) |
+| F22 | Interface gráfica e inglês | F20 | 4–6 semanas | B (alcance) |
+
+**Total:** ~32 a 36 semanas para uma pessoa. Marcos de versão:
+
+- **v1.1** = F11 + F12 + F13 → "o PC é medido e diagnosticado de verdade".
+- **v1.2** = F14 + F15 + F20 → "conserta o que outros estragaram, configura o jogo e é assinado".
+- **v1.3** = F16 + F17 + F18 + F19 → profundidade técnica.
+- **v2.0** = F21 + F22 → produto de massa.
+
+---
+
+## F11 — Correções de precisão (1 semana)
+
+**Objetivo:** tirar do produto o que não tem efeito comprovado e corrigir os riscos encontrados.
+
+| # | Tarefa | Onde | Pronto quando |
+|---|---|---|---|
+| 11.1 | Adicionar o campo `evidence` (ver P2.0 item 3) ao schema, ao `TweakDefinition` e a todos os 33 JSON | `tweak.schema.json`, `TweakDefinition.cs`, `data/tweaks/*.json` | Teste `LevelsOnlyContainProvenTweaks` passa |
+| 11.2 | `priority-separation` → `experimental`, sai do nível 2. No Windows cliente o padrão (2) já equivale a 0x26 | `priority-separation.json` | Só aparece em Custom |
+| 11.3 | `mmcss-gaming`: separar em `mmcss-responsiveness` (`SystemResponsiveness`, `NetworkThrottlingIndex`, documentados) e `mmcss-games-task` (`experimental`, só afeta threads registradas na tarefa "Games") | `mmcss-gaming.json` | Dois ajustes; o teste `EachSystemTargetBelongsToASingleTweak` passa |
+| 11.4 | Guardian: prioridade padrão do jogo **AboveNormal**. High vira opção em `settings.json` (`guardian.gamePriority`) | `Guardian.cs`, `GuardianService.cs` | Teste da política cobre os dois modos |
+| 11.5 | Plano de energia: valores `dc` próprios (estado mínimo 5%, boost "Eficiente agressivo", suspensão seletiva USB ligada na bateria). Em notebook, o `ac` continua igual | `power-plan.json` | Teste confere `dc` ≠ `ac` nos itens de CPU |
+| 11.6 | `vbs-off`: corrigir o texto de risco. A Riot pode exigir HVCI de algumas contas (Vanguard "VAN: Restriction"); **verificar a política atual** antes de escrever. Adicionar `compat.antiCheat: ["Vanguard"]` com aviso na revisão | `vbs-off.json`, `Compatibility.cs` | Ao revisar com Valorant instalado, aparece o aviso |
+| 11.7 | Renomear "Latência DPC" para **"Carga de DPC/ISR (%)"** em toda a interface até a F12 trazer a latência real | `Views.cs`, `Performance.cs` | Nenhum texto promete latência em µs |
+| 11.8 | Revisar `hags-on`: no nível 1 só para RTX 30+/RX 6000+ (`compat.hardware: gpu-hags`) | `hags-on.json` | GTX não recebe o ajuste |
+
+---
+
+## F12 — Benchmark v2: prova estatística (3 semanas)
+
+**Objetivo:** cada promessa vira número com margem de erro. É o que permite ao marketing dizer "+14% no 1% low" com honestidade.
+
+### 12.1 PresentMon embutido
+- `scripts/build.ps1` baixa o **PresentMon console** de uma versão fixa do GitHub da Intel, confere o **SHA256 fixado no script**
+  e copia para `tools/` dentro do pacote. Licença MIT em `THIRD_PARTY_NOTICES.md`.
+- `Benchmark.FindPresentMon` passa a preferir o embutido. A tela não pede mais para o usuário baixar nada.
+
+### 12.2 Mais métricas por quadro
+- Ler as colunas do PresentMon 2: `MsBetweenPresents`/`FrameTime`, `MsGPUBusy`, `MsCPUBusy`, `MsPCLatency`
+  e `MsClickToPhotonLatency` (quando o jogo tem Reflex).
+- **Classificação do gargalo:** se `GPUBusy` ≈ `FrameTime` → limitado pela GPU; senão → limitado pela CPU ou pelo sistema.
+  Isso decide quais recomendações mostrar (ajuste de CPU não ajuda jogo limitado pela GPU).
+- Gráfico de frametime no terminal (sparkline com Spectre.Console) e contagem de travadas (> 2× a mediana).
+
+### 12.3 Sessão estatística (Core, 100% testável)
+- Novo `BenchmarkSession` em `src/NovaisBoost.Core/Performance.cs`:
+  - de 3 a 5 rodadas por lado (antes/depois), descartando os primeiros 10 s de cada uma (aquecimento);
+  - média, desvio padrão e **intervalo de confiança de 95%** por bootstrap (10.000 reamostragens, semente fixa nos testes);
+  - veredito: `GanhoReal`, `DentroDoRuído` ou `Piorou`, com o tamanho do efeito.
+- Testes: dados sintéticos com ganho conhecido, só ruído e piora.
+
+### 12.4 Teste A/B por grupo de ajustes
+- Fluxo "Provar ajustes": benchmark antes → aplicar **um grupo** (energia, latência, serviços...) → reiniciar se o grupo exigir → benchmark depois → veredito.
+- O resultado vira `measured` **local** para aquele PC (guardado em `%ProgramData%\NOVAIS boost\evidence.json`). Na F21, alimenta a base coletiva.
+- O usuário pode reverter só o grupo que deu `DentroDoRuído` ou `Piorou`.
+
+### 12.5 Latência real de DPC/ISR por driver (ETW)
+- Pacote `Microsoft.Diagnostics.Tracing.TraceEvent`, sessão de kernel com `KernelTraceEventParser.Keywords.DeferedProcedureCalls | Interrupt | ImageLoad`.
+- Para cada evento: duração em µs e endereço da rotina → módulo (`.sys`) pelos eventos de ImageLoad.
+- Relatório: top 10 drivers por tempo máximo e por total. Alerta acima de 500 µs, crítico acima de 1.000 µs, com a dica por driver
+  (`nvlddmkm.sys` → driver de vídeo, `ndis.sys`/`rt640x64.sys` → rede, `storport.sys` → disco, `ACPI.sys` → BIOS/energia).
+- Interface `IKernelTrace` com fake que reproduz uma gravação salva (arquivo `.etl` de exemplo só nos testes).
+
+### 12.6 Relatório para compartilhar
+- `reports/benchmark-AAAAMMDD.html` auto-contido (CSS e SVG inline, sem internet): cartão da marca NOVAIS, hardware,
+  antes × depois com intervalos, gráfico de frametime, ajustes aplicados.
+- Botão "Abrir relatório" no terminal.
+
+**Pronto quando:** uma sessão A/B completa com 3 rodadas gera o veredito e o HTML; os testes estatísticos passam; a latência ETW lista drivers numa VM.
+
+---
+
+## F13 — Diagnóstico profundo, estilo detetive (3 semanas)
+
+**Objetivo:** achar os problemas que dão 10–30% de ganho. Cada regra nova é pura (Core) sobre o `HardwareSnapshot`; a coleta fica em `HardwareProbe.cs`.
+
+| # | Regra | Como coletar | Severidade |
+|---|---|---|---|
+| 13.1 | **GPU com PCIe abaixo da largura máxima** (x8/x4 por slot errado ou riser) | `Win32_PnPEntity.GetDeviceProperties` com `DEVPKEY_PciDevice_CurrentLinkWidth` / `MaxLinkWidth` / `CurrentLinkSpeed` / `MaxLinkSpeed` | Crítico se a largura for menor. A geração só vale sob carga (a GPU reduz a geração parada), então fica como Info |
+| 13.2 | **Pentes de RAM no mesmo canal** | `Win32_PhysicalMemory.DeviceLocator`/`BankLabel` (padrões `ChannelA-DIMM1`, `DIMM_A2`...). Heurística por fabricante em `data/memory-slots.json` | Aviso |
+| 13.3 | **Instabilidade de hardware** (erros WHEA nos últimos 30 dias) | Log System, provedor `Microsoft-Windows-WHEA-Logger`, IDs 17, 18, 19, 47 | Crítico se ≥ 1 erro fatal, Aviso se corrigidos |
+| 13.4 | **Telas azuis e desligamentos** | Eventos `BugCheck 1001`, `Kernel-Power 41`; contagem em `%SystemRoot%\Minidump` | Crítico se > 2 em 30 dias |
+| 13.5 | **Travamentos do driver de vídeo (TDR)** | Evento `Display 4101`; `nvlddmkm` 13/14/153 | Aviso |
+| 13.6 | **Microcódigo Intel 13ª/14ª ger. desatualizado** (degradação Vmin) | `HKLM\HARDWARE\DESCRIPTION\System\CentralProcessor\0\Update Revision`; versão mínima em `data/microcode.json` (0x12B; conferir a mais recente) | Crítico |
+| 13.7 | **Temperatura e motivo de limitação da GPU** | NVML (`nvml.dll` do driver): `nvmlDeviceGetTemperature`, `nvmlDeviceGetCurrentClocksEventReasons`. AMD na F16 | Aviso se houver limitação térmica ou de energia sob carga |
+| 13.8 | **CPU limitando sob carga** | Carga curta de 20 s (opcional, com aviso) + contadores `Processor Information\% Processor Performance` e `% of Maximum Frequency` | Aviso |
+| 13.9 | **Jogo instalado em HD** | Pasta do jogo (`GameLibrary`) → volume → `MSFT_PhysicalDisk.MediaType` | Aviso |
+| 13.10 | **Arquivo de paginação desligado ou em HD** | `Win32_PageFileUsage`, `Win32_ComputerSystem.AutomaticManagedPagefile` | Crítico se desligado (alimenta a F14) |
+| 13.11 | **Overlays demais ao mesmo tempo** | Processos: Discord overlay, RTSS, NVIDIA overlay, Steam overlay, Game Bar | Info |
+| 13.12 | **Monitor por HDMI limitando os Hz** e VRR desligado | `QueryDisplayConfig` (`outputTechnology`); `DirectXUserGlobalSettings` (`VRROptimizeEnable`) | Aviso |
+| 13.13 | **TRIM desligado** | `fsutil behavior query DisableDeleteNotify` | Crítico em SSD |
+| 13.14 | **Dois ou mais otimizadores instalados** (conflito) | Lista de executáveis e serviços conhecidos em `data/optimizers.json` | Info → leva ao Modo Reparar |
+| 13.15 | **Nota de saúde v2** | Peso por categoria e teto por categoria (10 avisos de disco não podem zerar a nota) | — |
+
+**Pronto quando:** cada regra tem pelo menos 2 testes (dispara / não dispara) com snapshots falsos; o relatório JSON inclui as fontes de cada dado.
+
+---
+
+## F14 — Modo Reparar (2 semanas) — exclusivo no mercado
+
+**Objetivo:** desfazer o estrago de "pacotes de FPS" e otimizadores agressivos que muitos jogadores já rodaram.
+
+### 14.1 Tipos novos de ação
+- `BcdAction(string Element, string? Expected)`: lê e escreve com `bcdedit /enum {current}` e `/set` / `/deletevalue`.
+  Backup = valor anterior. Interface `IBcdStore` + fake.
+- `PagefileAction(bool SystemManaged)`: via `Win32_ComputerSystem.AutomaticManagedPagefile` + `Win32_PageFileSetting`.
+
+### 14.2 Catálogo de reparos (`data/repairs/*.json`, mesmo schema com `category: "Reparo"`)
+| Reparo | Detecta | Restaura |
+|---|---|---|
+| Relógio de plataforma forçado | `useplatformclock`, `useplatformtick`, `disabledynamictick`, `tscsyncpolicy` definidos | Remove os elementos (padrão do Windows) |
+| Paginação desligada | Sem arquivo de paginação | Gerenciado pelo sistema |
+| Serviços críticos desativados | Lista em `data/critical-services.json` com o tipo de início padrão por versão do Windows (Winmgmt, BITS, wuauserv, Audiosrv, AudioEndpointBuilder, Dnscache, CryptSvc, Schedule, EventLog, mpssvc, TrustedInstaller, ...) | Tipo de início padrão |
+| Mitigações de CPU desligadas | `FeatureSettingsOverride`/`FeatureSettingsOverrideMask` em `Memory Management` | Remove os valores |
+| Defender ou Windows Update desligados por política | `DisableAntiSpyware`, `NoAutoUpdate` e afins em `Policies` | Remove as políticas |
+| Valores absurdos de latência | `Win32PrioritySeparation`, `SystemResponsiveness` fora da faixa válida, `LargeSystemCache`, `DisablePagingExecutive` | Padrão do Windows |
+| Pilha TCP alterada | `netsh int tcp show global` diferente do padrão (autotuning desabilitado etc.) | `netsh int tcp set global` com o padrão |
+
+### 14.3 Fluxo
+`Menu → Reparar → varredura (somente leitura, sem admin) → lista "alterações suspeitas" com a origem provável → simulação → backup → restaurar`.
+O resultado aparece no diagnóstico como "Encontramos 7 alterações de outros otimizadores".
+
+**Pronto quando:** cada reparo tem teste de detecção e restauração; uma VM "estragada" por um script de teste (`scripts/vm-damage.ps1`, **só para VM**) volta ao padrão.
+
+---
+
+## F15 — Configuração dentro dos jogos (3 semanas)
+
+**Objetivo:** aplicar o preset competitivo nos arquivos do jogo, que rende mais que qualquer registro.
+Os arquivos ficam fora do processo do jogo, então não há conflito com anti-cheat.
+
+### 15.1 Tipo novo de ação: `ConfigFileAction`
+- Campos: `path` (com tokens `%LOCALAPPDATA%`, `%USERPROFILE%`, `{steamUser}`, `{gameDir}`), `format` (`ini`, `keyValue`, `cfg`, `json`), `section`, `key`, `value`.
+- Backup = **cópia do arquivo inteiro** antes da primeira mudança. Revert restaura a cópia, ou só a chave se o arquivo mudou depois.
+- Regras: recusa aplicar com o jogo aberto (o jogo regrava ao fechar); não mexe em arquivo somente leitura sem perguntar; falha fechada se a chave não existir no formato esperado.
+
+### 15.2 Presets por jogo (`data/games/<id>.json`, com `testedVersion` e `lastVerified`)
+| Jogo | Arquivo | Exemplos de chave |
+|---|---|---|
+| CS2 | Steam `userdata\{steamUser}\730\local\cfg\cs2_video.txt` e `game\csgo\cfg\autoexec.cfg` | MSAA, sombras, `fps_max` |
+| Fortnite | `%LOCALAPPDATA%\FortniteGame\Saved\Config\WindowsClient\GameUserSettings.ini` | `FrameRateLimit`, `bUseVSync`, modo de renderização |
+| Apex | `%USERPROFILE%\Saved Games\Respawn\Apex\local\videoconfig.txt` | sombras, `setting.fps_max` |
+| R6 Siege | `Documents\My Games\Rainbow Six - Siege\<id>\GameSettings.ini` | `FPSLimit`, Reflex |
+| Overwatch 2 | `Documents\Overwatch\Settings\Settings_v0.ini` | `FrameRateCap`, Reflex |
+| Valorant | `%LOCALAPPDATA%\VALORANT\Saved\Config\...\GameUserSettings.ini` | Parte das opções fica no servidor: **verificar** o que o arquivo ainda controla |
+| COD | `Documents\Call of Duty\players\options.*.cst` | Formato muda por título: marcar como **beta** |
+
+### 15.3 Limite de FPS calculado
+- Com VRR (G-Sync/FreeSync) + Reflex: limite ≈ `Hz − Hz²/3600` (ex.: 144 Hz → 138, 240 Hz → 224). Sem VRR: sem limite ou o limite do jogo.
+- A fórmula fica no Core (`FrameCap.For(hz, vrr, reflex)`) com testes.
+
+### 15.4 Opções de inicialização
+- Steam: mostrar o texto pronto para copiar (não editar `localconfig.vdf`, que o Steam regrava).
+
+**Pronto quando:** cada jogo tem fixture de arquivo real nos testes; aplicar → reverter devolve o arquivo byte a byte; com o jogo aberto, aplicar é recusado.
+
+---
+
+## F16 — GPU dos três fabricantes (3 semanas)
+
+### 16.1 NVIDIA
+- **Perfis por aplicativo** via DRS (`NvAPI_DRS_FindApplicationByName`, `CreateProfile`, `CreateApplication`). Novo `NvidiaProfileAction(string Exe, uint SettingId, uint Value)`.
+- Ajustes por jogo: modo de energia, limite de FPS do driver (alternativa ao 15.3), V-Sync, modo de baixa latência.
+  Validar os IDs e valores aceitos no driver atual antes de ativar (a decisão anterior de não mexer em Low Latency Mode deve ser revista com teste real).
+- NVML (iniciado na F13) também para uso de VRAM durante o jogo (alerta no Guardian).
+
+### 16.2 AMD (ADLX)
+- Bindings C# gerados com SWIG a partir do ADLX SDK (licença MIT), carregando `amdadlx64.dll` do driver.
+- Ajustes: Anti-Lag (ligado), Radeon Chill (desligado), Radeon Boost (desligado no competitivo), Enhanced Sync (desligado), HYPR-RX (desligado).
+  Leitura de temperatura, clock e VRAM para o diagnóstico.
+- Novo `AmdSettingAction` + `IAmdSettings` + fake.
+
+### 16.3 Intel Arc
+- Só leitura via IGCL (`ControlLib.dll`): ReBAR ativo, versão do driver, temperatura. Ajustes ficam para depois.
+
+**Pronto quando:** o checklist manual cobre NVIDIA e Radeon reais; revert devolve o painel de cada fabricante ao estado anterior.
+
+---
+
+## F17 — Guardian v2, nível Process Lasso (3 semanas)
+
+| # | Tarefa | Detalhe |
+|---|---|---|
+| 17.1 | Detecção por evento | Trocar a varredura a cada 2 s por `Win32_ProcessStartTrace`/`StopTrace` (WMI) ou ETW. Meta: < 0,1% de CPU parado |
+| 17.2 | **Modo eficiência para o segundo plano** | `SetProcessInformation(ProcessPowerThrottling)` (EcoQoS, o "modo de eficiência" do próprio Windows) nos processos da lista durante o jogo. É mais seguro que mexer no jogo |
+| 17.3 | **CPU Sets para o segundo plano** | `GetSystemCpuSetInformation` (`EfficiencyClass` para P/E, `LastLevelCacheIndex` para o CCD). Mover os processos pesados para os E-cores ou para o CCD sem cache. **O jogo não é tocado por padrão** |
+| 17.4 | CPU Sets no jogo (experimental) | Só com opt-in e só se o benchmark da F12 provar ganho. Lista `noTouch` por jogo em `games.json` (jogos com anti-cheat protegido). Se o `OpenProcess` falhar, desistir sem tentar de novo |
+| 17.5 | Plano de energia só durante o jogo | Equilibrado parado, plano NOVAIS no jogo. Em X3D de 2 CCDs continua no Equilibrado |
+| 17.6 | Standby list inteligente | `NtSetSystemInformation(SystemMemoryListInformation, MemoryPurgeStandbyList)` só se a memória livre < 1 GB **e** a standby > 2 GB, no máximo 1 vez a cada 5 min, com log |
+| 17.7 | Exclusões do Defender para as pastas de jogos | Opt-in, via `MSFT_MpPreference`, reversível, com aviso. Se a Proteção contra Adulteração bloquear, explicar como fazer pela interface do Windows |
+| 17.8 | Alertas | Toast do Windows: VRAM > 95%, RAM > 90%, processo com vazamento (working set subindo por 30 min) |
+| 17.9 | Configurável | `settings.json`: lista do usuário para baixar prioridade, eficiência ou ignorar |
+
+**Pronto quando:** `GuardianPolicy` tem testes para cada regra nova; num jogo com anti-cheat, nada é aplicado ao processo do jogo sem opt-in.
+
+---
+
+## F18 — Debloat completo (2 semanas)
+
+| # | Tarefa | Detalhe |
+|---|---|---|
+| 18.1 | Apps da Store | Novo `AppxPackageAction` via `Windows.Management.Deployment.PackageManager` (TFM `net10.0-windows10.0.19041.0`). **Revert = reinstalar pela Store** (`winget install --source msstore <id>`); o ID da Store fica no JSON e o revert é testado. Lista segura em `data/bloat/appx.json` (Clipchamp, News, Solitaire, Bing Weather...) |
+| 18.2 | Edge em segundo plano | Políticas `BackgroundModeEnabled=0` e `StartupBoostEnabled=0` (registro, reversível) |
+| 18.3 | OneDrive e Teams | Só tirar da inicialização (sem desinstalar) |
+| 18.4 | Serviços de fabricantes | `data/bloat/oem.json`: Armoury Crate, MSI Center, Gigabyte Control Center, iCUE, Razer Synapse. Serviços pesados → **Manual** (nunca Desativado), com aviso de RGB e ventoinhas |
+| 18.5 | Xbox | Serviços Xbox só em Manual e **nunca** em X3D de 2 CCDs (`compat.hardware: not-dual-ccd-x3d`) |
+
+**Pronto quando:** cada pacote removido volta com o revert numa VM; o checklist manual inclui RGB funcionando após o 18.4.
+
+---
+
+## F19 — Entrada, áudio, rede e armazenamento (3 semanas)
+
+**Entrada**
+- **Teste de polling rate do mouse**: janela invisível com `RegisterRawInputDevices(RIDEV_INPUTSINK)`, 5 s movendo o mouse →
+  Hz médio e estabilidade. Alerta quando 4K/8K Hz pesam numa CPU fraca.
+- **Mapa dos controladores USB** (SetupAPI, cadeia de dispositivos pai): mostra se mouse, teclado, headset e webcam/placa de captura dividem o controlador.
+- **Otimizações para jogos em janela** (`DirectXUserGlobalSettings` → `SwapEffectUpgradeEnable=1;`), reversível.
+- **MPO**: diagnóstico e reparo só para quem tem flicker/stutter (`experimental`; **verificar** se a chave ainda funciona no 24H2/25H2).
+
+**Áudio**
+- Listar dispositivos; desativar saídas HDMI/DisplayPort sem uso (reversível pela API de dispositivos); desligar realces de áudio por dispositivo.
+
+**Rede**
+- Ping até os **servidores reais de cada jogo** (`data/servers.json`; CS2 pela configuração pública de relays da Valve, os outros por região).
+- Varredura em segundo plano do Wi-Fi desligada **só durante o jogo** (`WlanSetInterface`, integrado ao Guardian).
+- Conferir RSS ligado e buffers da placa de rede.
+- Fora do produto: desligar Nagle (`TcpAckFrequency`/`TCPNoDelay`), que não ajuda jogos modernos (fica documentado na seção 11).
+
+**Armazenamento**
+- Cache de gravação, estado do BypassIO (`fsutil bypassio state C:`), jogo no SSD mais rápido.
+
+---
+
+## F20 — Confiança e distribuição (2–3 semanas, pode correr em paralelo)
+
+| # | Tarefa | Detalhe |
+|---|---|---|
+| 20.1 | Assinatura de código | Azure Trusted Signing (exige CNPJ) ou certificado OV/EV; `build.ps1` já aceita o thumbprint |
+| 20.2 | Envio à Microsoft | Cada versão no portal WDSI como "software developer" |
+| 20.3 | **Atualização automática** | `releases/latest.json` (versão, URL, SHA256) no GitHub Releases. O app baixa, confere **Authenticode + SHA256**, troca o exe ao reiniciar e guarda a versão anterior para voltar |
+| 20.4 | **Proteção depois do reboot** | Ao aplicar algo com reinício, registrar uma tarefa de inicialização (SYSTEM, antes do logon) que conta tentativas de boot. Se o usuário não chegar ao logon em 2 boots seguidos, a tarefa executa "Reverter tudo" sozinha. A confirmação de boot saudável no logon apaga a tarefa |
+| 20.5 | CI | GitHub Actions `windows-latest`: `dotnet build -warnaserror` + `dotnet test` em cada push |
+| 20.6 | Teste em VM automatizado | `scripts/vm-test.ps1` (Hyper-V/Windows Sandbox): export do registro → aplicar nível 3 → reverter → export → diff vazio |
+| 20.7 | Relatório de erro opt-in | Envia só a exceção e a versão, nunca dados pessoais |
+
+---
+
+## F21 — Base de dados anônima opt-in (3 semanas + backend)
+
+**Objetivo:** saber qual ajuste funciona em qual hardware. É a vantagem que nenhum concorrente consegue copiar.
+
+- **Consentimento explícito** na primeira execução, com a tela "Ver exatamente o que será enviado". Desligado por padrão. Política de privacidade conforme a **LGPD**.
+- **O que é enviado:** modelo de CPU/GPU, RAM (GB e MT/s), build do Windows, ajustes aplicados e o resultado relativo do benchmark (F12).
+  **Nunca:** nome, e-mail, número de série, IP salvo, lista de programas.
+- **Backend simples:** Cloudflare Workers + D1 (ou Supabase), endpoint único `POST /v1/results` e `GET /v1/evidence?cpu=...&gpu=...`.
+- **No app:** cada ajuste mostra "Testado em 214 PCs parecidos com o seu: +3,1% no 1% low (IC 95%: +1,8 a +4,4)".
+- **Promoção automática:** um ajuste vira `measured` para uma classe de hardware com N ≥ 30 e intervalo de confiança acima de zero.
+
+---
+
+## F22 — Interface gráfica e inglês (4–6 semanas)
+
+- **Textos:** extrair todos os textos de interface para recursos (`pt-BR` e `en-US`). Teste que falha se houver texto fixo em `Views.cs`.
+- **Interface gráfica:** Avalonia sobre o mesmo `NovaisBoost.Core` (publica como exe único). O terminal continua existindo (`--terminal`) para entusiastas e para as tarefas agendadas.
+- **Fluxo de 1 clique:** Diagnóstico → "Recomendado para o seu PC" (com a evidência da F21) → Revisar → Aplicar → Provar (F12).
+- **Marca:** mesmas cores e banner (NOVAIS roxo, boost branco), tema escuro primeiro.
+
+---
+
+## P2.2 Status da Parte 2
+
+| Fase | Status | Observações |
+|---|---|---|
+| F11 Correções de precisão | ⏳ | |
+| F12 Benchmark v2 | ⏳ | |
+| F13 Diagnóstico profundo | ⏳ | |
+| F14 Modo Reparar | ⏳ | |
+| F15 Configuração dos jogos | ⏳ | |
+| F16 GPU três fabricantes | ⏳ | |
+| F17 Guardian v2 | ⏳ | |
+| F18 Debloat completo | ⏳ | |
+| F19 Entrada, áudio, rede, armazenamento | ⏳ | |
+| F20 Confiança e distribuição | ⏳ | |
+| F21 Base de dados opt-in | ⏳ | |
+| F22 Interface gráfica e inglês | ⏳ | |
+
+## P2.3 Itens a verificar antes de implementar
+
+Pontos que dependem de informação externa que muda com o tempo:
+
+- Política atual da Riot/Vanguard sobre HVCI (F11.6) e de COD/Battlefield sobre Secure Boot/TPM.
+- Microcódigo Intel mínimo recomendado para 13ª/14ª ger. (F13.6).
+- Chave de MPO no Windows 11 24H2/25H2 (F19).
+- O que o `GameUserSettings.ini` do Valorant ainda controla e o formato atual do `.cst` do COD (F15.2).
+- IDs e valores aceitos de Low Latency Mode no driver NVIDIA atual (F16.1).
