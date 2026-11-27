@@ -19,6 +19,7 @@ Execute `NOVAIS boost.exe` (pede administrador). O menu tem:
 | 8 | Reverter / Backups | Desfaz tudo o que foi aplicado |
 | 9 | Rede & Latência | Ping, jitter, perda, bufferbloat, DNS mais rápido, ajustes da placa de rede |
 | 10 | Modo Reparar | Acha e desfaz o que "pacotes de FPS" e outros otimizadores deixaram alterado |
+| 11 | Configurações | As opções do `settings.json` (Guardian, limpeza, atualizações, relatório de erros, fonte) |
 
 Linha de comando:
 
@@ -28,8 +29,14 @@ NOVAIS boost.exe --simular [--extremo] mostra o que seria alterado, sem alterar 
 NOVAIS boost.exe --reparar             procura alterações de outros otimizadores, sem alterar nada
 NOVAIS boost.exe --guardian            Process Guardian (usado pela tarefa de logon)
 NOVAIS boost.exe --tarefa <id>         reaplicar | limpeza | ssd | saude | drivers | rede
+NOVAIS boost.exe --aplicar <1|2|3> --confirmar   aplica um nível sem perguntas (testes em VM; com backup)
+NOVAIS boost.exe --reverter-tudo --confirmar     desfaz tudo sem perguntas
+NOVAIS boost.exe --desinstalar         desfaz tudo e remove tarefas, perfis NVIDIA próprios e o plano de energia
+NOVAIS boost.exe --voltar-versao       volta para a versão anterior à última atualização
 NOVAIS boost.exe --versao
 ```
+
+Na primeira vez, o menu mostra o **termo de uso**; sem aceite, só os modos somente leitura funcionam.
 
 ## Segurança
 
@@ -41,6 +48,14 @@ NOVAIS boost.exe --versao
   pode exigir de algumas contas: com o Valorant instalado, a revisão mostra um aviso antes de aplicar.
 - Os níveis só têm ajustes com efeito documentado ou medido. Os experimentais ficam em "Ajustes individuais".
 - Logs diários em `C:\ProgramData\NOVAIS boost\logs`.
+- **Proteção depois do reinício:** depois de ajustes que pedem reinício, uma tarefa de inicialização (SYSTEM) conta os boots.
+  Se você não chegar à área de trabalho 2 vezes seguidas, o terceiro boot executa "Reverter tudo" sozinho (o que depende da
+  sua conta, como apps da Store, termina no próximo logon). Ao entrar no Windows, a proteção se desliga.
+- **Atualização automática:** ao abrir, o app lê o `latest.json` do GitHub Releases e oferece a versão nova. Antes de trocar o
+  exe, confere o SHA256 e a assinatura digital (Authenticode, mesmo autor da versão atual); a anterior fica guardada para
+  `--voltar-versao`. Versões sem assinatura nunca são instaladas automaticamente.
+- **Relatório de erros** (opcional, desligado): só o tipo da exceção, a mensagem sem caminhos/nomes/IPs, a versão e o build
+  do Windows, salvo em `reports\errors` e enviado só se houver um endereço configurado.
 
 ## Diagnóstico profundo
 
@@ -216,6 +231,9 @@ Arquivo opcional `C:\ProgramData\NOVAIS boost\settings.json` (só administradore
 | `guardian.wifiScanOff` | `true`/`false` | `true`: pausa a varredura de redes Wi-Fi em segundo plano enquanto o jogo roda |
 | `guardian.obsCpuSets` | `true`/`false` | `false`: OBS/Streamlabs nos E-cores / CCD sem V-Cache durante o jogo |
 | `cleanup.browsers` / `cleanup.launchers` | `true`/`false` | `false`: limpar o cache dos navegadores / launchers na limpeza semanal |
+| `updates.check` | `true`/`false` | `true`: procurar versão nova ao abrir o menu |
+| `errorReports.enabled` / `endpoint` | `true`/`false`, `https://...` | desligado: relatório de erros sem dados pessoais |
+| `termsAccepted` | data | preenchido ao aceitar o termo de uso |
 | `pc.psuWatts` / `pc.psuRating` | 200 a 3000 / `bronze`, `gold`... | não informado: potência e certificação da fonte, usadas nos avisos |
 
 Um arquivo inválido é ignorado (com aviso no log) e o padrão é usado.
@@ -226,7 +244,7 @@ Requer o SDK do .NET 10 (`winget install Microsoft.DotNet.SDK.10`).
 
 ```
 dotnet build NovaisBoost.slnx -c Release -warnaserror
-dotnet test  NovaisBoost.slnx -c Release
+dotnet test  NovaisBoost.slnx -c Release      # também roda no Linux (os testes que dependem do Windows são pulados)
 pwsh .\scripts\build.ps1 -Version 1.0.0      # gera artifacts\publish\NOVAIS boost.exe
 ```
 
@@ -239,7 +257,11 @@ src/NovaisBoost.App    acesso ao Windows (registro, serviços, WMI, NVAPI, power
 data/tweaks/*.json     catálogo de ajustes (validado por tweak.schema.json)
 data/profiles.json     perfis de hardware        data/processes.json  base de processos
 data/games.json        jogos e dicas
-tests/                 testes xUnit (sem tocar no Windows real)
+tests/NovaisBoost.Tests      testes xUnit do Core (sem tocar no Windows real)
+tests/NovaisBoost.App.Tests  testes de fumaça das telas e das tarefas (os que usam APIs do Windows só rodam na CI Windows)
+.github/workflows/ci.yml     build -warnaserror + testes a cada push (windows-latest)
+scripts/vm-test.ps1          só em VM: aplica o nível 3, reverte e compara o registro antes × depois
+scripts/changelog.ps1        gera o CHANGELOG.md da versão a partir dos commits
 ```
 
 Para adicionar um ajuste: crie um JSON em `data/tweaks/` seguindo o schema. O teste

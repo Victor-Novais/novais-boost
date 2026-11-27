@@ -14,6 +14,8 @@ O plano completo está em `PLANO_DE_ACAO.md`. Leia-o antes de qualquer tarefa e 
   (Modo Reparar), `data/games/*.json` (presets por jogo), `data/profiles.json`, `data/processes.json`, `data/games.json` e as
   tabelas de apoio `critical-services.json`, `memory-slots.json`, `microcode.json`, `optimizers.json`.
 - Build de release: `pwsh .\scripts\build.ps1 -Version X.Y.Z`. Checklist de testes: `docs/LANCAMENTO.md`.
+- Testes: `tests/NovaisBoost.Tests` (Core, roda em qualquer SO) e `tests/NovaisBoost.App.Tests` (telas/adaptadores; os que usam
+  APIs do Windows usam `[WindowsFact]`). Versão única em `Directory.Build.props`.
 - Código, nomes e comentários em inglês. Textos exibidos ao usuário em português do Brasil.
 
 ## Regras de segurança (inegociáveis)

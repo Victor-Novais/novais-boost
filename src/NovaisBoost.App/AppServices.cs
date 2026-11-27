@@ -12,7 +12,7 @@ internal sealed class AppServices
     private LocalEvidence? _evidence;
     private IReadOnlyList<TweakDefinition>? _repairs;
 
-    private AppServices(string dataDirectory, IActionLog log, SnapshotManager snapshots)
+    private AppServices(string dataDirectory, IActionLog log, SnapshotManager snapshots, string? userSid)
     {
         DataDirectory = dataDirectory;
         Log = log;
@@ -20,11 +20,11 @@ internal sealed class AppServices
         Probe = new WindowsHardwareProbe(log, () => Games);
         Appx = new WindowsAppxPackages(log);
         var nvidia = new NvidiaDrs();
-        Engine = new TweakEngine(new WindowsRegistry(), new WindowsServiceController(), new WindowsPowerConfig(), snapshots, log,
+        Engine = new TweakEngine(new WindowsRegistry(userSid), new WindowsServiceController(), new WindowsPowerConfig(), snapshots, log,
             new WindowsScheduledTasks(log), new WindowsPowerPlans(), compat => Compatibility.Check(compat, Pc),
             nvidia, new WindowsDnsSettings(), new WindowsBcdStore(), new WindowsPagefile(), new WindowsTcpSettings(), new WindowsConfigFiles(),
             nvidia, Amd, new WindowsDefenderExclusions(), Appx, new WindowsSystemFeatures(),
-            new WindowsDirectXSettings(), new WindowsDevices());
+            new WindowsDirectXSettings(userSid), new WindowsDevices());
     }
 
     public string DataDirectory { get; }
@@ -36,8 +36,14 @@ internal sealed class AppServices
     public TweakEngine Engine { get; }
     public IReadOnlyList<TweakDefinition> StaticTweaks { get; } = TweakCatalog.LoadEmbedded();
 
-    public static AppServices Create(string dataDirectory, IActionLog log, string owner) =>
-        new(dataDirectory, log, new SnapshotManager(dataDirectory, owner, new WindowsRestorePoints(), log));
+    /// <param name="userSid">Boot protection only: running as SYSTEM, map "HKCU" to this account's hive.</param>
+    public static AppServices Create(string dataDirectory, IActionLog log, string owner, string? userSid = null) =>
+        new(dataDirectory, log, new SnapshotManager(dataDirectory, owner, new WindowsRestorePoints(), log), userSid)
+        {
+            Owner = owner
+        };
+
+    public string Owner { get; private init; } = "";
 
     public HardwareSnapshot Pc => _pc ??= Probe.Capture();
     public IReadOnlyList<InstalledGame> Games => _games ??= GameLibrary.Detect(DataCatalog.Games(), Log);

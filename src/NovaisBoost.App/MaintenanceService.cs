@@ -45,7 +45,7 @@ internal static class TaskSchedulerService
     public static void RunNow(ScheduleDefinition schedule) =>
         WindowsCommand.Run("schtasks.exe", "/run", "/tn", Schedules.Folder + schedule.Id);
 
-    private static XDocument BuildXml(ScheduleDefinition schedule)
+    internal static XDocument BuildXml(ScheduleDefinition schedule)
     {
         using var identity = WindowsIdentity.GetCurrent();
         var sid = identity.User?.Value ?? throw new InvalidOperationException("Conta do Windows não identificada.");
@@ -53,6 +53,7 @@ internal static class TaskSchedulerService
 
         XElement trigger = schedule.Trigger switch
         {
+            ScheduleTrigger.Boot => new XElement(Ns + "BootTrigger", new XElement(Ns + "Enabled", "true"), new XElement(Ns + "Delay", "PT45S")),
             ScheduleTrigger.Logon => new XElement(Ns + "LogonTrigger", new XElement(Ns + "Enabled", "true"),
                 new XElement(Ns + "UserId", sid), new XElement(Ns + "Delay", "PT30S")),
             ScheduleTrigger.Daily => Calendar(start, new XElement(Ns + "ScheduleByDay", new XElement(Ns + "DaysInterval", 1))),
@@ -68,14 +69,17 @@ internal static class TaskSchedulerService
         return new XDocument(new XElement(Ns + "Task", new XAttribute("version", "1.4"),
             new XElement(Ns + "RegistrationInfo", new XElement(Ns + "Author", "NOVAIS boost"), new XElement(Ns + "Description", schedule.Description)),
             new XElement(Ns + "Triggers", trigger),
-            new XElement(Ns + "Principals", new XElement(Ns + "Principal", new XAttribute("id", "Author"),
-                new XElement(Ns + "UserId", sid), new XElement(Ns + "LogonType", "InteractiveToken"), new XElement(Ns + "RunLevel", "HighestAvailable"))),
+            new XElement(Ns + "Principals", schedule.RunAsSystem
+                ? new XElement(Ns + "Principal", new XAttribute("id", "Author"),
+                    new XElement(Ns + "UserId", "S-1-5-18"), new XElement(Ns + "RunLevel", "HighestAvailable"))
+                : new XElement(Ns + "Principal", new XAttribute("id", "Author"),
+                    new XElement(Ns + "UserId", sid), new XElement(Ns + "LogonType", "InteractiveToken"), new XElement(Ns + "RunLevel", "HighestAvailable"))),
             new XElement(Ns + "Settings",
                 new XElement(Ns + "MultipleInstancesPolicy", "IgnoreNew"),
                 new XElement(Ns + "DisallowStartIfOnBatteries", "false"),
                 new XElement(Ns + "StopIfGoingOnBatteries", "false"),
                 new XElement(Ns + "StartWhenAvailable", "true"),
-                new XElement(Ns + "ExecutionTimeLimit", schedule.Trigger == ScheduleTrigger.Logon ? "PT0S" : "PT2H"),
+                new XElement(Ns + "ExecutionTimeLimit", schedule.Trigger == ScheduleTrigger.Logon && schedule.Id == "guardian" ? "PT0S" : "PT2H"),
                 new XElement(Ns + "Priority", 7),
                 new XElement(Ns + "Enabled", "true")),
             new XElement(Ns + "Actions", new XAttribute("Context", "Author"),
@@ -305,6 +309,8 @@ internal static class MaintenanceTasks
                 case "rede":
                     WeeklyNetwork(app);
                     break;
+                case "protecao-logon":
+                    return BootProtection.OnLogon(app);
                 default:
                     throw new ArgumentException($"Tarefa desconhecida: {id}.");
             }

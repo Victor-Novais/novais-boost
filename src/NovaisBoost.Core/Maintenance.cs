@@ -2,11 +2,13 @@ namespace NovaisBoost.Core;
 
 // ---------------------------------------------------------------- Schedules (F6)
 
-public enum ScheduleTrigger { Logon, Daily, Weekly, Monthly }
+public enum ScheduleTrigger { Logon, Daily, Weekly, Monthly, Boot }
 
 /// <param name="Argument">Command line argument passed to NovaisBoost.App.exe.</param>
+/// <param name="RunAsSystem">Runs as SYSTEM (boot protection, before anyone logs on).</param>
 public sealed record ScheduleDefinition(
-    string Id, string Name, string Description, ScheduleTrigger Trigger, DayOfWeek? Day, int? DayOfMonth, TimeOnly? Time, string Argument);
+    string Id, string Name, string Description, ScheduleTrigger Trigger, DayOfWeek? Day, int? DayOfMonth, TimeOnly? Time, string Argument,
+    bool RunAsSystem = false);
 
 public static class Schedules
 {
@@ -29,6 +31,15 @@ public static class Schedules
         new("rede", "Teste de rede semanal", "Toda quinta: mede ping, jitter e DNS. Se você já usa o \"DNS mais rápido\" e outro ficou 10 ms mais rápido, troca para ele.",
             ScheduleTrigger.Weekly, DayOfWeek.Thursday, null, new TimeOnly(21, 0), "--tarefa rede")
     ];
+
+    /// <summary>20.4: armed only after changes that need a restart; not in the user's list of schedules.</summary>
+    public static readonly ScheduleDefinition BootGuard = new("protecao-boot", "Proteção depois do reinício",
+        "Conta os reinícios depois de ajustes que pedem reinício. Se o Windows não chegar à área de trabalho 2 vezes seguidas, desfaz tudo.",
+        ScheduleTrigger.Boot, null, null, null, "--tarefa protecao-boot", RunAsSystem: true);
+
+    public static readonly ScheduleDefinition BootConfirm = new("protecao-logon", "Confirmação de reinício saudável",
+        "Ao entrar no Windows, confirma que o PC iniciou bem e desliga a proteção depois do reinício.",
+        ScheduleTrigger.Logon, null, null, null, "--tarefa protecao-logon");
 
     public static ScheduleDefinition Find(string id) =>
         All.FirstOrDefault(schedule => schedule.Id == id) ?? throw new ArgumentException($"Tarefa desconhecida: {id}.", nameof(id));

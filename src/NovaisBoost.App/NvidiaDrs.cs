@@ -97,6 +97,25 @@ internal sealed class NvidiaDrs : INvidiaSettings, INvidiaProfiles
         return state;
     });
 
+    private delegate int EnumProfilesFn(IntPtr session, uint index, out IntPtr profile);
+
+    /// <summary>20.8 (uninstall): deletes every leftover profile NOVAIS boost created ("NOVAIS boost - jogo.exe").</summary>
+    public static int DeleteOwnProfiles()
+    {
+        if (!IsAvailable)
+            return 0;
+        return WithSession(save: true, session =>
+        {
+            var own = new List<IntPtr>();
+            for (uint index = 0; Function<EnumProfilesFn>(0xBC371EE0)(session, index, out var profile) == 0; index++)
+                if (ProfileName(session, profile).StartsWith(OwnProfilePrefix, StringComparison.Ordinal))
+                    own.Add(profile);
+            foreach (var profile in own)
+                Check(Function<DeleteProfileFn>(0x17093206)(session, profile), "apagar o perfil de");
+            return own.Count;
+        });
+    }
+
     private static IntPtr? FindApplication(IntPtr session, string exe)
     {
         var application = Allocate(ApplicationSize);

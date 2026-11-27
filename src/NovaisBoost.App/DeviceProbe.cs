@@ -153,17 +153,20 @@ internal sealed partial class WindowsHardwareProbe
 }
 
 /// <summary>F19: DirectXUserGlobalSettings entries (Windows graphics settings) of the current user.</summary>
-internal sealed class WindowsDirectXSettings : IDirectXSettings
+internal sealed class WindowsDirectXSettings(string? userSid = null) : IDirectXSettings
 {
+    private RegistryKey Root() => userSid is null ? Registry.CurrentUser
+        : Registry.Users.OpenSubKey(userSid, writable: true) ?? throw new InvalidOperationException("O perfil do usuário não está carregado.");
+
     public string? Read(string key)
     {
-        using var registry = Registry.CurrentUser.OpenSubKey(DirectXSettings.Path);
+        using var registry = Root().OpenSubKey(DirectXSettings.Path);
         return DirectXSettings.Get(registry?.GetValue(DirectXSettings.ValueName) as string, key);
     }
 
     public void Write(string key, string? value)
     {
-        using var registry = Registry.CurrentUser.CreateSubKey(DirectXSettings.Path);
+        using var registry = Root().CreateSubKey(DirectXSettings.Path);
         var updated = DirectXSettings.Set(registry.GetValue(DirectXSettings.ValueName) as string, key, value);
         if (updated is null)
             registry.DeleteValue(DirectXSettings.ValueName, throwOnMissingValue: false);

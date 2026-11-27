@@ -36,7 +36,7 @@ internal sealed class ConsoleUi
     private static readonly string[] Menu =
     [
         "Diagnóstico completo", "Otimização Universal", "Perfil do meu Hardware", "Jogos & Streaming", "Process Guardian",
-        "Cronogramas", "Benchmark antes/depois", "Reverter / Backups", "Rede & Latência", "Modo Reparar"
+        "Cronogramas", "Benchmark antes/depois", "Reverter / Backups", "Rede & Latência", "Modo Reparar", "Configurações"
     ];
 
     private readonly AppServices _app;
@@ -105,6 +105,7 @@ internal sealed class ConsoleUi
                     case 8: ShowBackups(); break;
                     case 9: _views.Network(); break;
                     case 10: RepairView.Run(_app, this); break;
+                    case 11: new SettingsView(_app).Run(); break;
                 }
             });
             AnsiConsole.WriteLine();
@@ -116,8 +117,9 @@ internal sealed class ConsoleUi
         if (AnsiConsole.Profile.Width >= 64)
         {
             var grid = new Grid().AddColumn().AddColumn();
-            for (var index = 0; index < 5; index++)
-                grid.AddRow(Item(index + 1, Menu[index]), index + 5 < Menu.Length ? Item(index + 6, Menu[index + 5]) : "");
+            var rows = (Menu.Length + 1) / 2;
+            for (var index = 0; index < rows; index++)
+                grid.AddRow(Item(index + 1, Menu[index]), index + rows < Menu.Length ? Item(index + rows + 1, Menu[index + rows]) : "");
             AnsiConsole.Write(grid);
         }
         else
@@ -297,7 +299,18 @@ internal sealed class ConsoleUi
         foreach (var failure in failed)
             AnsiConsole.MarkupLine($"  [red]✗[/] {Markup.Escape(failure.Tweak.Name)}: [grey]{Markup.Escape(failure.Error!)}[/]");
         if (ok.Any(result => result.Tweak.RequiresReboot))
+        {
             AnsiConsole.MarkupLine("[yellow]Reinicie o PC para concluir os ajustes que precisam de reinício.[/]");
+            try
+            {
+                BootProtection.Arm(_app, _app.Owner);
+                AnsiConsole.MarkupLine("[grey]Proteção ligada: se o Windows não chegar à área de trabalho 2 vezes seguidas, tudo é desfeito sozinho.[/]");
+            }
+            catch (Exception error) when (error is System.ComponentModel.Win32Exception or IOException or UnauthorizedAccessException)
+            {
+                Log.Warning($"Não foi possível armar a proteção depois do reinício: {error.Message}");
+            }
+        }
         AnsiConsole.MarkupLine("[grey]Para desfazer tudo: menu [[8]] Reverter / Backups.[/]");
         _app.Refresh();
         return results;
@@ -381,6 +394,9 @@ internal sealed class ConsoleUi
         if (active is null)
         {
             AnsiConsole.MarkupLine("[grey]Nenhum backup ativo para esta conta.[/]");
+            AnsiConsole.MarkupLine($"{Item(2, "Desinstalar o NOVAIS boost")}   {Item(0, "Voltar")}");
+            if (ReadChoice() == "2")
+                Uninstaller.Run(_app, Confirm);
             return;
         }
 
@@ -389,8 +405,15 @@ internal sealed class ConsoleUi
         if (active.Pending)
             AnsiConsole.MarkupLine("[yellow]Há uma operação pendente neste backup.[/]");
         AnsiConsole.MarkupLine(Item(1, "Reverter tudo"));
+        AnsiConsole.MarkupLine(Item(2, "Desinstalar o NOVAIS boost (desfaz tudo e remove tarefas, perfis e plano de energia)"));
         AnsiConsole.MarkupLine(Item(0, "Voltar"));
-        if (ReadChoice() != "1")
+        var choice = ReadChoice();
+        if (choice == "2")
+        {
+            Uninstaller.Run(_app, Confirm);
+            return;
+        }
+        if (choice != "1")
             return;
 
         var changes = Engine.RevertAll();

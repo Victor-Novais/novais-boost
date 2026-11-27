@@ -2,10 +2,14 @@
 
 ## 1. Antes de cada versão
 
-1. `pwsh .\scripts\build.ps1 -Version X.Y.Z` (compila sem avisos, roda os testes, publica e gera o SHA256).
-2. Rode o checklist de testes manuais abaixo em uma **máquina virtual** com Windows 11 limpo e em pelo menos
+1. `pwsh .\scripts\changelog.ps1 -Version X.Y.Z` e revise o `CHANGELOG.md`.
+2. `pwsh .\scripts\build.ps1 -Version X.Y.Z` com a assinatura (abaixo): compila sem avisos, roda os testes, publica, assina e
+   gera `SHA256.txt` e `latest.json`.
+3. Numa VM: `pwsh .\scripts\vm-test.ps1 -IUnderstandThisIsAVm` (nível 3 → reverter → registro igual ao de antes).
+4. Rode o checklist de testes manuais abaixo em uma **máquina virtual** com Windows 11 limpo e em pelo menos
    um PC real de cada tipo: AMD + NVIDIA, Intel + NVIDIA, AMD + Radeon, notebook.
-3. Atualize o número da versão e anote as mudanças no commit/tag (`git tag vX.Y.Z`).
+5. `git tag vX.Y.Z`, crie o release `vX.Y.Z` no GitHub e envie `NOVAIS boost.exe`, `latest.json`, `SHA256.txt` e o `.zip` da pasta.
+6. Envie o exe à Microsoft (WDSI, seção 3).
 
 ## 2. Checklist de testes manuais (com administrador)
 
@@ -128,6 +132,22 @@ Faça um snapshot da VM antes. Para cada item, confira o log em `C:\ProgramData\
 - [ ] `guardian.obsCpuSets: true` num Intel híbrido ou X3D de 2 CCDs com OBS aberto → OBS só nos E-cores / CCD sem V-Cache durante o jogo.
 - [ ] Jogos & Streaming com OBS instalado → teste de upload termina e mostra o bitrate sugerido.
 
+- [ ] **F20 — proteção depois do reinício (VM):** aplicar o nível 2 → aparecem `\NOVAIS boost\protecao-boot` (SYSTEM) e
+      `protecao-logon` → reiniciar e entrar → as duas tarefas somem e o log diz "PC iniciou normalmente".
+- [ ] Simular falha: aplicar o nível 2 → reiniciar duas vezes **sem entrar** (desligar na tela de bloqueio) → no terceiro boot o
+      log mostra "Desfazendo tudo"; ao entrar, notificação de reversão e `--simular` igual ao estado inicial.
+- [ ] `--aplicar 2` sem `--confirmar` → recusa com código 2; `vm-test.ps1` termina com "OK".
+- [ ] Atualização: publicar um release de teste assinado com versão maior → ao abrir, oferta de atualização → aceitar → o exe é
+      trocado e `NOVAIS boost.anterior.exe` existe → `--voltar-versao` volta. Com o SHA256 errado no `latest.json`, recusa.
+      Com o exe atual sem assinatura, recusa.
+- [ ] Termo de uso: primeira abertura mostra o termo; recusar → sai; `--diagnostico` continua funcionando sem aceite.
+- [ ] [11] Configurações: mudar uma opção → `settings.json` atualizado e válido.
+- [ ] Relatório de erros ligado: forçar um erro (ex.: settings.json bloqueado) → `reports\errors\erro-*.json` sem nome de usuário,
+      caminhos ou nome do PC.
+- [ ] Desinstalar: tarefas removidas, plano "NOVAIS boost" removido, perfis NVIDIA "NOVAIS boost - *" removidos e, se escolhido,
+      a pasta `ProgramData\NOVAIS boost` apagada.
+- [ ] A CI no GitHub (Actions) passa no push.
+
 ## 3. Assinatura de código (evita alerta do SmartScreen e falso positivo de antivírus)
 
 Um otimizador que mexe no registro e roda como administrador **precisa** ser assinado.
@@ -135,7 +155,10 @@ Um otimizador que mexe no registro e roda como administrador **precisa** ser ass
 1. Compre um certificado de assinatura de código **EV** ou **OV** (Sectigo, DigiCert, SSL.com) ou use o
    **Azure Trusted Signing** (mais barato, exige empresa/CNPJ verificado).
 2. Instale o Windows SDK (para o `signtool.exe`).
-3. `pwsh .\scripts\build.ps1 -Version X.Y.Z -CertificateThumbprint <thumbprint>`.
+3. Certificado: `pwsh .\scripts\build.ps1 -Version X.Y.Z -CertificateThumbprint <thumbprint>`.
+   Azure Trusted Signing: `pwsh .\scripts\build.ps1 -Version X.Y.Z -TrustedSigningMetadata .\signing.json -TrustedSigningDlib <Azure.CodeSigning.Dlib.dll>`,
+   com `signing.json` = `{ "Endpoint": "https://<região>.codesigning.azure.net", "CodeSigningAccountName": "...", "CertificateProfileName": "..." }`
+   e login feito com `az login`.
 4. Envie o exe assinado para análise da Microsoft (https://www.microsoft.com/wdsi/filesubmission) como
    "software developer" para evitar detecções heurísticas do Defender.
 
@@ -144,9 +167,9 @@ Um otimizador que mexe no registro e roda como administrador **precisa** ser ass
 - Publique a pasta `artifacts\publish` inteira (`NOVAIS boost.exe`, `tools\`, `SHA256.txt`, `THIRD_PARTY_NOTICES.md`)
   em um GitHub Release (ou no seu site), como `.zip`. O `build.ps1` baixa o PresentMon da versão fixa e para se o SHA256
   não conferir. Para atualizar o PresentMon, troque a versão e o hash no `build.ps1` e em `PresentMonTool` (Core).
-- Atualização automática ainda **não** está implementada: ela precisa de um endereço fixo de releases.
-  Quando houver, o caminho recomendado é: o app consulta `releases/latest`, compara a versão, baixa o exe,
-  confere a assinatura (Authenticode) e o SHA256 antes de substituir.
+- Atualização automática: o app lê `https://github.com/Victor-Novais/novais-boost/releases/latest/download/latest.json`
+  (gerado pelo `build.ps1`). Por isso o `latest.json` e o exe precisam estar no release marcado como "Latest". Se o repositório
+  for privado, o download falha e o app só registra no log; torne os releases públicos (ou troque `Updates.ManifestUrl`).
 
 ## 5. O que fica fora de propósito (decisões de segurança)
 

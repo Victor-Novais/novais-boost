@@ -1,0 +1,8 @@
+<Project>
+  <PropertyGroup>
+    <!-- 20.12: one version for the whole solution. scripts/build.ps1 -Version X.Y.Z overrides it for a release. -->
+    <Version>1.0.0</Version>
+    <!-- Lets the Windows-only App build (not run) on Linux/macOS, e.g. for the Core tests in CI or on a dev machine. -->
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+  </PropertyGroup>
+</Project>
