@@ -53,6 +53,7 @@ public static class TweakLevels
 [JsonDerivedType(typeof(BcdAction), "bcd")]
 [JsonDerivedType(typeof(PagefileAction), "pagefile")]
 [JsonDerivedType(typeof(TcpGlobalAction), "tcpGlobal")]
+[JsonDerivedType(typeof(ConfigFileAction), "configFile")]
 public abstract record TweakAction
 {
     internal abstract string Target { get; }
@@ -144,6 +145,17 @@ public sealed record TcpGlobalAction(string Setting, string Expected) : TweakAct
 {
     internal override string Target => $"TCP: {Setting}";
     internal override string Identity => $"tcp:{Setting.ToLowerInvariant()}";
+}
+
+/// <summary>
+/// One key of a game's configuration file (F15). Path is already resolved for this PC. The key must exist (fail closed);
+/// nothing is written while one of <see cref="LockedBy"/> is running, or when the file is read-only.
+/// </summary>
+/// <param name="LockedBy">Process names (without .exe) of the game that owns the file.</param>
+public sealed record ConfigFileAction(string Path, ConfigFormat Format, string? Section, string Key, string Value, string[] LockedBy) : TweakAction
+{
+    internal override string Target => $"{System.IO.Path.GetFileName(Path)}: {(Section is null ? "" : $"[{Section}] ")}{Key}";
+    internal override string Identity => $"config:{Path.ToLowerInvariant()}\0{Section?.ToLowerInvariant()}\0{Key.ToLowerInvariant()}";
 }
 
 /// <summary>A power plan owned by NOVAIS boost: created from a template on apply, deleted on revert.</summary>

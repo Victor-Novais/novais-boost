@@ -24,6 +24,14 @@ Faça um snapshot da VM antes. Para cada item, confira o log em `C:\ProgramData\
 - [ ] Guardian com `{ "guardian": { "gamePriority": "high" } }` em `C:\ProgramData\NOVAIS boost\settings.json` → jogo em High;
       com um valor inválido (ex.: `"realTime"`) → jogo em AboveNormal e aviso no log.
 - [ ] Limpar agora: mostra os tamanhos, apaga só arquivos antigos, não apaga nada fora das pastas listadas.
+- [ ] **Presets dos jogos (CS2 e Fortnite):** com o jogo fechado, Jogos & Streaming → revisar presets → aplicar → abrir o jogo e
+      conferir V-Sync, MSAA/shader (CS2) e limite de FPS (Fortnite) no menu. Reverter tudo → o arquivo fica idêntico ao original
+      (`Get-FileHash` antes e depois).
+- [ ] Com o jogo aberto, aplicar e reverter são recusados com "Feche o jogo".
+- [ ] Fortnite com `GameUserSettings.ini` somente leitura → nada é alterado e a mensagem explica o motivo.
+- [ ] Ao validar com o arquivo real, troque o fixture em `tests/NovaisBoost.Tests/Fixtures/presets/<jogo>/` pelo arquivo real
+      (sem dados pessoais) e preencha `testedVersion` no preset.
+- [ ] VRR: 144 Hz com G-Sync → Fortnite em 138 FPS; respondendo "não" ao G-Sync, o limite do jogo não muda.
 - [ ] **Modo Reparar, só em VM:** snapshot → `pwsh .\scripts\vm-damage.ps1 -IUnderstandThisIsAVm` → reiniciar →
       `--reparar` lista BCD, paginação, BITS e Windows Update, mitigações, políticas, latência e TCP → menu [10] → restaurar →
       reiniciar → `--reparar` sem itens, e a VM inicia, tem áudio, rede e Windows Update funcionando.

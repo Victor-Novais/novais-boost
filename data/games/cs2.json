@@ -1,0 +1,25 @@
+{
+  "id": "cs2",
+  "name": "Counter-Strike 2",
+  "processes": [ "cs2" ],
+  "reflex": true,
+  "evidence": "experimental",
+  "testedVersion": null,
+  "lastVerified": "2026-11-27",
+  "sources": [
+    "https://gist.github.com/JMorell/12278de3b904ae75a07321705761cff7",
+    "https://steamcommunity.com/app/730/discussions/0/2646361245005129514"
+  ],
+  "notes": "As chaves foram conferidas em arquivos cs2_video.txt publicados por jogadores; a Valve não documenta o formato. Se o CS2 mudar uma chave, nada é alterado.",
+  "files": [
+    {
+      "path": "{steamUserdata}\\730\\local\\cfg\\cs2_video.txt",
+      "format": "keyValue",
+      "settings": [
+        { "section": null, "key": "setting.mat_vsync", "value": "0", "label": "V-Sync desligado" },
+        { "section": null, "key": "setting.msaa_samples", "value": "2", "label": "MSAA 2x" },
+        { "section": null, "key": "setting.shaderquality", "value": "0", "label": "detalhe de shader baixo" }
+      ]
+    }
+  ]
+}

@@ -53,6 +53,16 @@ public interface ITcpSettings
     void Write(string setting, TcpState state);
 }
 
+/// <summary>Game configuration files. The real implementation adds file IO, the read-only check and the process check.</summary>
+public interface IConfigFiles
+{
+    ConfigFileState Read(ConfigFileAction action);
+    void Write(ConfigFileAction action, ConfigFileState state);
+
+    /// <summary>True while the game that owns the file is running (it would overwrite the change when it closes).</summary>
+    bool IsInUse(ConfigFileAction action);
+}
+
 public interface IPowerPlans
 {
     PowerPlanState Read(PowerPlanAction plan);
@@ -93,6 +103,7 @@ public interface IActionLog
 [JsonDerivedType(typeof(BcdState), "bcd")]
 [JsonDerivedType(typeof(PagefileState), "pagefile")]
 [JsonDerivedType(typeof(TcpState), "tcpGlobal")]
+[JsonDerivedType(typeof(ConfigFileState), "configFile")]
 public abstract record SettingState
 {
     internal virtual bool Matches(SettingState other) => Equals(other);
@@ -177,6 +188,15 @@ public sealed record PagefileState(bool SystemManaged, PagefileSetting[] Files) 
         : Files.Length == 0 ? "desligado (sem arquivo de paginação)"
         : string.Join(", ", Files.Select(file => file.InitialMb == 0 && file.MaximumMb == 0 ? $"{file.Path} (tamanho do sistema)"
             : $"{file.Path} ({file.InitialMb}-{file.MaximumMb} MB)"));
+}
+
+/// <param name="Value">Current value of the key; null when the key is missing.</param>
+/// <param name="Original">The whole file (base64) as it was read; kept in the backup so revert can restore it byte for byte.</param>
+public sealed record ConfigFileState(bool FileExists, string? Value, string? Original = null) : SettingState
+{
+    internal override bool Matches(SettingState other) =>
+        other is ConfigFileState config && FileExists == config.FileExists && string.Equals(Value, config.Value, StringComparison.Ordinal);
+    internal override string Display => !FileExists ? "arquivo não encontrado" : Value ?? "chave ausente";
 }
 
 public sealed record TcpState(string Value) : SettingState

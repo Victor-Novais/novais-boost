@@ -20,7 +20,7 @@ internal sealed class AppServices
         Probe = new WindowsHardwareProbe(log, () => Games);
         Engine = new TweakEngine(new WindowsRegistry(), new WindowsServiceController(), new WindowsPowerConfig(), snapshots, log,
             new WindowsScheduledTasks(log), new WindowsPowerPlans(), compat => Compatibility.Check(compat, Pc),
-            new NvidiaDrs(), new WindowsDnsSettings(), new WindowsBcdStore(), new WindowsPagefile(), new WindowsTcpSettings());
+            new NvidiaDrs(), new WindowsDnsSettings(), new WindowsBcdStore(), new WindowsPagefile(), new WindowsTcpSettings(), new WindowsConfigFiles());
     }
 
     public string DataDirectory { get; }

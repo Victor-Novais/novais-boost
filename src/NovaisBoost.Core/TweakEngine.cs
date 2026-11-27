@@ -11,7 +11,7 @@ public sealed class TweakEngine(
     IScheduledTasks? tasks = null, IPowerPlans? plans = null,
     Func<TweakCompatibility, string?>? compatibility = null,
     INvidiaSettings? nvidia = null, IDnsSettings? dns = null,
-    IBcdStore? bcd = null, IPagefile? pagefile = null, ITcpSettings? tcp = null)
+    IBcdStore? bcd = null, IPagefile? pagefile = null, ITcpSettings? tcp = null, IConfigFiles? configs = null)
 {
     private RestorePoint? _batchPoint;
     private bool _inBatch;
@@ -100,6 +100,7 @@ public sealed class TweakEngine(
         if (plan.Length == 0)
             return [];
 
+        EnsureNotInUse(plan.Select(change => change.Action));
         var backup = new TweakBackup(tweak.Id, plan.Select(change => new SettingBackup(change.Action, change.Current)).ToArray());
         var file = snapshots.Begin(active, backup, point);
         try
@@ -205,6 +206,7 @@ public sealed class TweakEngine(
             EnsureReviewed(changes, reviewedChanges);
             if (changes.Length > 0)
             {
+                EnsureNotInUse(original.Select(entry => entry.Action));
                 snapshots.SavePreRevert(file, current, point);
                 snapshots.Save(file with { State = file.State with { Pending = true } });
                 Restore(original.Reverse());
@@ -217,6 +219,13 @@ public sealed class TweakEngine(
         snapshots.Save(file with { State = state });
         log.Info($"Reversão concluída: {Label(tweakIds)}.");
         return changes;
+    }
+
+    /// <summary>Game files are only touched with the game closed: it rewrites its settings when it exits.</summary>
+    private void EnsureNotInUse(IEnumerable<TweakAction> actions)
+    {
+        if (actions.OfType<ConfigFileAction>().FirstOrDefault(config => Require(configs).IsInUse(config)) is { } busy)
+            throw new InvalidOperationException($"Feche o jogo antes ({string.Join(", ", busy.LockedBy)} está aberto): ele regrava a configuração ao fechar.");
     }
 
     private static string Label(IReadOnlyCollection<string>? tweakIds) => tweakIds is null ? "tudo" : string.Join(", ", tweakIds);
@@ -253,6 +262,12 @@ public sealed class TweakEngine(
             PagefileAction when before is PagefileState { SystemManaged: false, Files.Length: > 0 } => before,
             PagefileAction setting => new PagefileState(setting.SystemManaged, []),
             TcpGlobalAction setting => new TcpState(setting.Expected),
+            // Fail closed: never create a file or a key the game did not write itself.
+            ConfigFileAction config when before is ConfigFileState { FileExists: false } =>
+                throw new InvalidDataException($"{System.IO.Path.GetFileName(config.Path)} não existe. Abra o jogo uma vez e feche para ele criar o arquivo."),
+            ConfigFileAction config when before is ConfigFileState { Value: null } =>
+                throw new InvalidDataException($"A chave {config.Key} não existe em {System.IO.Path.GetFileName(config.Path)}; o formato do jogo pode ter mudado."),
+            ConfigFileAction config => new ConfigFileState(true, config.Value),
             _ => throw new InvalidDataException("Operação de ajuste inválida.")
         };
         return new PlannedChange(action, before, expected);
@@ -270,6 +285,7 @@ public sealed class TweakEngine(
         BcdAction element => Require(bcd).Read(element.Element),
         PagefileAction => Require(pagefile).Read(),
         TcpGlobalAction setting => Require(tcp).Read(setting.Setting),
+        ConfigFileAction config => Require(configs).Read(config),
         _ => throw new InvalidDataException("Tipo de ajuste desconhecido.")
     };
 
@@ -310,6 +326,9 @@ public sealed class TweakEngine(
                 break;
             case (TcpGlobalAction setting, TcpState tcpState):
                 Require(tcp).Write(setting.Setting, tcpState);
+                break;
+            case (ConfigFileAction config, ConfigFileState configState):
+                Require(configs).Write(config, configState);
                 break;
             default:
                 throw new InvalidDataException("O estado do backup não corresponde à operação.");

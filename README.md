@@ -12,7 +12,7 @@ Execute `NOVAIS boost.exe` (pede administrador). O menu tem:
 | 1 | Diagnóstico completo | Lê o hardware, o log de eventos e os sensores e dá uma nota de 0 a 100 com os problemas encontrados |
 | 2 | Otimização Universal | Níveis 1 (Seguro), 2 (Competitivo) e 3 (Extremo), ou ajustes individuais |
 | 3 | Perfil do meu Hardware | Recomendações e checklist de BIOS para a sua CPU, GPU, RAM e placa-mãe |
-| 4 | Jogos & Streaming | Detecta os jogos, dicas por jogo, GPU dedicada e QoS por jogo, codificador do OBS |
+| 4 | Jogos & Streaming | Detecta os jogos, preset competitivo nos arquivos do jogo, dicas, GPU dedicada e QoS por jogo, codificador do OBS |
 | 5 | Process Guardian | Prioridades automáticas durante o jogo, processos inúteis, programas na inicialização |
 | 6 | Cronogramas | Tarefas automáticas: reaplicar ajustes, limpeza semanal, SSD, saúde mensal |
 | 7 | Benchmark | Provar ajustes (teste A/B com estatística e relatório HTML), latência de DPC/ISR por driver (µs), FPS/1% low com PresentMon |
@@ -61,6 +61,26 @@ Além de RAM, disco, monitor, energia e rede, o diagnóstico procura os problema
 **Nota v2:** cada categoria (estabilidade, memória, vídeo, armazenamento, monitor, energia, Windows, rede, programas) tem
 um teto de pontos que pode tirar. Dez avisos de disco não zeram a nota, e a estabilidade é a que pesa mais. O relatório
 JSON (`reports\diagnostico-*.json`) traz a fonte de cada dado e de cada problema.
+
+## Configuração dentro dos jogos
+
+Em Jogos & Streaming, o NOVAIS boost aplica um preset competitivo direto no arquivo de configuração do jogo
+(`data/games/<id>.json`), com a mesma revisão, backup e reversão dos outros ajustes:
+
+| Jogo | Arquivo | O que muda | Evidência |
+|---|---|---|---|
+| Counter-Strike 2 | `Steam\userdata\<conta>\730\local\cfg\cs2_video.txt` (uma vez por conta Steam que já jogou) | V-Sync desligado, MSAA 2x, shader baixo | `experimental` (chaves vistas em arquivos de jogadores; a Valve não documenta) |
+| Fortnite | `%LOCALAPPDATA%\FortniteGame\Saved\Config\WindowsClient\GameUserSettings.ini` | V-Sync desligado e limite de FPS para VRR | `documented` (UGameUserSettings do Unreal Engine) |
+
+- **Regras:** recusa aplicar ou reverter com o jogo aberto (ele regrava o arquivo ao fechar), não mexe em arquivo
+  somente leitura e falha fechada se a chave não existir ou aparecer repetida. Nunca cria arquivo nem chave.
+- **Backup:** o arquivo inteiro vai para o backup antes da primeira mudança. Ao reverter, ele volta byte a byte; se o jogo
+  regravou o arquivo depois, só as chaves do preset voltam, e o resto do que o jogo salvou fica.
+- **Limite de FPS:** com G-Sync/FreeSync e Reflex, `Hz − Hz²/3600` (144 Hz → 138, 240 Hz → 224); com VRR sem Reflex,
+  3 abaixo do Hz; sem VRR, o limite do jogo não é alterado (`FrameCap.For`).
+- **Fora por enquanto:** VALORANT (as configurações ficam no servidor da Riot), Call of Duty (o nome e o formato do `.cst`
+  mudam a cada título), Apex, Rainbow Six Siege e Overwatch 2 (chaves ainda não confirmadas). Esses jogos mostram só as dicas.
+- Opções de inicialização do Steam aparecem prontas para copiar (o `localconfig.vdf` não é editado).
 
 ## Modo Reparar
 

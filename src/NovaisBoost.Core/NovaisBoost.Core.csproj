@@ -9,6 +9,7 @@
     <PackageReference Include="JsonSchema.Net" Version="9.5.0" />
     <EmbeddedResource Include="../../data/tweaks/*.json" LogicalName="Tweaks.%(Filename)%(Extension)" />
     <EmbeddedResource Include="../../data/repairs/*.json" LogicalName="Repairs.%(Filename)%(Extension)" />
+    <EmbeddedResource Include="../../data/games/*.json" LogicalName="Presets.%(Filename)%(Extension)" />
     <EmbeddedResource Include="../../data/*.json" LogicalName="Data.%(Filename)%(Extension)" />
   </ItemGroup>
 </Project>

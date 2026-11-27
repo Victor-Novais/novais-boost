@@ -1,0 +1,24 @@
+{
+  "id": "fortnite",
+  "name": "Fortnite",
+  "processes": [ "FortniteClient-Win64-Shipping", "FortniteLauncher" ],
+  "reflex": true,
+  "evidence": "documented",
+  "testedVersion": null,
+  "lastVerified": "2026-11-27",
+  "sources": [
+    "https://dev.epicgames.com/documentation/en-us/unreal-engine/API/Runtime/Engine/UGameUserSettings",
+    "https://www.epicgames.com/help/fortnite-battle-royale-c-202300000001636/technical-support-c-202300000001719/how-do-i-adjust-my-fps-in-fortnite-if-it-is-locked-or-capped-a202300000010554"
+  ],
+  "notes": "FrameRateLimit e bUseVSync são as configurações documentadas do Unreal Engine (UGameUserSettings). O limite de FPS só é definido com G-Sync/FreeSync. Se o arquivo estiver como somente leitura, nada é alterado.",
+  "files": [
+    {
+      "path": "%LOCALAPPDATA%\\FortniteGame\\Saved\\Config\\WindowsClient\\GameUserSettings.ini",
+      "format": "ini",
+      "settings": [
+        { "section": "/Script/FortniteGame.FortGameUserSettings", "key": "bUseVSync", "value": "False", "label": "V-Sync desligado" },
+        { "section": "/Script/FortniteGame.FortGameUserSettings", "key": "FrameRateLimit", "value": "{frameCap}", "label": "limite de FPS para VRR" }
+      ]
+    }
+  ]
+}

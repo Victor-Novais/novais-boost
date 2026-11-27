@@ -14,9 +14,17 @@ public static class DataCatalog
     public static IReadOnlyList<OptimizerDefinition> Optimizers() => Load<OptimizerDefinition[]>("optimizers.json");
     public static IReadOnlyList<CriticalService> CriticalServices() => Load<CriticalService[]>("critical-services.json");
 
-    private static T Load<T>(string name)
+    /// <summary>Per-game presets for configuration files (data/games/*.json).</summary>
+    public static IReadOnlyList<GamePreset> Presets() => typeof(DataCatalog).Assembly.GetManifestResourceNames()
+        .Where(name => name.StartsWith("Presets.", StringComparison.Ordinal)).Order(StringComparer.Ordinal)
+        .Select(name => LoadResource<GamePreset>(name)).ToArray();
+
+    private static T Load<T>(string name) => LoadResource<T>("Data." + name);
+
+    private static T LoadResource<T>(string resource)
     {
-        using var stream = typeof(DataCatalog).Assembly.GetManifestResourceStream("Data." + name)
+        var name = resource[(resource.IndexOf('.') + 1)..];
+        using var stream = typeof(DataCatalog).Assembly.GetManifestResourceStream(resource)
             ?? throw new InvalidDataException($"Base de dados ausente: {name}.");
         try
         {

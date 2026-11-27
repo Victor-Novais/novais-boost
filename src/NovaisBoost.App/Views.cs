@@ -72,6 +72,8 @@ internal sealed class Views(AppServices app, ConsoleUi ui)
                 AnsiConsole.MarkupLine($"  • {Markup.Escape(tip)}");
         }
 
+        GamePresetsOffer(games);
+
         var gpu = app.Pc.Gpus.FirstOrDefault(item => !item.IsIntegrated) ?? app.Pc.Gpus.FirstOrDefault();
         if (gpu is not null)
             AnsiConsole.MarkupLine($"[bold]Streaming com {Markup.Escape(gpu.Name)}:[/] {Markup.Escape(EncoderAdvice(gpu))}");
@@ -79,6 +81,38 @@ internal sealed class Views(AppServices app, ConsoleUi ui)
         var tweaks = app.DynamicTweaks.Where(tweak => tweak.Id is "games-gpu-preference" or "games-qos").ToArray();
         if (tweaks.Length > 0 && ConsoleUi.Confirm("Revisar os ajustes para os jogos detectados (GPU dedicada e prioridade de rede)?"))
             ui.ReviewAndApply(tweaks);
+    }
+
+    /// <summary>15.1–15.3: competitive presets written into the game's own configuration file (game closed, full-file backup).</summary>
+    private void GamePresetsOffer(IReadOnlyList<InstalledGame> games)
+    {
+        var found = GamePresetFiles.Find(games);
+        if (found.Count == 0)
+            return;
+        AnsiConsole.MarkupLine($"[bold]Preset competitivo nos arquivos do jogo:[/] {Markup.Escape(string.Join(", ", found.Select(item => item.Preset.Name)))} " +
+            "[grey](o jogo precisa estar fechado; o arquivo inteiro vai para o backup)[/]");
+        if (!ConsoleUi.Confirm("Revisar os presets dos jogos?"))
+            return;
+
+        int? hz = app.Pc.Displays.Count > 0 ? app.Pc.Displays.Max(display => display.MaxHz) : null;
+        bool? vrr = null;
+        var tweaks = new List<TweakDefinition>();
+        foreach (var (preset, files) in found)
+        {
+            int? cap = null;
+            if (hz is > 0 && preset.Files.Any(file => file.Settings.Any(setting => setting.Value == GamePresets.FrameCapToken)))
+            {
+                vrr ??= ConsoleUi.Confirm($"Seu monitor ({hz} Hz) usa G-Sync ou FreeSync ligado?");
+                cap = FrameCap.For(hz.Value, vrr.Value, preset.Reflex);
+                AnsiConsole.MarkupLine(cap is { } value
+                    ? $"[grey]{Markup.Escape(preset.Name)}: limite de FPS calculado em {value} (VRR{(preset.Reflex ? " + Reflex" : "")}, {hz} Hz).[/]"
+                    : $"[grey]{Markup.Escape(preset.Name)}: sem VRR o limite de FPS do jogo não é alterado.[/]");
+            }
+            tweaks.AddRange(GamePresets.Build(preset, files, cap));
+            if (preset.TestedVersion is null)
+                AnsiConsole.MarkupLine($"[grey]{Markup.Escape(preset.Name)}: chaves conferidas em fontes públicas ({preset.LastVerified}), ainda não testadas numa instalação.[/]");
+        }
+        ui.ReviewAndApply(tweaks);
     }
 
     private static string EncoderAdvice(GpuInfo gpu) => gpu.Vendor switch

@@ -29,7 +29,8 @@
       "NVIDIA Reflex: Ligado + Boost",
       "Limite de FPS: desligado ou bem acima do Hz do monitor",
       "Multithreaded rendering: ligado",
-      "Vanguard exige TPM 2.0 e Secure Boot: nunca desligue"
+      "Vanguard exige TPM 2.0 e Secure Boot: nunca desligue",
+      "As configurações do VALORANT ficam salvas no servidor da Riot: ajuste pelo menu do jogo (o NOVAIS boost não edita os arquivos dele)"
     ],
     "folders": [
       "VALORANT",

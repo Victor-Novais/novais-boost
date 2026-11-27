@@ -529,7 +529,7 @@ public sealed partial class TweakEngineTests : IDisposable
 
     private TweakEngine CreateEngine(string owner) =>
         new(_windows, _windows, _windows, CreateSnapshots(owner), _log, _windows, _windows, _compatibility, _windows, _windows,
-            _windows, _windows, _windows);
+            _windows, _windows, _windows, _windows);
 
     private Func<TweakCompatibility, string?>? _compatibility;
 
@@ -548,8 +548,21 @@ public sealed partial class TweakEngineTests : IDisposable
     }
 
     private sealed class FakeWindows : IRegistry, IServiceController, IPowerConfig, IScheduledTasks, IPowerPlans, INvidiaSettings, IDnsSettings,
-        IBcdStore, IPagefile, ITcpSettings
+        IBcdStore, IPagefile, ITcpSettings, IConfigFiles
     {
+        public Dictionary<string, byte[]> Files { get; } = new(StringComparer.OrdinalIgnoreCase);
+        public HashSet<string> Running { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+        ConfigFileState IConfigFiles.Read(ConfigFileAction action) => ConfigFiles.Read(action, Files.GetValueOrDefault(action.Path));
+
+        void IConfigFiles.Write(ConfigFileAction action, ConfigFileState state)
+        {
+            OnWrite();
+            Files[action.Path] = ConfigFiles.Compute(action, Files[action.Path], state);
+        }
+
+        bool IConfigFiles.IsInUse(ConfigFileAction action) => action.LockedBy.Any(Running.Contains);
+
         public Dictionary<string, string> Bcd { get; } = new(StringComparer.OrdinalIgnoreCase);
         public PagefileState Pagefile { get; set; } = new(true, []);
         public Dictionary<string, string> Tcp { get; } = new(StringComparer.OrdinalIgnoreCase) { ["autotuninglevel"] = "normal", ["rss"] = "enabled" };
