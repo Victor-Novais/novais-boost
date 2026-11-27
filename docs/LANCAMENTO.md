@@ -24,6 +24,11 @@ Faça um snapshot da VM antes. Para cada item, confira o log em `C:\ProgramData\
 - [ ] Guardian com `{ "guardian": { "gamePriority": "high" } }` em `C:\ProgramData\NOVAIS boost\settings.json` → jogo em High;
       com um valor inválido (ex.: `"realTime"`) → jogo em AboveNormal e aviso no log.
 - [ ] Limpar agora: mostra os tamanhos, apaga só arquivos antigos, não apaga nada fora das pastas listadas.
+- [ ] **NVIDIA por jogo:** com um jogo sem perfil (ex.: um .exe qualquer cadastrado), aplicar → o NVIDIA Profile Inspector mostra
+      o perfil "NOVAIS boost - jogo.exe" com "Prefer maximum performance"; reverter → o perfil some. Num jogo com perfil
+      predefinido (CS2), reverter mantém o perfil e só a configuração volta.
+- [ ] Limite de FPS do driver (experimental): conferir no Painel de Controle NVIDIA que "Taxa de quadros máx." mostra o valor.
+- [ ] Radeon: a tela de Jogos mostra as recomendações do AMD Software e não tenta aplicar nada.
 - [ ] **Presets dos jogos (CS2 e Fortnite):** com o jogo fechado, Jogos & Streaming → revisar presets → aplicar → abrir o jogo e
       conferir V-Sync, MSAA/shader (CS2) e limite de FPS (Fortnite) no menu. Reverter tudo → o arquivo fica idêntico ao original
       (`Get-FileHash` antes e depois).

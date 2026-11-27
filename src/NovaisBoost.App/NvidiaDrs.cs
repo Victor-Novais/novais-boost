@@ -4,16 +4,21 @@ using NovaisBoost.Core;
 namespace NovaisBoost.App;
 
 /// <summary>
-/// NVIDIA driver settings (DRS) on the global/base profile through NVAPI.
-/// Function ids and the NVDRS_SETTING layout were verified against the installed driver.
+/// NVIDIA driver settings (DRS) through NVAPI: the global/base profile and per-application profiles.
+/// Function ids and the NVDRS_SETTING / NVDRS_PROFILE / NVDRS_APPLICATION_V1 layouts were verified (read-only)
+/// against the installed driver.
 /// </summary>
-internal sealed class NvidiaDrs : INvidiaSettings
+internal sealed class NvidiaDrs : INvidiaSettings, INvidiaProfiles
 {
     private const int SettingSize = 12320;          // sizeof(NVDRS_SETTING_V1)
     private const int SettingIdOffset = 4100;
     private const int SettingTypeOffset = 4104;
     private const int CurrentValueOffset = 8220;
     private const int SettingNotFound = -160;
+    private const int ExecutableNotFound = -166;
+    private const int ProfileSize = 4116;           // sizeof(NVDRS_PROFILE_V1): name at 4
+    private const int ApplicationSize = 12296;      // sizeof(NVDRS_APPLICATION_V1): appName at 8
+    private const string OwnProfilePrefix = "NOVAIS boost - ";
 
     [DllImport("nvapi64.dll", EntryPoint = "nvapi_QueryInterface")]
     private static extern IntPtr QueryInterface(uint id);
@@ -25,6 +30,11 @@ internal sealed class NvidiaDrs : INvidiaSettings
     private delegate int GetSettingFn(IntPtr session, IntPtr profile, uint settingId, IntPtr setting);
     private delegate int SetSettingFn(IntPtr session, IntPtr profile, IntPtr setting);
     private delegate int DeleteSettingFn(IntPtr session, IntPtr profile, uint settingId);
+    private delegate int FindApplicationFn(IntPtr session, [MarshalAs(UnmanagedType.LPWStr)] string app, out IntPtr profile, IntPtr application);
+    private delegate int ProfileInfoFn(IntPtr session, IntPtr profile, IntPtr info);
+    private delegate int CreateProfileFn(IntPtr session, IntPtr info, out IntPtr profile);
+    private delegate int CreateApplicationFn(IntPtr session, IntPtr profile, IntPtr application);
+    private delegate int DeleteProfileFn(IntPtr session, IntPtr profile);
 
     private static readonly Lazy<bool> Initialized = new(() => Function<InitializeFn>(0x0150E828)() == 0);
 
@@ -44,6 +54,102 @@ internal sealed class NvidiaDrs : INvidiaSettings
     }
 
     public NvidiaSettingState Read(uint settingId) => WithBaseProfile(save: false, (session, profile) =>
+        ReadSetting(session, profile, settingId) is { } value ? new NvidiaSettingState(true, value) : new NvidiaSettingState(false, 0));
+
+    public void Write(uint settingId, NvidiaSettingState state) => WithBaseProfile(save: true, (session, profile) =>
+    {
+        if (state.Defined)
+            WriteSetting(session, profile, settingId, state.Value);
+        else
+            DeleteSetting(session, profile, settingId);
+        return state;
+    });
+
+    // ------------------------------------------------------------------ per-application profiles (F16.1)
+
+    public NvidiaProfileState Read(string exe, uint settingId) => WithSession(save: false, session =>
+    {
+        if (FindApplication(session, exe) is not { } profile)
+            return new NvidiaProfileState(false, false, 0);
+        return ReadSetting(session, profile, settingId) is { } value ? new NvidiaProfileState(true, true, value) : new NvidiaProfileState(true, false, 0);
+    });
+
+    public void Write(string exe, uint settingId, NvidiaProfileState state) => WithSession(save: true, session =>
+    {
+        var profile = FindApplication(session, exe);
+        if (!state.AppKnown)
+        {
+            // Back to "no profile": delete only a profile NOVAIS boost created; in any other profile, only the setting.
+            if (profile is { } existing)
+            {
+                if (ProfileName(session, existing).StartsWith(OwnProfilePrefix, StringComparison.Ordinal))
+                    Check(Function<DeleteProfileFn>(0x17093206)(session, existing), "apagar o perfil de");
+                else
+                    DeleteSetting(session, existing, settingId);
+            }
+            return state;
+        }
+        profile ??= CreateProfile(session, exe);
+        if (state.Defined)
+            WriteSetting(session, profile.Value, settingId, state.Value);
+        else
+            DeleteSetting(session, profile.Value, settingId);
+        return state;
+    });
+
+    private static IntPtr? FindApplication(IntPtr session, string exe)
+    {
+        var application = Allocate(ApplicationSize);
+        try
+        {
+            var result = Function<FindApplicationFn>(0xEEE566B2)(session, exe, out var profile, application);
+            if (result == ExecutableNotFound)
+                return null;
+            Check(result, "procurar o perfil do jogo nas");
+            return profile;
+        }
+        finally
+        {
+            Marshal.FreeHGlobal(application);
+        }
+    }
+
+    private static string ProfileName(IntPtr session, IntPtr profile)
+    {
+        var info = Allocate(ProfileSize);
+        try
+        {
+            Check(Function<ProfileInfoFn>(0x61CD6FD6)(session, profile, info), "ler o perfil das");
+            return Marshal.PtrToStringUni(info + 4) ?? "";
+        }
+        finally
+        {
+            Marshal.FreeHGlobal(info);
+        }
+    }
+
+    private static IntPtr CreateProfile(IntPtr session, string exe)
+    {
+        var info = Allocate(ProfileSize);
+        var application = Allocate(ApplicationSize);
+        try
+        {
+            WriteString(info, 4, OwnProfilePrefix + exe);
+            Check(Function<CreateProfileFn>(0xCC176068)(session, info, out var profile), "criar o perfil nas");
+            WriteString(application, 8, exe);
+            Check(Function<CreateApplicationFn>(0x4347A9DE)(session, profile, application), "adicionar o jogo ao perfil nas");
+            return profile;
+        }
+        finally
+        {
+            Marshal.FreeHGlobal(info);
+            Marshal.FreeHGlobal(application);
+        }
+    }
+
+    // ------------------------------------------------------------------ shared
+
+    private static uint? ReadSetting(IntPtr session, IntPtr profile, uint settingId)
     {
         var buffer = Marshal.AllocHGlobal(SettingSize);
         try
@@ -51,43 +157,47 @@ internal sealed class NvidiaDrs : INvidiaSettings
             Clear(buffer);
             var result = Function<GetSettingFn>(0x73BF8338)(session, profile, settingId, buffer);
             if (result == SettingNotFound)
-                return new NvidiaSettingState(false, 0);
+                return null;
             Check(result, "ler");
-            return new NvidiaSettingState(true, unchecked((uint)Marshal.ReadInt32(buffer, CurrentValueOffset)));
+            return unchecked((uint)Marshal.ReadInt32(buffer, CurrentValueOffset));
         }
         finally
         {
             Marshal.FreeHGlobal(buffer);
         }
-    });
+    }
 
-    public void Write(uint settingId, NvidiaSettingState state) => WithBaseProfile(save: true, (session, profile) =>
+    private static void WriteSetting(IntPtr session, IntPtr profile, uint settingId, uint value)
     {
-        if (!state.Defined)
-        {
-            var result = Function<DeleteSettingFn>(0xE4A26362)(session, profile, settingId);
-            if (result != SettingNotFound)
-                Check(result, "restaurar o padrão de");
-            return state;
-        }
-
         var buffer = Marshal.AllocHGlobal(SettingSize);
         try
         {
             Clear(buffer);
             Marshal.WriteInt32(buffer, SettingIdOffset, unchecked((int)settingId));
             Marshal.WriteInt32(buffer, SettingTypeOffset, 0); // NVDRS_DWORD_TYPE
-            Marshal.WriteInt32(buffer, CurrentValueOffset, unchecked((int)state.Value));
+            Marshal.WriteInt32(buffer, CurrentValueOffset, unchecked((int)value));
             Check(Function<SetSettingFn>(0x577DD202)(session, profile, buffer), "gravar");
-            return state;
         }
         finally
         {
             Marshal.FreeHGlobal(buffer);
         }
+    }
+
+    private static void DeleteSetting(IntPtr session, IntPtr profile, uint settingId)
+    {
+        var result = Function<DeleteSettingFn>(0xE4A26362)(session, profile, settingId);
+        if (result != SettingNotFound)
+            Check(result, "restaurar o padrão de");
+    }
+
+    private static T WithBaseProfile<T>(bool save, Func<IntPtr, IntPtr, T> operation) => WithSession(save, session =>
+    {
+        Check(Function<GetBaseProfileFn>(0xDA8466A0)(session, out var profile), "abrir o perfil global de");
+        return operation(session, profile);
     });
 
-    private static T WithBaseProfile<T>(bool save, Func<IntPtr, IntPtr, T> operation)
+    private static T WithSession<T>(bool save, Func<IntPtr, T> operation)
     {
         if (!IsAvailable)
             throw new InvalidOperationException("Driver NVIDIA (NVAPI) não encontrado.");
@@ -95,8 +205,7 @@ internal sealed class NvidiaDrs : INvidiaSettings
         try
         {
             Check(Function<SessionFn>(0x375DBD6B)(session), "carregar");
-            Check(Function<GetBaseProfileFn>(0xDA8466A0)(session, out var profile), "abrir o perfil global de");
-            var result = operation(session, profile);
+            var result = operation(session);
             if (save)
                 Check(Function<SessionFn>(0xFCBC7E14)(session), "salvar");
             return result;
@@ -105,6 +214,20 @@ internal sealed class NvidiaDrs : INvidiaSettings
         {
             Function<SessionFn>(0xDAD9CFF8)(session);
         }
+    }
+
+    private static IntPtr Allocate(int size)
+    {
+        var buffer = Marshal.AllocHGlobal(size);
+        Marshal.Copy(new byte[size], 0, buffer, size);
+        Marshal.WriteInt32(buffer, 0, size | (1 << 16));
+        return buffer;
+    }
+
+    private static void WriteString(IntPtr buffer, int offset, string text)
+    {
+        var chars = (text.Length > 2047 ? text[..2047] : text).ToCharArray();
+        Marshal.Copy(chars, 0, buffer + offset, chars.Length);
     }
 
     private static void Clear(IntPtr buffer)

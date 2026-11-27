@@ -73,6 +73,7 @@ internal sealed class Views(AppServices app, ConsoleUi ui)
         }
 
         GamePresetsOffer(games);
+        GpuProfilesOffer(games);
 
         var gpu = app.Pc.Gpus.FirstOrDefault(item => !item.IsIntegrated) ?? app.Pc.Gpus.FirstOrDefault();
         if (gpu is not null)
@@ -113,6 +114,28 @@ internal sealed class Views(AppServices app, ConsoleUi ui)
                 AnsiConsole.MarkupLine($"[grey]{Markup.Escape(preset.Name)}: chaves conferidas em fontes públicas ({preset.LastVerified}), ainda não testadas numa instalação.[/]");
         }
         ui.ReviewAndApply(tweaks);
+    }
+
+    /// <summary>16.1: per-game NVIDIA profiles; 16.2: Radeon settings when ADLX is available.</summary>
+    private void GpuProfilesOffer(IReadOnlyList<InstalledGame> games)
+    {
+        var discrete = app.Pc.Gpus.Where(gpu => !gpu.IsIntegrated).ToArray();
+        if (discrete.Any(gpu => gpu.Vendor == GpuVendor.Nvidia) && NvidiaDrs.IsAvailable && games.Any(game => game.Game.Id != "obs") &&
+            ConsoleUi.Confirm("Revisar o perfil de cada jogo no driver NVIDIA (desempenho máximo só no jogo)?"))
+        {
+            int? hz = app.Pc.Displays.Count > 0 ? app.Pc.Displays.Max(display => display.MaxHz) : null;
+            var cap = hz is > 0 && ConsoleUi.Confirm($"Também limitar o FPS pelo driver para o G-Sync ({hz} Hz)? Só para jogos sem limite próprio")
+                ? FrameCap.For(hz.Value, vrr: true, reflex: false) : null;
+            ui.ReviewAndApply(NvidiaProfiles.Build(games, cap));
+        }
+        if (discrete.Any(gpu => gpu.Vendor == GpuVendor.Amd))
+        {
+            if (app.Amd.IsAvailable)
+                ui.ReviewAndApply([AmdProfiles.Competitive()]);
+            else
+                AnsiConsole.MarkupLine("[grey]Radeon: ligue o Anti-Lag e desligue Chill, Boost, Enhanced Sync e HYPR-RX no AMD Software " +
+                    "(a aplicação automática pelo ADLX ainda não está disponível nesta versão).[/]");
+        }
     }
 
     private static string EncoderAdvice(GpuInfo gpu) => gpu.Vendor switch

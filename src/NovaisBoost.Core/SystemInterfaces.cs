@@ -63,6 +63,21 @@ public interface IConfigFiles
     bool IsInUse(ConfigFileAction action);
 }
 
+/// <summary>Per-application NVIDIA driver profiles (DRS).</summary>
+public interface INvidiaProfiles
+{
+    NvidiaProfileState Read(string exe, uint settingId);
+    void Write(string exe, uint settingId, NvidiaProfileState state);
+}
+
+/// <summary>Radeon Software settings through ADLX. IsAvailable is false when the driver or the integration is missing.</summary>
+public interface IAmdSettings
+{
+    bool IsAvailable { get; }
+    AmdSettingState Read(string feature);
+    void Write(string feature, AmdSettingState state);
+}
+
 public interface IPowerPlans
 {
     PowerPlanState Read(PowerPlanAction plan);
@@ -104,6 +119,8 @@ public interface IActionLog
 [JsonDerivedType(typeof(PagefileState), "pagefile")]
 [JsonDerivedType(typeof(TcpState), "tcpGlobal")]
 [JsonDerivedType(typeof(ConfigFileState), "configFile")]
+[JsonDerivedType(typeof(NvidiaProfileState), "nvidiaProfile")]
+[JsonDerivedType(typeof(AmdSettingState), "amdSetting")]
 public abstract record SettingState
 {
     internal virtual bool Matches(SettingState other) => Equals(other);
@@ -197,6 +214,20 @@ public sealed record ConfigFileState(bool FileExists, string? Value, string? Ori
     internal override bool Matches(SettingState other) =>
         other is ConfigFileState config && FileExists == config.FileExists && string.Equals(Value, config.Value, StringComparison.Ordinal);
     internal override string Display => !FileExists ? "arquivo não encontrado" : Value ?? "chave ausente";
+}
+
+/// <param name="AppKnown">Some profile lists the executable (predefined by NVIDIA or created before).</param>
+/// <param name="Defined">The setting is set in that profile (otherwise the profile/driver default applies).</param>
+public sealed record NvidiaProfileState(bool AppKnown, bool Defined, uint Value) : SettingState
+{
+    internal override bool Matches(SettingState other) =>
+        other is NvidiaProfileState state && AppKnown == state.AppKnown && Defined == state.Defined && (!Defined || Value == state.Value);
+    internal override string Display => !AppKnown ? "sem perfil no driver" : Defined ? $"0x{Value:X}" : "padrão do perfil";
+}
+
+public sealed record AmdSettingState(bool Enabled) : SettingState
+{
+    internal override string Display => Enabled ? "ligado" : "desligado";
 }
 
 public sealed record TcpState(string Value) : SettingState

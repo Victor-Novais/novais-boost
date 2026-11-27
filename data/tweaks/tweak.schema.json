@@ -125,6 +125,12 @@
           },
           {
             "$ref": "#/$defs/configFile"
+          },
+          {
+            "$ref": "#/$defs/nvidiaProfile"
+          },
+          {
+            "$ref": "#/$defs/amdSetting"
           }
         ]
       }
@@ -632,6 +638,67 @@
           "items": {
             "$ref": "#/$defs/nonblank"
           }
+        }
+      }
+    },
+    "nvidiaProfile": {
+      "description": "DWORD setting in the NVIDIA driver profile of one executable (created as \"NOVAIS boost - exe\" when missing).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "exe",
+        "settingId",
+        "name",
+        "expected"
+      ],
+      "properties": {
+        "type": {
+          "const": "nvidiaProfile"
+        },
+        "exe": {
+          "type": "string",
+          "pattern": "^[^\\\\/:*?\"<>|]+\\.exe$"
+        },
+        "settingId": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4294967295
+        },
+        "name": {
+          "$ref": "#/$defs/nonblank"
+        },
+        "expected": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4294967295
+        }
+      }
+    },
+    "amdSetting": {
+      "description": "Radeon Software feature through ADLX.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "feature",
+        "enabled"
+      ],
+      "properties": {
+        "type": {
+          "const": "amdSetting"
+        },
+        "feature": {
+          "enum": [
+            "AntiLag",
+            "Chill",
+            "Boost",
+            "EnhancedSync",
+            "HyprRx"
+          ]
+        },
+        "enabled": {
+          "type": "boolean"
         }
       }
     }

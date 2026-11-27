@@ -529,7 +529,7 @@ public sealed partial class TweakEngineTests : IDisposable
 
     private TweakEngine CreateEngine(string owner) =>
         new(_windows, _windows, _windows, CreateSnapshots(owner), _log, _windows, _windows, _compatibility, _windows, _windows,
-            _windows, _windows, _windows, _windows);
+            _windows, _windows, _windows, _windows, _windows, _windows);
 
     private Func<TweakCompatibility, string?>? _compatibility;
 
@@ -548,8 +548,51 @@ public sealed partial class TweakEngineTests : IDisposable
     }
 
     private sealed class FakeWindows : IRegistry, IServiceController, IPowerConfig, IScheduledTasks, IPowerPlans, INvidiaSettings, IDnsSettings,
-        IBcdStore, IPagefile, ITcpSettings, IConfigFiles
+        IBcdStore, IPagefile, ITcpSettings, IConfigFiles, INvidiaProfiles, IAmdSettings
     {
+        /// <summary>Driver profiles: name → (predefined, apps, settings). Mirrors how NvidiaDrs treats them.</summary>
+        public Dictionary<string, (bool Predefined, HashSet<string> Apps, Dictionary<uint, uint> Settings)> Profiles { get; } = [];
+        public Dictionary<string, bool> Amd { get; } = [];
+        public bool AmdAvailable { get; set; } = true;
+
+        private string? ProfileOf(string exe) => Profiles.FirstOrDefault(pair => pair.Value.Apps.Contains(exe)).Key;
+
+        NvidiaProfileState INvidiaProfiles.Read(string exe, uint settingId) => ProfileOf(exe) is { } name
+            ? Profiles[name].Settings.TryGetValue(settingId, out var value) ? new(true, true, value) : new(true, false, 0)
+            : new(false, false, 0);
+
+        void INvidiaProfiles.Write(string exe, uint settingId, NvidiaProfileState state)
+        {
+            OnWrite();
+            var name = ProfileOf(exe);
+            if (!state.AppKnown)
+            {
+                if (name is not null && name.StartsWith("NOVAIS boost - ", StringComparison.Ordinal))
+                    Profiles.Remove(name);
+                else if (name is not null)
+                    Profiles[name].Settings.Remove(settingId);
+                return;
+            }
+            if (name is null)
+            {
+                name = "NOVAIS boost - " + exe;
+                Profiles[name] = (false, new HashSet<string>(StringComparer.OrdinalIgnoreCase) { exe }, []);
+            }
+            if (state.Defined)
+                Profiles[name].Settings[settingId] = state.Value;
+            else
+                Profiles[name].Settings.Remove(settingId);
+        }
+
+        bool IAmdSettings.IsAvailable => AmdAvailable;
+        AmdSettingState IAmdSettings.Read(string feature) => new(Amd.GetValueOrDefault(feature));
+
+        void IAmdSettings.Write(string feature, AmdSettingState state)
+        {
+            OnWrite();
+            Amd[feature] = state.Enabled;
+        }
+
         public Dictionary<string, byte[]> Files { get; } = new(StringComparer.OrdinalIgnoreCase);
         public HashSet<string> Running { get; } = new(StringComparer.OrdinalIgnoreCase);
 

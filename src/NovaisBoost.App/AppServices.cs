@@ -18,12 +18,15 @@ internal sealed class AppServices
         Log = log;
         Snapshots = snapshots;
         Probe = new WindowsHardwareProbe(log, () => Games);
+        var nvidia = new NvidiaDrs();
         Engine = new TweakEngine(new WindowsRegistry(), new WindowsServiceController(), new WindowsPowerConfig(), snapshots, log,
             new WindowsScheduledTasks(log), new WindowsPowerPlans(), compat => Compatibility.Check(compat, Pc),
-            new NvidiaDrs(), new WindowsDnsSettings(), new WindowsBcdStore(), new WindowsPagefile(), new WindowsTcpSettings(), new WindowsConfigFiles());
+            nvidia, new WindowsDnsSettings(), new WindowsBcdStore(), new WindowsPagefile(), new WindowsTcpSettings(), new WindowsConfigFiles(),
+            nvidia, Amd);
     }
 
     public string DataDirectory { get; }
+    public AmdAdlx Amd { get; } = new();
     public IActionLog Log { get; }
     public SnapshotManager Snapshots { get; }
     public WindowsHardwareProbe Probe { get; }

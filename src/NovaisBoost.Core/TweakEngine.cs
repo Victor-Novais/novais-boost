@@ -11,7 +11,8 @@ public sealed class TweakEngine(
     IScheduledTasks? tasks = null, IPowerPlans? plans = null,
     Func<TweakCompatibility, string?>? compatibility = null,
     INvidiaSettings? nvidia = null, IDnsSettings? dns = null,
-    IBcdStore? bcd = null, IPagefile? pagefile = null, ITcpSettings? tcp = null, IConfigFiles? configs = null)
+    IBcdStore? bcd = null, IPagefile? pagefile = null, ITcpSettings? tcp = null, IConfigFiles? configs = null,
+    INvidiaProfiles? nvidiaProfiles = null, IAmdSettings? amd = null)
 {
     private RestorePoint? _batchPoint;
     private bool _inBatch;
@@ -268,6 +269,8 @@ public sealed class TweakEngine(
             ConfigFileAction config when before is ConfigFileState { Value: null } =>
                 throw new InvalidDataException($"A chave {config.Key} não existe em {System.IO.Path.GetFileName(config.Path)}; o formato do jogo pode ter mudado."),
             ConfigFileAction config => new ConfigFileState(true, config.Value),
+            NvidiaProfileAction profile => new NvidiaProfileState(true, true, profile.Expected),
+            AmdSettingAction feature => new AmdSettingState(feature.Enabled),
             _ => throw new InvalidDataException("Operação de ajuste inválida.")
         };
         return new PlannedChange(action, before, expected);
@@ -286,6 +289,8 @@ public sealed class TweakEngine(
         PagefileAction => Require(pagefile).Read(),
         TcpGlobalAction setting => Require(tcp).Read(setting.Setting),
         ConfigFileAction config => Require(configs).Read(config),
+        NvidiaProfileAction profile => Require(nvidiaProfiles).Read(profile.Exe, profile.SettingId),
+        AmdSettingAction feature => Require(amd).Read(feature.Feature),
         _ => throw new InvalidDataException("Tipo de ajuste desconhecido.")
     };
 
@@ -329,6 +334,12 @@ public sealed class TweakEngine(
                 break;
             case (ConfigFileAction config, ConfigFileState configState):
                 Require(configs).Write(config, configState);
+                break;
+            case (NvidiaProfileAction profile, NvidiaProfileState profileState):
+                Require(nvidiaProfiles).Write(profile.Exe, profile.SettingId, profileState);
+                break;
+            case (AmdSettingAction feature, AmdSettingState featureState):
+                Require(amd).Write(feature.Feature, featureState);
                 break;
             default:
                 throw new InvalidDataException("O estado do backup não corresponde à operação.");

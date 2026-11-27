@@ -82,6 +82,17 @@ Em Jogos & Streaming, o NOVAIS boost aplica um preset competitivo direto no arqu
   mudam a cada título), Apex, Rainbow Six Siege e Overwatch 2 (chaves ainda não confirmadas). Esses jogos mostram só as dicas.
 - Opções de inicialização do Steam aparecem prontas para copiar (o `localconfig.vdf` não é editado).
 
+## GPU por jogo
+
+- **NVIDIA:** em Jogos & Streaming, cada jogo detectado pode ter o modo de energia em "Preferir desempenho máximo" no
+  próprio perfil do driver (DRS), sem deixar a GPU em clock alto o tempo todo. Se o jogo não tiver perfil, um perfil
+  "NOVAIS boost - jogo.exe" é criado; ao reverter, ele é apagado. Perfis predefinidos da NVIDIA nunca são apagados: só a
+  configuração volta. Opcional: limite de FPS do driver para G-Sync (`experimental`). Os IDs foram conferidos no driver
+  instalado (`NvAPI_DRS_GetSettingNameFromId`); o Low Latency Mode continua fora (use Reflex no jogo).
+- **AMD:** a estrutura para ADLX está pronta (Anti-Lag ligado; Chill, Boost, Enhanced Sync e HYPR-RX desligados), mas a
+  integração com o driver ainda não está nesta versão; a tela mostra as recomendações para fazer no AMD Software.
+- **Intel Arc:** leitura via IGCL ainda não implementada.
+
 ## Modo Reparar
 
 Muitos jogadores já rodaram "pacotes de FPS" e otimizadores agressivos que deixam o Windows pior. O Modo Reparar

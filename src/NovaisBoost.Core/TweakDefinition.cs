@@ -54,6 +54,8 @@ public static class TweakLevels
 [JsonDerivedType(typeof(PagefileAction), "pagefile")]
 [JsonDerivedType(typeof(TcpGlobalAction), "tcpGlobal")]
 [JsonDerivedType(typeof(ConfigFileAction), "configFile")]
+[JsonDerivedType(typeof(NvidiaProfileAction), "nvidiaProfile")]
+[JsonDerivedType(typeof(AmdSettingAction), "amdSetting")]
 public abstract record TweakAction
 {
     internal abstract string Target { get; }
@@ -156,6 +158,23 @@ public sealed record ConfigFileAction(string Path, ConfigFormat Format, string? 
 {
     internal override string Target => $"{System.IO.Path.GetFileName(Path)}: {(Section is null ? "" : $"[{Section}] ")}{Key}";
     internal override string Identity => $"config:{Path.ToLowerInvariant()}\0{Section?.ToLowerInvariant()}\0{Key.ToLowerInvariant()}";
+}
+
+/// <summary>
+/// A DWORD setting in the NVIDIA driver profile of one game (F16). If no profile lists the executable, a profile
+/// "NOVAIS boost - exe" is created on apply and deleted on revert; a predefined NVIDIA profile is never deleted.
+/// </summary>
+public sealed record NvidiaProfileAction(string Exe, uint SettingId, string Name, uint Expected) : TweakAction
+{
+    internal override string Target => $"NVIDIA ({Exe}): {Name}";
+    internal override string Identity => $"nvidia-app:{Exe.ToLowerInvariant()}:{SettingId:X8}";
+}
+
+/// <summary>A Radeon Software feature switched through ADLX (F16.2): AntiLag, Chill, Boost, EnhancedSync, HyprRx.</summary>
+public sealed record AmdSettingAction(string Feature, bool Enabled) : TweakAction
+{
+    internal override string Target => $"AMD: {Feature}";
+    internal override string Identity => $"amd:{Feature.ToLowerInvariant()}";
 }
 
 /// <summary>A power plan owned by NOVAIS boost: created from a template on apply, deleted on revert.</summary>
