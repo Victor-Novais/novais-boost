@@ -106,7 +106,7 @@ public sealed class GuardianPolicy(ProcessCatalog catalog, IEnumerable<string> g
         : null;
 
     private static HashSet<string> Names(IEnumerable<string> names) =>
-        names.Select(name => Path.GetFileNameWithoutExtension(name)).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        names.Select(name => WindowsPath.GetFileNameWithoutExtension(name)).ToHashSet(StringComparer.OrdinalIgnoreCase);
 }
 
 // ---------------------------------------------------------------- CPU topology (17.3, 17.4)

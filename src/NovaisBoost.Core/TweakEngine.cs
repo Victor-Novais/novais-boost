@@ -265,9 +265,9 @@ public sealed class TweakEngine(
             TcpGlobalAction setting => new TcpState(setting.Expected),
             // Fail closed: never create a file or a key the game did not write itself.
             ConfigFileAction config when before is ConfigFileState { FileExists: false } =>
-                throw new InvalidDataException($"{System.IO.Path.GetFileName(config.Path)} não existe. Abra o jogo uma vez e feche para ele criar o arquivo."),
+                throw new InvalidDataException($"{WindowsPath.GetFileName(config.Path)} não existe. Abra o jogo uma vez e feche para ele criar o arquivo."),
             ConfigFileAction config when before is ConfigFileState { Value: null } =>
-                throw new InvalidDataException($"A chave {config.Key} não existe em {System.IO.Path.GetFileName(config.Path)}; o formato do jogo pode ter mudado."),
+                throw new InvalidDataException($"A chave {config.Key} não existe em {WindowsPath.GetFileName(config.Path)}; o formato do jogo pode ter mudado."),
             ConfigFileAction config => new ConfigFileState(true, config.Value),
             NvidiaProfileAction profile => new NvidiaProfileState(true, true, profile.Expected),
             AmdSettingAction feature => new AmdSettingState(feature.Enabled),

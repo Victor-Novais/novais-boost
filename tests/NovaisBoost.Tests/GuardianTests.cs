@@ -196,7 +196,7 @@ public sealed class GuardianTests
             """).GuardianOrDefault;
         Assert.Equal((PriorityLevel.High, true, false, true, true), (settings.GamePriority, settings.TouchProtectedGames, settings.EfficiencyMode,
             settings.PowerPlanDuringGame, settings.StandbyPurge));
-        Assert.Equal(["Discord"], settings.Lower);
+        Assert.Equal(["Discord"], settings.Lower!);
         var defaults = new GuardianSettings();
         Assert.Equal((false, true, true, false, false, false), (defaults.TouchProtectedGames, defaults.EfficiencyMode, defaults.BackgroundCpuSets,
             defaults.GameCpuSets, defaults.PowerPlanDuringGame, defaults.StandbyPurge));

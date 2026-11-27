@@ -157,7 +157,7 @@ public sealed record TcpGlobalAction(string Setting, string Expected) : TweakAct
 /// <param name="LockedBy">Process names (without .exe) of the game that owns the file.</param>
 public sealed record ConfigFileAction(string Path, ConfigFormat Format, string? Section, string Key, string Value, string[] LockedBy) : TweakAction
 {
-    internal override string Target => $"{System.IO.Path.GetFileName(Path)}: {(Section is null ? "" : $"[{Section}] ")}{Key}";
+    internal override string Target => $"{WindowsPath.GetFileName(Path)}: {(Section is null ? "" : $"[{Section}] ")}{Key}";
     internal override string Identity => $"config:{Path.ToLowerInvariant()}\0{Section?.ToLowerInvariant()}\0{Key.ToLowerInvariant()}";
 }
 

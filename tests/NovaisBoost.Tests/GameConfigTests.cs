@@ -71,7 +71,7 @@ public sealed partial class TweakEngineTests
         {
             foreach (var file in preset.Files)
             {
-                var name = Path.GetFileName(file.Path.Replace('/', '\\'));
+                var name = WindowsPath.GetFileName(file.Path);
                 var original = Fixture(preset.Id, name);
                 var path = $@"C:\fixture\{preset.Id}\{name}";
                 _windows.Files[path] = original;
