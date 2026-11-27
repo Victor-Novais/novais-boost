@@ -378,7 +378,7 @@ F0 a F14 estão concluídas; F10, F15, F16 e F17 estão parciais (ver P2.2). Ord
 
 1. **Portão de validação V** (P2.4): rodar o checklist de `docs/LANCAMENTO.md` numa VM e num PC real. F12, F14 e F16
    estão marcadas como prontas sem validação no Windows real. Manual, pode correr em paralelo com o item 2.
-2. **F18 — Debloat completo** (prompt em `PROMPT_F18.md`). F20 pode correr em paralelo.
+2. ~~F18 — Debloat completo~~ ✅. Seguem F23, F19 e F20 (as partes que não dependem de certificado ou backend), depois o backlog P2.4.
 3. Itens do **backlog das fases parciais** (P2.4) encaixados entre as fases, sem bloquear o roadmap.
 
 ---
@@ -764,7 +764,7 @@ Cronogramas e terminam com código 0 na VM; nenhuma tarefa troca nada sem o usu�
 | F15 Configuração dos jogos | ✅ parcial | `ConfigFileAction` (ini, KeyValues, cfg, json) com `IConfigFiles` + fake: backup do arquivo inteiro, revert byte a byte (ou só as chaves se o jogo regravou), recusa com o jogo aberto ou arquivo somente leitura, falha fechada em chave ausente/repetida. `FrameCap.For` (VRR + Reflex). Presets: CS2 (`experimental`) e Fortnite (`documented`), com fixtures reconstruídos a partir de exemplos públicos. Pendente: Apex, R6 e OW2 (chaves não confirmadas), VALORANT (configurações no servidor da Riot), COD (formato `.cst` muda por título), e validar CS2/Fortnite com arquivos reais |
 | F16 GPU três fabricantes | ✅ parcial | NVIDIA: `NvidiaProfileAction` por jogo (DRS: Find/Create/DeleteProfile, CreateApplication), IDs e layouts validados só em leitura no driver instalado (RTX 4070); modo de energia máximo por jogo (`documented`) e limite de FPS do driver (`experimental`); perfil próprio apagado no revert, predefinido nunca. AMD: `AmdSettingAction` + `IAmdSettings` + fake + testes; integração ADLX real pendente (precisa dos bindings SWIG e de uma Radeon para validar). Intel Arc (IGCL) pendente. Low Latency Mode continua fora |
 | F17 Guardian v2 | ✅ parcial | Detecção por evento (`Win32_ProcessStartTrace`, com verificação a cada 15 s como reserva). EcoQoS e CPU Sets para o segundo plano (E-cores / CCD sem V-Cache, lidos de `GetSystemCpuSetInformation` + tamanho do L3), CPU Sets no jogo só com opt-in e nunca em jogo protegido. Jogos com anti-cheat de kernel não são tocados sem opt-in. Plano de energia só no jogo, standby list com limites e intervalo, alertas de RAM/VRAM (NVML)/vazamento, `DefenderExclusionAction` reversível, listas do usuário em `settings.json`. Pendente: notificação "toast" do Windows (alertas vão para a janela e o log) e medir o uso de CPU parado |
-| F18 Debloat completo | ⏳ | |
+| F18 Debloat completo | ✅ | Tipos novos `AppxPackageAction` (PackageManager só da conta atual, revert pelo `winget --source msstore`; falha na reinstalação mantém o backup) e `SystemFeatureAction` (hibernação via powercfg, compressão via MMAgent), com fakes e testes de lote e de reversão interrompida. 9 apps em `data/bloat/appx.json` (um ajuste por app instalado, nível 2) e lista `NeverRemove`. Edge sem segundo plano, OneDrive/Teams fora da inicialização (incluindo a StartupTask do Teams novo), serviços de fabricantes em Manual (`experimental`, `data/bloat/oem.json`), Xbox em Manual no nível 3 com `not-dual-ccd-x3d`, efeitos visuais, adiar atualizações de recurso (`not-home`), hibernação e compressão de memória (`ram-32gb`) só em Custom. App passou para `net10.0-windows10.0.19041.0`. Pendente: conferir `storeId`s e nomes de serviço OEM em PCs reais (portão V) |
 | F19 Entrada, áudio, rede, armazenamento | ⏳ | |
 | F20 Confiança e distribuição | ⏳ | |
 | F21 Base de dados opt-in | ⏳ | |
@@ -781,7 +781,8 @@ Pontos que dependem de informação externa que muda com o tempo:
 - O que o `GameUserSettings.ini` do Valorant ainda controla e o formato atual do `.cst` do COD (F15.2).
 - IDs e valores aceitos de Low Latency Mode no driver NVIDIA atual (F16.1).
 - Chaves de Apex (`videoconfig.txt`), R6 (`GameSettings.ini`) e OW2 (`Settings_v0.ini`) com arquivos reais (backlog B1).
-- Disponibilidade de `winget --source msstore` para reinstalar cada pacote Appx removido (F18.1).
+- Disponibilidade de `winget --source msstore` para reinstalar cada pacote Appx removido (F18.1): conferir cada `storeId` com `winget show`.
+- Nomes reais dos serviços de ASUS, MSI, Gigabyte, Corsair e Razer em `data/bloat/oem.json` (F18.4): nomes errados são ignorados, mas não ajudam.
 
 **Decisões de produto pendentes** (não são código, mas bloqueiam fases):
 - Modelo de negócio e licença (grátis, pago, freemium, open source). Afeta F20.1 (assinatura exige CNPJ), F20.3 (onde hospedar

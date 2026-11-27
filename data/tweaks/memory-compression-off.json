@@ -1,0 +1,23 @@
+{
+  "id": "memory-compression-off",
+  "name": "Desligar a compressão de memória",
+  "description": "Com 32 GB ou mais, a RAM raramente enche e comprimir páginas só gasta CPU. Sem efeito comprovado em FPS: use Provar ajustes para medir neste PC. Exige o serviço SysMain ligado para mudar.",
+  "category": "Memória",
+  "level": "extreme",
+  "evidence": "experimental",
+  "risk": "Baixo com 32 GB+. Se a RAM encher, o Windows usa mais o arquivo de paginação.",
+  "requiresReboot": true,
+  "compat": {
+    "hardware": [
+      "ram-32gb"
+    ],
+    "antiCheat": []
+  },
+  "actions": [
+    {
+      "type": "systemFeature",
+      "feature": "memoryCompression",
+      "enabled": false
+    }
+  ]
+}

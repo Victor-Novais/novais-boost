@@ -85,4 +85,31 @@ public sealed class CompatibilityTests
 
     [Fact]
     public void UnknownTokenIsNeverSatisfied() => Assert.Contains("desconhecido", Check(Pc(), "warp-drive"));
+
+    [Fact]
+    public void XboxServicesAreNeverTouchedOnDualCcdX3d()
+    {
+        var xbox = TweakCatalog.LoadEmbedded().Single(tweak => tweak.Id == "xbox-services-manual");
+        Assert.Equal(TweakLevel.Extreme, xbox.Level);
+        Assert.NotNull(Compatibility.Check(xbox.Compat, Pc("AMD Ryzen 9 7950X3D 16-Core Processor")));
+        Assert.Null(Compatibility.Check(xbox.Compat, Pc("AMD Ryzen 7 7800X3D 8-Core Processor")));
+    }
+
+    [Theory]
+    [InlineData(16, false)]
+    [InlineData(31, true)]
+    [InlineData(64, true)]
+    public void Ram32GbToken(int gb, bool allowed)
+    {
+        var pc = Pc() with { Memory = new MemoryInfo((long)gb << 30, 0, []) };
+        Assert.Equal(allowed, Check(pc, "ram-32gb") is null);
+        Assert.NotNull(Check(Pc(), "ram-32gb"));
+    }
+
+    [Theory]
+    [InlineData("Microsoft Windows 11 Home Single Language", false)]
+    [InlineData("Microsoft Windows 11 Pro", true)]
+    [InlineData("Microsoft Windows 11 Enterprise", true)]
+    public void NotHomeToken(string caption, bool allowed) =>
+        Assert.Equal(allowed, Check(Pc() with { Os = Pc().Os with { Caption = caption } }, "not-home") is null);
 }

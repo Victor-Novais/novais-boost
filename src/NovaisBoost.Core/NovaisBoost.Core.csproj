@@ -11,5 +11,6 @@
     <EmbeddedResource Include="../../data/repairs/*.json" LogicalName="Repairs.%(Filename)%(Extension)" />
     <EmbeddedResource Include="../../data/games/*.json" LogicalName="Presets.%(Filename)%(Extension)" />
     <EmbeddedResource Include="../../data/*.json" LogicalName="Data.%(Filename)%(Extension)" />
+    <EmbeddedResource Include="../../data/bloat/*.json" LogicalName="Bloat.%(Filename)%(Extension)" />
   </ItemGroup>
 </Project>

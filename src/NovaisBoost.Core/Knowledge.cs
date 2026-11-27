@@ -19,6 +19,12 @@ public static class DataCatalog
         .Where(name => name.StartsWith("Presets.", StringComparison.Ordinal)).Order(StringComparer.Ordinal)
         .Select(name => LoadResource<GamePreset>(name)).ToArray();
 
+    /// <summary>Store apps that are safe to remove (data/bloat/appx.json).</summary>
+    public static IReadOnlyList<AppxBloatEntry> AppxBloat() => LoadResource<AppxBloatEntry[]>("Bloat.appx.json");
+
+    /// <summary>Heavy services of motherboard and peripheral suites (data/bloat/oem.json).</summary>
+    public static IReadOnlyList<OemServiceGroup> OemBloat() => LoadResource<OemServiceGroup[]>("Bloat.oem.json");
+
     private static T Load<T>(string name) => LoadResource<T>("Data." + name);
 
     private static T LoadResource<T>(string resource)

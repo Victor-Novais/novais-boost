@@ -91,6 +91,19 @@ Faça um snapshot da VM antes. Para cada item, confira o log em `C:\ProgramData\
 - [ ] Com um backup antigo que contém `mmcss-gaming`, Reverter tudo devolve os valores do MMCSS e a tarefa "reaplicar"
       não o reaplica (registra no log).
 
+- [ ] **Debloat (F18), só em VM:** Ajustes individuais → remover cada app da Store → some do menu Iniciar → Reverter tudo →
+      cada app volta pela Microsoft Store. Sem internet, a reversão falha com a mensagem da Store e funciona depois de reconectar.
+- [ ] Antes do primeiro release, conferir cada `storeId` de `data/bloat/appx.json` com `winget show --id <id> --source msstore`.
+- [ ] Serviços de fabricantes: num PC com Armoury Crate / iCUE / MSI Center, aplicar → reiniciar → RGB e ventoinhas funcionam
+      e o app do fabricante abre. Conferir no `services.msc` os nomes de `data/bloat/oem.json` (nomes errados são ignorados).
+- [ ] Ryzen 7950X3D/9950X3D: "Serviços Xbox sob demanda" aparece como "não se aplica" e a Game Bar continua funcionando.
+- [ ] Edge: fechar o Edge → nenhum `msedge.exe` no Gerenciador de Tarefas; reverter → o modo em segundo plano volta.
+- [ ] OneDrive e Teams fora da inicialização: reiniciar → não abrem; abrir manualmente → sincronizam.
+- [ ] Hibernação: aplicar → `hiberfil.sys` some e o espaço aparece livre; reverter → `powercfg /a` mostra Hibernação disponível.
+- [ ] Compressão de memória (32 GB+): aplicar → reiniciar → `Get-MMAgent` mostra `MemoryCompression False`; com SysMain desligado,
+      a mensagem explica que ele precisa estar ligado.
+- [ ] Windows Pro: "Adiar atualizações de recurso" → `gpedit`/Configurações mostram o adiamento de 90 dias. No Home, "não se aplica".
+
 ## 3. Assinatura de código (evita alerta do SmartScreen e falso positivo de antivírus)
 
 Um otimizador que mexe no registro e roda como administrador **precisa** ser assinado.

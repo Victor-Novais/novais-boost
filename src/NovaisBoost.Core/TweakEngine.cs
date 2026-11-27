@@ -12,7 +12,8 @@ public sealed class TweakEngine(
     Func<TweakCompatibility, string?>? compatibility = null,
     INvidiaSettings? nvidia = null, IDnsSettings? dns = null,
     IBcdStore? bcd = null, IPagefile? pagefile = null, ITcpSettings? tcp = null, IConfigFiles? configs = null,
-    INvidiaProfiles? nvidiaProfiles = null, IAmdSettings? amd = null, IDefenderExclusions? defender = null)
+    INvidiaProfiles? nvidiaProfiles = null, IAmdSettings? amd = null, IDefenderExclusions? defender = null,
+    IAppxPackages? appx = null, ISystemFeatures? features = null)
 {
     private RestorePoint? _batchPoint;
     private bool _inBatch;
@@ -272,6 +273,11 @@ public sealed class TweakEngine(
             NvidiaProfileAction profile => new NvidiaProfileState(true, true, profile.Expected),
             AmdSettingAction feature => new AmdSettingState(feature.Enabled),
             DefenderExclusionAction => new DefenderExclusionState(true),
+            // An app that is not installed has nothing to remove.
+            AppxPackageAction when before is AppxPackageState { Installed: false } => before,
+            AppxPackageAction => new AppxPackageState(false),
+            SystemFeatureAction when before is SystemFeatureState { Enabled: null } => before,
+            SystemFeatureAction feature => new SystemFeatureState(feature.Enabled),
             _ => throw new InvalidDataException("Operação de ajuste inválida.")
         };
         return new PlannedChange(action, before, expected);
@@ -293,6 +299,8 @@ public sealed class TweakEngine(
         NvidiaProfileAction profile => Require(nvidiaProfiles).Read(profile.Exe, profile.SettingId),
         AmdSettingAction feature => Require(amd).Read(feature.Feature),
         DefenderExclusionAction exclusion => new DefenderExclusionState(Require(defender).Contains(exclusion.Path)),
+        AppxPackageAction package => new AppxPackageState(Require(appx).IsInstalled(package.Name)),
+        SystemFeatureAction feature => new SystemFeatureState(Require(features).IsEnabled(feature.Feature)),
         _ => throw new InvalidDataException("Tipo de ajuste desconhecido.")
     };
 
@@ -345,6 +353,15 @@ public sealed class TweakEngine(
                 break;
             case (DefenderExclusionAction exclusion, DefenderExclusionState exclusionState):
                 Require(defender).Set(exclusion.Path, exclusionState.Excluded);
+                break;
+            case (AppxPackageAction package, AppxPackageState { Installed: true }):
+                Require(appx).Install(package.Name, package.StoreId);
+                break;
+            case (AppxPackageAction package, AppxPackageState { Installed: false }):
+                Require(appx).Remove(package.Name);
+                break;
+            case (SystemFeatureAction feature, SystemFeatureState { Enabled: { } enabled }):
+                Require(features).Set(feature.Feature, enabled);
                 break;
             default:
                 throw new InvalidDataException("O estado do backup não corresponde à operação.");

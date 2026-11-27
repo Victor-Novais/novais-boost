@@ -102,6 +102,23 @@ Em Jogos & Streaming, o NOVAIS boost aplica um preset competitivo direto no arqu
   integração com o driver ainda não está nesta versão; a tela mostra as recomendações para fazer no AMD Software.
 - **Intel Arc:** leitura via IGCL ainda não implementada.
 
+## Debloat
+
+| Item | O que faz | Nível | Como voltar |
+|---|---|---|---|
+| Apps da Store (`data/bloat/appx.json`) | Remove só da sua conta: Clipchamp, Notícias, Clima, Solitaire, Obter Ajuda, Hub de Comentários, To Do, Power Automate, Family Safety (um ajuste por app, só os instalados) | 2 | Reverter reinstala pela Microsoft Store (`winget --source msstore`, precisa de internet). Se falhar, o backup fica guardado para tentar de novo |
+| Edge em segundo plano | Políticas `BackgroundModeEnabled=0` e `StartupBoostEnabled=0` | 1 | Reverter |
+| OneDrive e Teams | Só saem da inicialização (igual ao Gerenciador de Tarefas), nada é desinstalado | 1 | Reverter |
+| Serviços de fabricantes (`data/bloat/oem.json`) | Atualização/diagnóstico de ASUS, MSI, Gigabyte, Corsair e Razer em **Manual** (nunca Desativado). Iluminação, ventoinhas e o serviço principal de cada app ficam fora | Individual (`experimental`) | Reverter |
+| Serviços Xbox | Manual (o padrão do Windows), **nunca** em Ryzen X3D de 2 CCDs | 3 | Reverter |
+| Efeitos visuais | "Melhor desempenho" mantendo fontes suavizadas e miniaturas | 1 | Reverter |
+| Adiar atualizações de recurso | 90 dias (Windows Update para Empresas; não funciona no Home). Segurança continua chegando | 2 | Reverter |
+| Hibernação | Desliga e libera o `hiberfil.sys` (mostra o tamanho). Só em desktop | Individual (`experimental`) | Reverter |
+| Compressão de memória | Desliga com 32 GB+ (exige SysMain ligado) | Individual (`experimental`) | Reverter |
+
+Nunca são removidos: Microsoft Store, Instalador de Aplicativo (winget), Xbox/Game Bar, Calculadora, Fotos, Terminal,
+Segurança do Windows e as extensões de vídeo/imagem (`Debloat.NeverRemove`).
+
 ## Modo Reparar
 
 Muitos jogadores já rodaram "pacotes de FPS" e otimizadores agressivos que deixam o Windows pior. O Modo Reparar
@@ -121,6 +138,9 @@ A varredura é somente leitura e roda sem administrador (o BCD precisa de admini
 pela mesma simulação, ponto de restauração e backup dos ajustes, e podem ser desfeitos em Reverter / Backups. Eles nunca
 entram nos níveis, só agem em valores estragados e não desfazem nenhum ajuste do próprio NOVAIS boost (teste
 `RepairsNeverUndoANovaisBoostTweak`). O diagnóstico avisa: "Encontramos N alterações de outros otimizadores".
+
+Tipos de ação da F18: `appxPackage` (PackageManager, revert pelo winget) e `systemFeature` (hibernação e compressão de memória).
+Requisitos novos em `compat.hardware`: `ram-32gb` e `not-home`.
 
 Novos tipos de ação: `bcd` (bcdedit), `pagefile` (WMI) e `tcpGlobal` (netsh), além de `acceptRange` e
 `acceptIfBitsClear` no registro e `accept` nos serviços, para que um reparo só aja em valores fora do padrão.

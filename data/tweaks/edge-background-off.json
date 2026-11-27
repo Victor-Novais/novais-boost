@@ -1,0 +1,38 @@
+{
+  "id": "edge-background-off",
+  "name": "Edge sem segundo plano",
+  "description": "Impede que o Microsoft Edge continue aberto em segundo plano depois de fechado e que abra escondido junto com o Windows (Inicialização otimizada). O Edge continua instalado e funcionando.",
+  "category": "Debloat",
+  "level": "safe",
+  "evidence": "documented",
+  "risk": "Nenhum. O Edge pode demorar um pouco mais para abrir a primeira vez.",
+  "requiresReboot": false,
+  "compat": {
+    "hardware": [],
+    "antiCheat": []
+  },
+  "actions": [
+    {
+      "type": "registry",
+      "hive": "localMachine",
+      "path": "SOFTWARE\\Policies\\Microsoft\\Edge",
+      "valueName": "BackgroundModeEnabled",
+      "operation": "set",
+      "expected": {
+        "kind": "dword",
+        "value": 0
+      }
+    },
+    {
+      "type": "registry",
+      "hive": "localMachine",
+      "path": "SOFTWARE\\Policies\\Microsoft\\Edge",
+      "valueName": "StartupBoostEnabled",
+      "operation": "set",
+      "expected": {
+        "kind": "dword",
+        "value": 0
+      }
+    }
+  ]
+}

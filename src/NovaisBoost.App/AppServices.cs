@@ -18,15 +18,17 @@ internal sealed class AppServices
         Log = log;
         Snapshots = snapshots;
         Probe = new WindowsHardwareProbe(log, () => Games);
+        Appx = new WindowsAppxPackages(log);
         var nvidia = new NvidiaDrs();
         Engine = new TweakEngine(new WindowsRegistry(), new WindowsServiceController(), new WindowsPowerConfig(), snapshots, log,
             new WindowsScheduledTasks(log), new WindowsPowerPlans(), compat => Compatibility.Check(compat, Pc),
             nvidia, new WindowsDnsSettings(), new WindowsBcdStore(), new WindowsPagefile(), new WindowsTcpSettings(), new WindowsConfigFiles(),
-            nvidia, Amd, new WindowsDefenderExclusions());
+            nvidia, Amd, new WindowsDefenderExclusions(), Appx, new WindowsSystemFeatures());
     }
 
     public string DataDirectory { get; }
     public AmdAdlx Amd { get; } = new();
+    public WindowsAppxPackages Appx { get; }
     public IActionLog Log { get; }
     public SnapshotManager Snapshots { get; }
     public WindowsHardwareProbe Probe { get; }
@@ -38,7 +40,8 @@ internal sealed class AppServices
 
     public HardwareSnapshot Pc => _pc ??= Probe.Capture();
     public IReadOnlyList<InstalledGame> Games => _games ??= GameLibrary.Detect(DataCatalog.Games(), Log);
-    public IReadOnlyList<TweakDefinition> DynamicTweaks => _dynamic ??= new DeviceTweaks(Log).Generate(Games, Pc);
+    public IReadOnlyList<TweakDefinition> DynamicTweaks => _dynamic ??=
+        [.. new DeviceTweaks(Log).Generate(Games, Pc), .. DebloatTweaks.Generate(Log, Appx, new WindowsServiceController())];
     public IReadOnlyList<TweakDefinition> AllTweaks => [.. StaticTweaks, .. DynamicTweaks];
 
     /// <summary>Repair mode items (never part of AllTweaks or the levels).</summary>

@@ -57,6 +57,8 @@ public static class TweakLevels
 [JsonDerivedType(typeof(NvidiaProfileAction), "nvidiaProfile")]
 [JsonDerivedType(typeof(AmdSettingAction), "amdSetting")]
 [JsonDerivedType(typeof(DefenderExclusionAction), "defenderExclusion")]
+[JsonDerivedType(typeof(AppxPackageAction), "appxPackage")]
+[JsonDerivedType(typeof(SystemFeatureAction), "systemFeature")]
 public abstract record TweakAction
 {
     internal abstract string Target { get; }
@@ -183,6 +185,31 @@ public sealed record DefenderExclusionAction(string Path) : TweakAction
 {
     internal override string Target => $"Exclusão do Defender: {Path}";
     internal override string Identity => $"defender:{Path.TrimEnd('\\').ToLowerInvariant()}";
+}
+
+/// <summary>
+/// A Microsoft Store app removed for the current user only (18.1); never provisioned or system packages.
+/// Revert reinstalls it from the Microsoft Store by <see cref="StoreId"/> (winget, source msstore), which needs internet.
+/// </summary>
+/// <param name="Name">Package name (Package.Id.Name), e.g. "Clipchamp.Clipchamp".</param>
+public sealed record AppxPackageAction(string Name, string StoreId) : TweakAction
+{
+    internal override string Target => $"App da Store {Name}";
+    internal override string Identity => $"appx:{Name.ToLowerInvariant()}";
+}
+
+public enum SystemFeature { Hibernation, MemoryCompression }
+
+/// <summary>A Windows feature switched on or off as a whole (18.7 hibernation, 18.9 memory compression).</summary>
+public sealed record SystemFeatureAction(SystemFeature Feature, bool Enabled) : TweakAction
+{
+    internal override string Target => Feature switch
+    {
+        SystemFeature.Hibernation => "Hibernação",
+        SystemFeature.MemoryCompression => "Compressão de memória",
+        _ => Feature.ToString()
+    };
+    internal override string Identity => $"feature:{Feature}";
 }
 
 /// <summary>A power plan owned by NOVAIS boost: created from a template on apply, deleted on revert.</summary>
