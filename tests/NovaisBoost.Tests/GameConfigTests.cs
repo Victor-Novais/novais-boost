@@ -224,7 +224,7 @@ public sealed partial class TweakEngineTests
     public void PresetsStayOutOfTheLevelsAndRepairs()
     {
         var ids = DataCatalog.Presets().Select(preset => preset.Id).ToArray();
-        Assert.Equal(["cs2", "fortnite"], ids);
+        Assert.Equal(["apex", "cs2", "fortnite", "r6"], ids);
         Assert.All(DataCatalog.Presets(), preset => Assert.All(preset.Files, file => Assert.NotEmpty(file.Settings)));
         Assert.DoesNotContain(TweakCatalog.LoadEmbedded(), tweak => tweak.Actions.Any(action => action is ConfigFileAction));
         var games = DataCatalog.Games().Select(game => game.Id).ToHashSet();

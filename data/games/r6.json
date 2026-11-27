@@ -1,0 +1,22 @@
+{
+  "id": "r6",
+  "name": "Rainbow Six Siege",
+  "processes": [ "RainbowSix", "RainbowSix_BE", "RainbowSix_Vulkan" ],
+  "reflex": true,
+  "evidence": "documented",
+  "testedVersion": null,
+  "lastVerified": "2026-11-27",
+  "sources": [
+    "https://www.ubisoft.com/en-us/game/rainbow-six/siege/news-updates/7MPHeuO6hPcy49Mdc3rbDg/100-cpu-usage"
+  ],
+  "notes": "A Ubisoft documenta o FPSLimit na seção [DISPLAY] do GameSettings.ini (mínimo 30; abaixo disso, sem limite). Há uma pasta por conta Ubisoft. O limite só é definido com G-Sync/FreeSync.",
+  "files": [
+    {
+      "path": "{documents}\\My Games\\Rainbow Six - Siege\\*\\GameSettings.ini",
+      "format": "ini",
+      "settings": [
+        { "section": "DISPLAY", "key": "FPSLimit", "value": "{frameCap}", "label": "limite de FPS para VRR" }
+      ]
+    }
+  ]
+}

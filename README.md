@@ -86,6 +86,8 @@ Em Jogos & Streaming, o NOVAIS boost aplica um preset competitivo direto no arqu
 |---|---|---|---|
 | Counter-Strike 2 | `Steam\userdata\<conta>\730\local\cfg\cs2_video.txt` (uma vez por conta Steam que já jogou) | V-Sync desligado, MSAA 2x, shader baixo | `experimental` (chaves vistas em arquivos de jogadores; a Valve não documenta) |
 | Fortnite | `%LOCALAPPDATA%\FortniteGame\Saved\Config\WindowsClient\GameUserSettings.ini` | V-Sync desligado e limite de FPS para VRR | `documented` (UGameUserSettings do Unreal Engine) |
+| Rainbow Six Siege | `Documentos\My Games\Rainbow Six - Siege\<conta>\GameSettings.ini` (uma vez por conta Ubisoft) | `FPSLimit` para VRR | `documented` (a Ubisoft documenta o `FPSLimit` em `[DISPLAY]`) |
+| Apex Legends | `%USERPROFILE%\Saved Games\Respawn\Apex\local\videoconfig.txt` | V-Sync e sombras do sol desligados | `experimental` (chaves vistas em arquivos de jogadores) |
 
 - **Regras:** recusa aplicar ou reverter com o jogo aberto (ele regrava o arquivo ao fechar), não mexe em arquivo
   somente leitura e falha fechada se a chave não existir ou aparecer repetida. Nunca cria arquivo nem chave.
@@ -94,7 +96,8 @@ Em Jogos & Streaming, o NOVAIS boost aplica um preset competitivo direto no arqu
 - **Limite de FPS:** com G-Sync/FreeSync e Reflex, `Hz − Hz²/3600` (144 Hz → 138, 240 Hz → 224); com VRR sem Reflex,
   3 abaixo do Hz; sem VRR, o limite do jogo não é alterado (`FrameCap.For`).
 - **Fora por enquanto:** VALORANT (as configurações ficam no servidor da Riot), Call of Duty (o nome e o formato do `.cst`
-  mudam a cada título), Apex, Rainbow Six Siege e Overwatch 2 (chaves ainda não confirmadas). Esses jogos mostram só as dicas.
+  mudam a cada título), Overwatch 2 (a Blizzard restringiu a edição manual do `Settings_v0.ini`) e League of Legends (sem fonte
+  confiável para as chaves do `game.cfg`). Esses jogos mostram só as dicas.
 - Opções de inicialização do Steam aparecem prontas para copiar (o `localconfig.vdf` não é editado).
 
 ## Process Guardian v2

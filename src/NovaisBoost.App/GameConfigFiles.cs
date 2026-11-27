@@ -53,7 +53,9 @@ internal static class GamePresetFiles
         {
             ["%LOCALAPPDATA%"] = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             ["%APPDATA%"] = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            ["%USERPROFILE%"] = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)
+            ["%USERPROFILE%"] = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+            // Documents can be redirected (OneDrive), so it is not always %USERPROFILE%\Documents.
+            ["{documents}"] = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)
         };
         var steamAccounts = SteamUserdata();
 
@@ -72,7 +74,19 @@ internal static class GamePresetFiles
                             files.Add(new ResolvedPresetFile(file, path, account));
                 }
                 else if (GamePresets.Resolve(file.Path, tokens) is { } path)
-                    files.Add(new ResolvedPresetFile(file, path));
+                {
+                    // A "*" folder means one folder per game account (e.g. Rainbow Six Siege): every one that has the file.
+                    if (path.Contains(@"\*\", StringComparison.Ordinal))
+                    {
+                        var parts = path.Split(@"\*\", 2);
+                        if (Directory.Exists(parts[0]))
+                            foreach (var folder in Directory.EnumerateDirectories(parts[0]))
+                                if (Path.Combine(folder, parts[1]) is var candidate && File.Exists(candidate))
+                                    files.Add(new ResolvedPresetFile(file, candidate, Path.GetFileName(folder)));
+                    }
+                    else
+                        files.Add(new ResolvedPresetFile(file, path));
+                }
             }
             if (files.Count > 0)
                 result.Add((preset, files));

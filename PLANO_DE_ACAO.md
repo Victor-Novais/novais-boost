@@ -796,10 +796,10 @@ correspondente (P2.1).
 
 | # | Origem | Item | Bloqueio |
 |---|---|---|---|
-| B1 | F15 | Presets de Apex, R6 Siege e Overwatch 2 com fixtures de arquivos reais | Arquivos reais dos jogos |
+| B1 | F15 | ✅ R6 Siege (`FPSLimit`, `documented` pela Ubisoft) e Apex (`experimental`) com fixtures reconstruídos; pasta `*` por conta e token `{documents}`. Overwatch 2 fica fora: a Blizzard restringiu a edição manual do `Settings_v0.ini` | Trocar fixtures por arquivos reais (B5) |
 | B2 | F15 | VALORANT: só dicas, a menos que se confirme que o arquivo local ainda controla algo útil | P2.3 |
 | B3 | F15 | COD: preset `beta` por título (`.cst`) | P2.3 |
-| B4 | F15 | League of Legends (5.13): preset de `game.cfg`/`PersistedSettings.json` ou só dicas | Verificar formato |
+| B4 | F15 | League of Legends: só dicas (nenhuma fonte confiável para as chaves do `game.cfg`; pesquisa de 27/11/2026) | Arquivo real do jogo |
 | B5 | F15 | Trocar os fixtures de CS2 e Fortnite pelos arquivos reais e preencher `testedVersion` | Jogos instalados |
 | B6 | F16 | ADLX real: bindings SWIG, carregar `amdadlx64.dll`, validar numa Radeon | Radeon física |
 | B7 | F16 | Intel Arc via IGCL (`ControlLib.dll`), só leitura | Arc física |
