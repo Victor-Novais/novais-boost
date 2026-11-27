@@ -77,8 +77,10 @@ NOVAIS boost.exe
 ├── Bench
 │   ├── PresentMon (frametime/FPS/1% low)  ├── DPC/ISR latency (ETW)
 │   └── Report (antes/depois em HTML/Markdown)
-├── Data
-│   ├── tweaks/*.json   ├── profiles/*.json   ├── bloat/*.json   └── games/*.json
+├── Data (embutidos no exe)
+│   ├── tweaks/*.json (+ schema)   ├── repairs/*.json   ├── games/*.json (presets por jogo)
+│   ├── profiles.json   ├── processes.json   ├── games.json
+│   └── critical-services.json, memory-slots.json, microcode.json, optimizers.json  (bloat/*.json chega na F18)
 └── UI (Spectre.Console: banner, menus, progresso, relatórios)
 ```
 
@@ -267,7 +269,7 @@ Serviço leve em background (< 15 MB RAM, ~0% CPU):
 |---|---|
 | **Diário** (ao ligar, silencioso) | Verificar espaço em disco, temperaturas, processos novos no startup |
 | **Diário** | Checar se o Windows reverteu algum tweak (updates costumam reverter) e reaplicar |
-| **Sexta-feira** | Limpeza de temporários: `%TEMP%`, Windows\Temp, Prefetch antigo, cache de miniaturas, logs, crash dumps, Lixeira > 30 dias |
+| **Sexta-feira** | Limpeza de temporários: `%TEMP%`, Windows\Temp, cache de miniaturas, logs, crash dumps, Lixeira > 30 dias (Prefetch fica fora: ver seção 11) |
 | **Sexta-feira** | Limpeza de cache de navegadores (opcional), cache de launchers (Steam/Epic/Battle.net) |
 | **Domingo** | Otimização do SSD (TRIM), verificação SMART |
 | **Semanal** | Verificar driver novo de GPU/chipset (avisa, não instala sozinho) |
@@ -334,6 +336,8 @@ Protótipo do banner: `banner.ps1` (rode `pwsh .\banner.ps1`).
 - ❌ Desligar Secure Boot / TPM / assinatura de drivers (quebra Vanguard/FACEIT).
 - ❌ Remover Xbox Game Bar em Ryzen X3D de 2 CCDs.
 - ❌ Overclock automático (só recomendação).
+- ❌ Apagar a pasta Prefetch (o Windows já a gerencia; apagar só deixa o boot e a abertura de programas mais lentos). Removido da limpeza da seção 8.
+- ❌ Desligar Nagle (`TcpAckFrequency`/`TCPNoDelay`): não ajuda jogos modernos (ver F19).
 
 ---
 
@@ -370,7 +374,12 @@ Ryzen 5 7600X · RTX 4070 · 32 GB · Windows 11 25H2
 
 ## Próximo passo
 
-F0 a F10 estão concluídas (ver status abaixo). O trabalho continua na **Parte 2 do roadmap (F11 a F22)**, no fim deste arquivo, começando pela **F11 — Correções de precisão**.
+F0 a F14 estão concluídas; F10, F15, F16 e F17 estão parciais (ver P2.2). Ordem a partir daqui (27/11/2026):
+
+1. **Portão de validação V** (P2.4): rodar o checklist de `docs/LANCAMENTO.md` numa VM e num PC real. F12, F14 e F16
+   estão marcadas como prontas sem validação no Windows real. Manual, pode correr em paralelo com o item 2.
+2. **F18 — Debloat completo** (prompt em `PROMPT_F18.md`). F20 pode correr em paralelo.
+3. Itens do **backlog das fases parciais** (P2.4) encaixados entre as fases, sem bloquear o roadmap.
 
 ---
 
@@ -436,12 +445,14 @@ instalação limpa automática de driver. Detalhes em `docs/LANCAMENTO.md`.
 | F20 | Confiança e distribuição | — (pode ir em paralelo) | 2–3 semanas | B (bloqueia adoção) |
 | F21 | Base de dados anônima (opt-in) | F12, F20 | 3 semanas + backend | B (vantagem única) |
 | F22 | Interface gráfica e inglês | F20 | 4–6 semanas | B (alcance) |
+| F23 | Manutenção v2 e lacunas da Parte 1 | F13 | 2 semanas | B |
 
-**Total:** ~32 a 36 semanas para uma pessoa. Marcos de versão:
+**Total:** ~34 a 38 semanas para uma pessoa. Marcos de versão (uma versão só sai com o **portão V** da P2.4 executado
+para as fases dela, e com `git tag vX.Y.Z` + `<Version>` do `NovaisBoost.App.csproj` atualizados):
 
 - **v1.1** = F11 + F12 + F13 → "o PC é medido e diagnosticado de verdade".
 - **v1.2** = F14 + F15 + F20 → "conserta o que outros estragaram, configura o jogo e é assinado".
-- **v1.3** = F16 + F17 + F18 + F19 → profundidade técnica.
+- **v1.3** = F16 + F17 + F18 + F19 + F23 → profundidade técnica.
 - **v2.0** = F21 + F22 → produto de massa.
 
 ---
@@ -452,7 +463,7 @@ instalação limpa automática de driver. Detalhes em `docs/LANCAMENTO.md`.
 
 | # | Tarefa | Onde | Pronto quando |
 |---|---|---|---|
-| 11.1 | Adicionar o campo `evidence` (ver P2.0 item 3) ao schema, ao `TweakDefinition` e a todos os 33 JSON | `tweak.schema.json`, `TweakDefinition.cs`, `data/tweaks/*.json` | Teste `LevelsOnlyContainProvenTweaks` passa |
+| 11.1 | Adicionar o campo `evidence` (ver P2.0 item 3) ao schema, ao `TweakDefinition` e a todos os JSON (33 na época; 34 depois do 11.3) | `tweak.schema.json`, `TweakDefinition.cs`, `data/tweaks/*.json` | Teste `LevelsOnlyContainProvenTweaks` passa |
 | 11.2 | `priority-separation` → `experimental`, sai do nível 2. No Windows cliente o padrão (2) já equivale a 0x26 | `priority-separation.json` | Só aparece em Custom |
 | 11.3 | `mmcss-gaming`: separar em `mmcss-responsiveness` (`SystemResponsiveness`, `NetworkThrottlingIndex`, documentados) e `mmcss-games-task` (`experimental`, só afeta threads registradas na tarefa "Games") | `mmcss-gaming.json` | Dois ajustes; o teste `EachSystemTargetBelongsToASingleTweak` passa |
 | 11.4 | Guardian: prioridade padrão do jogo **AboveNormal**. High vira opção em `settings.json` (`guardian.gamePriority`) | `Guardian.cs`, `GuardianService.cs` | Teste da política cobre os dois modos |
@@ -641,8 +652,13 @@ Os arquivos ficam fora do processo do jogo, então não há conflito com anti-ch
 | 18.3 | OneDrive e Teams | Só tirar da inicialização (sem desinstalar) |
 | 18.4 | Serviços de fabricantes | `data/bloat/oem.json`: Armoury Crate, MSI Center, Gigabyte Control Center, iCUE, Razer Synapse. Serviços pesados → **Manual** (nunca Desativado), com aviso de RGB e ventoinhas |
 | 18.5 | Xbox | Serviços Xbox só em Manual e **nunca** em X3D de 2 CCDs (`compat.hardware: not-dual-ccd-x3d`) |
+| 18.6 | Efeitos visuais "melhor desempenho" (5.12) | `VisualFXSetting` = personalizado, mantendo fontes suavizadas e miniaturas; complementa `visual-animations` e `visual-transparency` sem disputar os mesmos valores |
+| 18.7 | Hibernação opcional (5.3) | `powercfg /hibernate off` só em Custom, com o espaço liberado (tamanho do `hiberfil.sys`) na revisão. Nunca em notebook por padrão. Revert = `powercfg /hibernate on` |
+| 18.8 | Adiar atualizações de recurso (5.1) | Política `DeferFeatureUpdates`/`DeferFeatureUpdatesPeriodInDays` (documentada pela Microsoft); nunca bloquear updates de segurança. Não pode conflitar com o reparo `windows-update-policies` da F14 (teste) |
+| 18.9 | Compressão de memória (5.4) | `Disable-MMAgent -MemoryCompression` só com 32 GB+ (`compat.hardware` novo `ram-32gb`), `experimental` até a F12 provar ganho |
 
-**Pronto quando:** cada pacote removido volta com o revert numa VM; o checklist manual inclui RGB funcionando após o 18.4.
+**Pronto quando:** cada pacote removido volta com o revert numa VM; o checklist manual inclui RGB funcionando após o 18.4;
+o teste `RepairsNeverUndoANovaisBoostTweak` continua passando com os ajustes novos.
 
 ---
 
@@ -664,8 +680,17 @@ Os arquivos ficam fora do processo do jogo, então não há conflito com anti-ch
 - Conferir RSS ligado e buffers da placa de rede.
 - Fora do produto: desligar Nagle (`TcpAckFrequency`/`TCPNoDelay`), que não ajuda jogos modernos (fica documentado na seção 11).
 
+- **Afinidade de interrupções** (5.8): diagnóstico de qual núcleo atende GPU, rede e USB (`Interrupt Management\Affinity Policy`).
+  Alterar só como `experimental`, com o modo MSI já aplicado e prova da F12.
+
 **Armazenamento**
 - Cache de gravação, estado do BypassIO (`fsutil bypassio state C:`), jogo no SSD mais rápido.
+- **SMART/NVMe completo** (5.6): `MSFT_StorageReliabilityCounter` (temperatura, desgaste, erros de leitura, horas).
+  Hoje só o `HealthStatus` é lido. Alerta de desgaste > 90% e temperatura alta sob uso.
+
+**Streaming** (5.14; a prioridade do OBS acima do normal já existe no Guardian)
+- Separar jogo e OBS em núcleos nos X3D de 2 CCDs e Intel híbrido (OBS no CCD sem V-Cache / nos E-cores), usando os CPU Sets da F17, com opt-in.
+- Bitrate sugerido pela velocidade de upload medida (teste da F9) e checklist de dois PCs / placa de captura.
 
 ---
 
@@ -680,6 +705,11 @@ Os arquivos ficam fora do processo do jogo, então não há conflito com anti-ch
 | 20.5 | CI | GitHub Actions `windows-latest`: `dotnet build -warnaserror` + `dotnet test` em cada push |
 | 20.6 | Teste em VM automatizado | `scripts/vm-test.ps1` (Hyper-V/Windows Sandbox): export do registro → aplicar nível 3 → reverter → export → diff vazio |
 | 20.7 | Relatório de erro opt-in | Envia só a exceção e a versão, nunca dados pessoais |
+| 20.8 | **Desinstalação limpa** | `--desinstalar` e item no menu: oferece "Reverter tudo" antes, remove as tarefas `\NOVAIS boost` do Agendador, os perfis NVIDIA "NOVAIS boost - *" e o plano de energia próprio; pergunta antes de apagar `%ProgramData%\NOVAIS boost` (backups e relatórios) |
+| 20.9 | **Termo de uso na primeira execução** | Tela curta com o que o app faz, o que nunca faz (seção 11) e a responsabilidade do usuário; aceite guardado em `settings.json`. Sem aceite, só os modos somente leitura funcionam |
+| 20.10 | **Tela de configurações** | Menu para editar o `settings.json` (opções do Guardian, gamePriority etc.) com validação; hoje só dá para editar o arquivo à mão numa pasta de administrador |
+| 20.11 | Testes do App | Projeto de testes `net10.0-windows` com testes de fumaça das telas (Spectre `TestConsole`) e dos adaptadores com fakes; roda só na CI Windows (20.5) |
+| 20.12 | Versão | Versão única em `Directory.Build.props`, `git tag vX.Y.Z` a cada release e CHANGELOG gerado dos commits |
 
 ---
 
@@ -705,6 +735,24 @@ Os arquivos ficam fora do processo do jogo, então não há conflito com anti-ch
 
 ---
 
+## F23 — Manutenção v2 e lacunas da Parte 1 (2 semanas)
+
+**Objetivo:** cumprir o que as seções 6, 8 e 9 prometem e ficou de fora das fases F6 a F9.
+
+| # | Tarefa | Detalhe |
+|---|---|---|
+| 23.1 | Limpeza completa (seção 8) | Novos alvos em `CleanupTargets`: Lixeira > 30 dias (`SHQueryRecycleBin`/`SHEmptyRecycleBin` por item antigo), cache de miniaturas (`thumbcache_*.db`), cache da Delivery Optimization (`Delete-DeliveryOptimizationCache`). Cache de navegadores e de launchers (Battle.net, EA) só com opt-in e só com o programa fechado. **Prefetch nunca** (seção 11) |
+| 23.2 | Integridade mensal | Tarefa "saude": `DISM /Online /Cleanup-Image /RestoreHealth` seguido de `sfc /scannow`, com o resultado no relatório de saúde. Hoje só roda `StartComponentCleanup` |
+| 23.3 | Aviso semanal de driver | Nova tarefa: compara a versão do driver de GPU (e chipset AMD/Intel quando legível) com a última publicada pelo fabricante; só avisa, nunca instala. Se não houver fonte confiável sem scraping, avisar só por idade do driver |
+| 23.4 | Teste de rede semanal | Nova tarefa: ping/jitter/DNS (F9) e troca de DNS só se o usuário já tiver aplicado o "DNS mais rápido" e a diferença passar de um limite (ex.: 10 ms) |
+| 23.5 | Fonte (PSU) opcional (6.1) | Pergunta opcional (potência e certificação), guardada em `settings.json`, usada nos avisos de PBO/OC e da regra de desligamentos (Kernel-Power 41) |
+| 23.6 | Teste rápido de gargalo (seção 9) | 30 s de CPU, RAM (latência/largura de banda) e disco (leitura sequencial e 4K) comparados com valores esperados pela classe do hardware em `data/baselines.json`. Alerta quando um componente rende bem abaixo do esperado |
+
+**Pronto quando:** cada alvo de limpeza novo tem teste de idade e de "programa aberto"; as tarefas novas aparecem em
+Cronogramas e terminam com código 0 na VM; nenhuma tarefa troca nada sem o usuário ter aplicado antes o ajuste correspondente.
+
+---
+
 ## P2.2 Status da Parte 2
 
 | Fase | Status | Observações |
@@ -721,13 +769,53 @@ Os arquivos ficam fora do processo do jogo, então não há conflito com anti-ch
 | F20 Confiança e distribuição | ⏳ | |
 | F21 Base de dados opt-in | ⏳ | |
 | F22 Interface gráfica e inglês | ⏳ | |
+| F23 Manutenção v2 e lacunas | ⏳ | |
 
 ## P2.3 Itens a verificar antes de implementar
 
 Pontos que dependem de informação externa que muda com o tempo:
 
-- Política atual da Riot/Vanguard sobre HVCI (F11.6) e de COD/Battlefield sobre Secure Boot/TPM.
-- Microcódigo Intel mínimo recomendado para 13ª/14ª ger. (F13.6).
+- ✅ Política da Riot/Vanguard sobre HVCI (F11.6): tratada com aviso em `vbs-off`. Ainda falta: COD/Battlefield sobre Secure Boot/TPM.
+- ✅ Microcódigo Intel 13ª/14ª ger. (F13.6): 0x12B mínimo, 0x12F recomendado em `data/microcode.json`. Reconferir a cada release da Intel.
 - Chave de MPO no Windows 11 24H2/25H2 (F19).
 - O que o `GameUserSettings.ini` do Valorant ainda controla e o formato atual do `.cst` do COD (F15.2).
 - IDs e valores aceitos de Low Latency Mode no driver NVIDIA atual (F16.1).
+- Chaves de Apex (`videoconfig.txt`), R6 (`GameSettings.ini`) e OW2 (`Settings_v0.ini`) com arquivos reais (backlog B1).
+- Disponibilidade de `winget --source msstore` para reinstalar cada pacote Appx removido (F18.1).
+
+**Decisões de produto pendentes** (não são código, mas bloqueiam fases):
+- Modelo de negócio e licença (grátis, pago, freemium, open source). Afeta F20.1 (assinatura exige CNPJ), F20.3 (onde hospedar
+  releases) e F21 (custo do backend e política LGPD).
+- Hospedagem dos releases (GitHub Releases público ou site próprio), que destrava o auto-update (F10/F20.3).
+
+## P2.4 Backlog das fases parciais e portão de validação
+
+Itens que sobraram das fases marcadas como "✅ parcial". Não bloqueiam a próxima fase, mas entram antes da versão do marco
+correspondente (P2.1).
+
+| # | Origem | Item | Bloqueio |
+|---|---|---|---|
+| B1 | F15 | Presets de Apex, R6 Siege e Overwatch 2 com fixtures de arquivos reais | Arquivos reais dos jogos |
+| B2 | F15 | VALORANT: só dicas, a menos que se confirme que o arquivo local ainda controla algo útil | P2.3 |
+| B3 | F15 | COD: preset `beta` por título (`.cst`) | P2.3 |
+| B4 | F15 | League of Legends (5.13): preset de `game.cfg`/`PersistedSettings.json` ou só dicas | Verificar formato |
+| B5 | F15 | Trocar os fixtures de CS2 e Fortnite pelos arquivos reais e preencher `testedVersion` | Jogos instalados |
+| B6 | F16 | ADLX real: bindings SWIG, carregar `amdadlx64.dll`, validar numa Radeon | Radeon física |
+| B7 | F16 | Intel Arc via IGCL (`ControlLib.dll`), só leitura | Arc física |
+| B8 | F17 | Notificação toast do Windows para os alertas do Guardian (hoje só janela e log) | — |
+| B9 | F17 | Medir o CPU do Guardian parado (meta < 0,1%) e registrar o número no README | PC real |
+| B10 | F10 | Certificado de assinatura e auto-update (passam para a F20) | Decisão de produto (P2.3) |
+
+**Portão V — validação no Windows real.** Nenhuma fase conta para um marco de versão sem o checklist dela em
+`docs/LANCAMENTO.md` executado numa VM Windows 11 limpa **e** em ao menos um PC real. Pendentes hoje:
+
+| Fase | O que validar |
+|---|---|
+| F12 | Sessão ETW de DPC/ISR lista drivers numa VM e num PC real; Provar ajustes completo com reinício no meio |
+| F13 | Regras novas com dados reais (PCIe, canais de RAM, WHEA, microcódigo) |
+| F14 | `scripts/vm-damage.ps1` → `--reparar` → restaurar → reiniciar → VM saudável; Reverter tudo devolve o estado "estragado" |
+| F15 | Presets aplicados e revertidos byte a byte com o jogo real |
+| F16 | Perfil DRS criado e apagado (NVIDIA Profile Inspector) |
+| F17 | Guardian v2 com jogos com e sem anti-cheat, EcoQoS e CPU Sets no Gerenciador de Tarefas / Process Explorer |
+
+Resultado de cada validação: data, máquina e "ok"/problema numa linha da tabela P2.2 da fase.

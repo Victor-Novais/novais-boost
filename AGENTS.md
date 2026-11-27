@@ -10,7 +10,9 @@ O plano completo está em `PLANO_DE_ACAO.md`. Leia-o antes de qualquer tarefa e 
 - C# / .NET 10 (LTS), app de console, `win-x64`, publicado como exe único e auto-contido.
 - UI: Spectre.Console. Testes: xUnit.
 - Manifesto `asInvoker`: os modos somente leitura rodam sem UAC; o menu e as tarefas pedem elevação no código.
-- Dados: `data/tweaks/*.json` (catálogo + schema), `data/profiles.json`, `data/processes.json`, `data/games.json`.
+- Dados (embutidos no exe pelo `NovaisBoost.Core.csproj`): `data/tweaks/*.json` (catálogo + schema), `data/repairs/*.json`
+  (Modo Reparar), `data/games/*.json` (presets por jogo), `data/profiles.json`, `data/processes.json`, `data/games.json` e as
+  tabelas de apoio `critical-services.json`, `memory-slots.json`, `microcode.json`, `optimizers.json`.
 - Build de release: `pwsh .\scripts\build.ps1 -Version X.Y.Z`. Checklist de testes: `docs/LANCAMENTO.md`.
 - Código, nomes e comentários em inglês. Textos exibidos ao usuário em português do Brasil.
 
